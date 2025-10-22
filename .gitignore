@@ -8,5 +8,4 @@ env/
 
 # Dados e segredos
 .streamlit/secrets.toml
-data/confirmados.json
 .vs/

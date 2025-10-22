@@ -8,7 +8,6 @@ from datetime import datetime
 
 # Importações internas
 from learning_qdrant import (
-    identificar_intencao,
     procurar_resposta_semelhante,
     guardar_mensagem,
     guardar_confirmacao,
