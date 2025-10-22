@@ -9,6 +9,7 @@ from sentence_transformers import SentenceTransformer, util
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
 # =====================================================
+COLLECTION_NAME = "chatbot_festa"
 BASE_DIR = os.path.dirname(__file__)
 QDRANT_PATH = os.path.join(BASE_DIR, "qdrant_data")
 DATA_PATH = os.path.join(BASE_DIR, "data", "event.json")
