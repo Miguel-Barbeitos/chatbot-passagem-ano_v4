@@ -46,7 +46,7 @@ def carregar_json(path: str, default=None):
 # =====================================================
 # 📂 DADOS BASE
 # =====================================================
-profiles = carregar_json("profiles.json", default=[])
+profiles = carregar_json("data/profiles.json", default=[])
 if not profiles:
     st.error("⚠️ Faltam perfis em 'profiles.json'.")
     st.stop()
