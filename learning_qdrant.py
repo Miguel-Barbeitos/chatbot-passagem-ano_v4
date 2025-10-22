@@ -132,61 +132,84 @@ def identificar_intencao(pergunta: str) -> str:
 # =====================================================
 # ✅ CONFIRMAÇÕES
 # =====================================================
-def guardar_confirmacao(nome):
-    """Guarda confirmação de presença (sem duplicar utilizadores)"""
+def guardar_confirmacao(nome: str):
+    """
+    Guarda a confirmação de presença no Qdrant sem duplicar.
+    """
     try:
-        # Gerar ID estável com base no nome (sem duplicados)
-        ponto_id = int(hashlib.md5(nome.encode()).hexdigest(), 16) % (10**9)
+        # Verificar se já existe confirmação
+        existentes, _ = client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="contexto", match=models.MatchValue(value="confirmacoes")
+                    ),
+                    models.FieldCondition(
+                        key="user", match=models.MatchValue(value=nome)
+                    ),
+                ]
+            ),
+            limit=1,
+        )
 
-        # Vetor nulo (não é necessário cálculo semântico aqui)
+        if existentes:
+            print(f"ℹ️ {nome} já estava confirmado.")
+            return
+
+        # Inserir nova confirmação
         vector = np.zeros(768).tolist()
-
-        # Payload com informação do utilizador e contexto
         payload = {
             "user": nome,
             "resposta": f"{nome} confirmou presença 🎉",
             "contexto": "confirmacoes",
         }
 
-        # Upsert (atualiza se já existir)
         client.upsert(
             collection_name=COLLECTION_NAME,
             points=[
                 models.PointStruct(
-                    id=ponto_id,  # ✅ ID determinístico
+                    id=random.randint(0, 1_000_000_000),
                     vector=vector,
                     payload=payload,
                 )
             ],
         )
 
-        print(f"✅ {nome} registado ou atualizado como confirmado.")
-
+        print(f"✅ {nome} registado como confirmado no Qdrant.")
     except Exception as e:
         print(f"⚠️ Erro ao guardar confirmação: {e}")
 
+
 def get_confirmacoes():
-    """Lista nomes confirmados a partir do Qdrant"""
+    """
+    Lê as confirmações atuais diretamente do Qdrant.
+    """
     try:
-        resultados = client.scroll(
+        pontos, _ = client.scroll(
             collection_name=COLLECTION_NAME,
             scroll_filter=models.Filter(
-                must=[models.FieldCondition(key="contexto", match=models.MatchValue(value="confirmacoes"))]
+                must=[
+                    models.FieldCondition(
+                        key="contexto", match=models.MatchValue(value="confirmacoes")
+                    )
+                ]
             ),
             limit=200,
         )
 
         confirmados = []
-        for ponto in resultados[0]:
-            if ponto.payload and "resposta" in ponto.payload:
-                resposta = ponto.payload["resposta"]
-                nome = resposta.split(" ")[0]  # pega primeiro nome
+        for p in pontos:
+            nome = p.payload.get("user")
+            if nome and nome not in confirmados:
                 confirmados.append(nome)
 
-        return sorted(list(set(confirmados)))
+        print(f"📋 Confirmados no Qdrant: {confirmados}")
+        return sorted(confirmados)
     except Exception as e:
         print(f"⚠️ Erro ao obter confirmações: {e}")
         return []
+
 
 def limpar_duplicados_antigos():
     """Remove confirmações duplicadas no Qdrant (mantém apenas 1 por utilizador)."""

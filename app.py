@@ -81,7 +81,7 @@ perfil = next(p for p in profiles if p["nome"] == nome)
 # =====================================================
 hora = datetime.now().hour
 saud = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
-st.success(f"{saud}, {nome}! 👋 Bem-vindo ao chat da festa 🎉")
+st.success(f"{saud}, {nome}! 👋 Bem-vindo! E sou o teu assistente virtual da festa 🎉")
 
 # =====================================================
 # 🧠 MOTOR DE RESPOSTA
@@ -124,6 +124,12 @@ def gerar_resposta(pergunta: str, perfil: dict):
     )
     guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto=intencao, perfil=perfil)
     return resposta_llm
+
+    # ✅ 5 — Debug
+    print(f"[DEBUG] Intenção: {intencao}")
+    print(f"[DEBUG] Confirmados atuais: {confirmados}")
+    print(f"[DEBUG] Contexto base:\n{contexto_base[:200]}...")
+
 
 # =====================================================
 # 💬 INTERFACE STREAMLIT (CHAT)
