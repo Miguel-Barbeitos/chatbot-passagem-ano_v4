@@ -1,0 +1,12 @@
+# Ambientes locais
+__pycache__/
+.qdrant/
+qdrant_data/
+.venv/
+env/
+*.pyc
+
+# Dados e segredos
+.streamlit/secrets.toml
+data/confirmados.json
+.vs/
