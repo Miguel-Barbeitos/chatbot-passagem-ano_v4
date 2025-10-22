@@ -1,4 +1,5 @@
-﻿import streamlit as st
+﻿import os
+import streamlit as st
 import json
 import random
 import time
@@ -46,7 +47,8 @@ def carregar_json(path: str, default=None):
 # =====================================================
 # 📂 DADOS BASE
 # =====================================================
-profiles = carregar_json("data/profiles.json", default=[])
+profiles_path = os.path.join(os.path.dirname(__file__), "data", "profiles.json")
+profiles = carregar_json(profiles_path, default=[])
 if not profiles:
     st.error("⚠️ Faltam perfis em 'profiles.json'.")
     st.stop()
