@@ -21,7 +21,7 @@ from llm_groq import gerar_resposta_llm
 # =====================================================
 USE_GROQ_ALWAYS = False  # 👈 muda para True se quiseres usar sempre o LLM
 st.set_page_config(page_title="🎉 Chat da Festa 2025/2026", page_icon="🎆")
-st.title("🎆 Assistente da Passagem de Ano — Monte da Galega 🥳")
+st.title("🎆 Assistente da Passagem de Ano 🥳")
 
 # =====================================================
 # 🔧 FUNÇÕES AUXILIARES
