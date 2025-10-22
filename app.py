@@ -89,22 +89,23 @@ st.success(f"{saud}, {nome}! 👋 Bem-vindo! E sou o teu assistente virtual da f
 def gerar_resposta(pergunta: str, perfil: dict):
     pergunta_l = normalizar(pergunta)
     intencao = identificar_intencao(pergunta_l)
-    confirmados = get_confirmacoes()
     contexto_base = get_contexto_base()
 
     # ✅ 1 — Se o utilizador confirmar presença
     if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar"]):
         guardar_confirmacao(perfil["nome"])
-        confirmados = get_confirmacoes()  # 🔄 Atualiza a lista imediatamente após guardar
+        confirmados = get_confirmacoes()  # 🔄 Atualiza lista logo após guardar
         resposta = f"Boa! 🎉 Fico feliz por saber que vais, {perfil['nome']}. Já estás na lista!"
         guardar_mensagem(perfil["nome"], pergunta, resposta, contexto="confirmacoes", perfil=perfil)
         return resposta
 
     # ✅ 2 — Perguntas sobre confirmações
-    if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "vai à festa", "vai a festa"]):
+    confirmados = get_confirmacoes()  # 🔄 Garante que lê sempre do Qdrant atualizado
+    if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "vai à festa", "vai a festa", "quantos somos", "quantos sao"]):
         if confirmados:
             lista = ", ".join(confirmados)
-            resposta = f"Até agora confirmaram: {lista} 🎉"
+            num = len(confirmados)
+            resposta = f"Até agora confirmaram: {lista} 🎉 (Somos {num})"
         else:
             resposta = f"Ainda ninguém confirmou oficialmente 😅 E tu, {perfil['nome']}, já confirmaste?"
         guardar_mensagem(perfil["nome"], pergunta, resposta, contexto="confirmacoes", perfil=perfil)
@@ -117,6 +118,7 @@ def gerar_resposta(pergunta: str, perfil: dict):
         return resposta_memoria
 
     # ✅ 4 — Caso não encontre, usa o LLM (Groq)
+    confirmados = get_confirmacoes()  # 🧩 Atualiza mais uma vez antes de enviar ao LLM
     resposta_llm = gerar_resposta_llm(
         pergunta=pergunta,
         perfil=perfil,
@@ -126,10 +128,6 @@ def gerar_resposta(pergunta: str, perfil: dict):
     guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto=intencao, perfil=perfil)
     return resposta_llm
 
-    # ✅ 5 — Debug
-    print(f"[DEBUG] Intenção: {intencao}")
-    print(f"[DEBUG] Confirmados atuais: {confirmados}")
-    print(f"[DEBUG] Contexto base:\n{contexto_base[:200]}...")
 
 
 # =====================================================
