@@ -76,9 +76,7 @@ Usa sempre as informações reais abaixo sobre o evento, e **nunca inventes** na
 {pergunta}
 
 🎙️ Instruções:
-- Se perguntarem "quem vai", "quem confirmou" ou "quantos somos", usa a lista de confirmados acima.
-- Se houver só um confirmado, responde naturalmente que só essa pessoa confirmou (se existir).
-- Se houver mais, diz quantos e quem são, por exemplo: "Somos {len(confirmados)}: {', '.join(confirmados)} 🎉".
+- Se perguntarem "quem vai", "quem confirmou" ou "quantos somos", , responde com o número de confirmados ({len(confirmados)})🎉".
 - Se o utilizador disser que confirma, adiciona-o (mentalmente) à lista e responde com entusiasmo.
 - Se perguntarem algo do evento, responde com base no contexto do JSON.
 - Se perguntarem "quem vai", "quem confirmou" ou "quantos somos", usa a lista acima.
