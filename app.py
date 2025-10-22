@@ -37,12 +37,14 @@ def normalizar(txt: str) -> str:
     t = re.sub(r"\s+", " ", t).strip()
     return t
 
-def carregar_json(path: str, default=None):
+def carregar_json(path, default=None):
+    import json
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
-        return default if default is not None else {}
+    except Exception as e:
+        st.error(f"⚠️ Erro a carregar JSON em {path}: {e}")
+        return default or []
 
 # =====================================================
 # 📂 DADOS BASE
