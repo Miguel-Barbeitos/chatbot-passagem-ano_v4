@@ -95,6 +95,7 @@ def gerar_resposta(pergunta: str, perfil: dict):
     # ✅ 1 — Se o utilizador confirmar presença
     if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar"]):
         guardar_confirmacao(perfil["nome"])
+        confirmados = get_confirmacoes()  # 🔄 Atualiza a lista imediatamente após guardar
         resposta = f"Boa! 🎉 Fico feliz por saber que vais, {perfil['nome']}. Já estás na lista!"
         guardar_mensagem(perfil["nome"], pergunta, resposta, contexto="confirmacoes", perfil=perfil)
         return resposta
