@@ -6,7 +6,7 @@ import requests
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
 # =====================================================
-oGROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     raise ValueError("❌ Falta a variável de ambiente GROQ_API_KEY.")
 
