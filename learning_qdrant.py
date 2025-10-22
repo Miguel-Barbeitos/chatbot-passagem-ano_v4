@@ -6,11 +6,6 @@ import numpy as np
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer, util
 
-# Para testar internamente. Depois Remover
-import os
-os.environ['CURL_CA_BUNDLE'] = r"C:\Users\mib\Downloads\huggingface.co.crt"
-os.environ['REQUESTS_CA_BUNDLE'] = r"C:\Users\mib\Downloads\huggingface.co.crt"
-
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
 # =====================================================
