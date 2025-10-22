@@ -9,10 +9,12 @@ from sentence_transformers import SentenceTransformer, util
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
 # =====================================================
-QDRANT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "qdrant_data"))
-print(f"📁 Base Qdrant ativa em: {QDRANT_PATH}")
-COLLECTION_NAME = "chatbot_festa"
-DATA_PATH = "data/event.json"
+BASE_DIR = os.path.dirname(__file__)
+QDRANT_PATH = os.path.join(BASE_DIR, "qdrant_data")
+DATA_PATH = os.path.join(BASE_DIR, "data", "event.json")
+
+print(f"📂 Qdrant ativo em: {QDRANT_PATH}")
+print(f"📄 Ficheiro de contexto: {DATA_PATH}")
 
 # =====================================================
 # 🧠 MODELO DE EMBEDDINGS
