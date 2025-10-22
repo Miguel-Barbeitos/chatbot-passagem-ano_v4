@@ -9,7 +9,8 @@ from sentence_transformers import SentenceTransformer, util
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
 # =====================================================
-QDRANT_PATH = "qdrant_data"
+QDRANT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "qdrant_data"))
+print(f"📁 Base Qdrant ativa em: {QDRANT_PATH}")
 COLLECTION_NAME = "chatbot_festa"
 DATA_PATH = "data/event.json"
 
@@ -42,6 +43,7 @@ def inicializar_qdrant():
     return client
 
 client = inicializar_qdrant()
+print(f"🚀 Qdrant ativo (Streamlit): {os.path.abspath(QDRANT_PATH)}")
 
 # =====================================================
 # 📂 CONTEXTO BASE (event.json)
@@ -180,7 +182,6 @@ def guardar_confirmacao(nome: str):
     except Exception as e:
         print(f"⚠️ Erro ao guardar confirmação: {e}")
 
-
 def get_confirmacoes():
     """
     Lê as confirmações atuais diretamente do Qdrant.
@@ -209,7 +210,6 @@ def get_confirmacoes():
     except Exception as e:
         print(f"⚠️ Erro ao obter confirmações: {e}")
         return []
-
 
 def limpar_duplicados_antigos():
     """Remove confirmações duplicadas no Qdrant (mantém apenas 1 por utilizador)."""
@@ -352,3 +352,22 @@ def procurar_resposta_semelhante(pergunta, contexto=None, limite_conf=0.6, top_k
         print(f"❌ Erro ao procurar resposta: {e}")
     return None
  
+
+
+# =====================================================
+# 🧹 LIMPAR COLEÇÃO (APENAS USO MANUAL)
+# =====================================================
+def limpar_qdrant():
+    """Apaga toda a coleção do Qdrant e recria-a (apenas usar manualmente)."""
+    from qdrant_client import models
+
+    try:
+        client.delete_collection(COLLECTION_NAME)
+        print("🧹 Coleção Qdrant apagada.")
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE)
+        )
+        print("✨ Nova coleção criada.")
+    except Exception as e:
+        print(f"Erro ao limpar Qdrant: {e}")
