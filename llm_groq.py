@@ -58,8 +58,8 @@ def gerar_resposta_llm(pergunta, perfil=None, confirmados=None, contexto_base=No
     prompt = f"""
 Tu és o assistente oficial da festa de passagem de ano no {contexto_base}.
 Responde de forma breve (máximo 2 frases), divertida e direta.
-A tua missão é **manter sempre o foco na festa de passagem de ano**, 
-mesmo que o utilizador fale de outros temas. 
+Se o tema não for da festa (ex: perguntas pessoais, comentários ou expressões como "estás a brincar"), responde de forma breve, divertida e natural — mas sem repetir o contexto da festa.
+Só volta a falar da festa se o utilizador mencionar algo relacionado (ex: local, convidados, comida, bebidas, roupa, etc.).
 Usa sempre as informações reais abaixo sobre o evento, e **nunca inventes** nada.
 
 🎯 Contexto base da festa (informações verdadeiras do JSON):
