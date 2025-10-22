@@ -92,6 +92,43 @@ def guardar_mensagem(user, pergunta, resposta, contexto="geral", perfil=None):
     except Exception as e:
         print(f"❌ Erro ao guardar mensagem: {e}")
 
+
+# =====================================================
+# 🧠 DETEÇÃO SIMPLES DE INTENÇÃO
+# =====================================================
+def identificar_intencao(pergunta: str) -> str:
+    """
+    Deteta a intenção principal da pergunta com base em palavras-chave simples.
+    (Versão leve para uso no app.py)
+    """
+    p = pergunta.lower()
+
+    if any(t in p for t in ["olá", "ola", "bom dia", "boa tarde", "boa noite"]):
+        return "saudacao"
+    if any(t in p for t in ["quem vai", "confirmou", "confirmacoes", "quantas pessoas"]):
+        return "confirmacoes"
+    if any(t in p for t in ["onde", "local", "sitio", "morada"]):
+        return "local"
+    if any(t in p for t in ["hora", "quando", "que horas", "começa"]):
+        return "hora"
+    if any(t in p for t in ["wifi", "internet", "rede"]):
+        return "wifi"
+    if any(t in p for t in ["roupa", "dress", "vestir", "codigo", "cor"]):
+        return "roupa"
+    if any(t in p for t in ["levar", "trazer", "preciso levar"]):
+        return "logistica"
+    if any(t in p for t in ["futebol", "benfica", "porto", "sporting", "jogo"]):
+        return "futebol"
+    if any(t in p for t in ["piada", "anedota", "brincadeira"]):
+        return "piadas"
+    if any(t in p for t in ["comida", "jantar", "menu", "sobremesa"]):
+        return "comida"
+    if any(t in p for t in ["bebida", "cerveja", "vinho", "champanhe", "cocktail"]):
+        return "bebida"
+
+    return "geral"
+
+
 # =====================================================
 # ✅ CONFIRMAÇÕES
 # =====================================================
