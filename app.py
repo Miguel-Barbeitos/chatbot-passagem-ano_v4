@@ -134,7 +134,6 @@ def gerar_resposta(pergunta: str, perfil: dict):
     resposta_llm = gerar_resposta_llm(
         pergunta=pergunta,
         perfil=perfil,
-        confirmados=confirmados,
         contexto_base=contexto_base,
     )
 
