@@ -1,11 +1,18 @@
 {
   "nome_local": "Agroturismo Monte da Galega",
   "morada": "Rua Minas 102, 7750-102 Minas de São Domingos, Mértola, Beja, Portugal",
+   "coordenadas": {
+    "latitude": 37.683333,
+    "longitude": -7.497194
+  },
+  "link_google_maps": "https://www.google.com/maps?q=37.683333,-7.497194",
   "numero_quartos": 8,
   "tem_churrasqueira": true,
   "tem_snooker": true,
   "tem_piscina": true,
   "aceita_animais": true,
+  "pode_levar_vinho": true,
+  "pode_levar_comida": true,
   "wifi": "MonteGalega2025",
   "hora_inicio": "20h00",
   "dress_code": "Casual elegante",
