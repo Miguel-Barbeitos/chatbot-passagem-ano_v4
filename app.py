@@ -21,7 +21,37 @@ from llm_groq import gerar_resposta_llm
 # =====================================================
 USE_GROQ_ALWAYS = False  # 👈 muda para True se quiseres usar sempre o LLM
 st.set_page_config(page_title="🎉 Chat da Festa 2025/2026", page_icon="🎆")
-st.title("🎆 Assistente da Passagem de Ano 🥳")
+
+# =====================================================
+# 🎨 LAYOUT E VISUAL
+# =====================================================
+st.set_page_config(
+    page_title="🎆 Chat da Festa 2025/2026",
+    page_icon="🎉",
+    layout="wide",
+)
+
+# Fundo do chat com imagem suave
+page_bg = """
+<style>
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://images.unsplash.com/photo-1519677100203-a0e668c92439");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+[data-testid="stHeader"] {
+    background: rgba(0, 0, 0, 0);
+}
+[data-testid="stSidebar"] {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+}
+</style>
+"""
+st.markdown(page_bg, unsafe_allow_html=True)
+
+
 
 # =====================================================
 # 🔧 FUNÇÕES AUXILIARES
@@ -73,6 +103,40 @@ else:
     st.stop()
 
 perfil = next(p for p in profiles if p["nome"] == nome)
+
+# =====================================================
+# 🎉 SIDEBAR — INFO DO EVENTO
+# =====================================================
+contexto = get_contexto_base(raw=True)
+confirmados = get_confirmacoes()
+
+st.sidebar.image(
+    "https://cf.bstatic.com/xdata/images/hotel/max1024x768/283222599.jpg",  # 🏡 foto real do Monte da Galega
+    caption="Agroturismo Monte da Galega",
+    use_container_width=True,
+)
+
+st.sidebar.markdown("### 📍 Localização")
+st.sidebar.markdown(f"**{contexto.get('nome_local')}**")
+st.sidebar.markdown(f"{contexto.get('morada')}")
+st.sidebar.markdown(f"[🗺️ Ver no Google Maps]({contexto.get('link_google_maps')})")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🧍‍♂️ Confirmados")
+if confirmados:
+    for nome in confirmados:
+        st.sidebar.markdown(f"- ✅ **{nome}**")
+else:
+    st.sidebar.markdown("_Ainda ninguém confirmou 😅_")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🎆 Detalhes")
+st.sidebar.markdown(f"🕗 **Hora:** {contexto.get('hora_inicio')}")
+st.sidebar.markdown(f"💃 **Dress code:** {contexto.get('dress_code')}")
+st.sidebar.markdown(f"🐾 **Aceita animais:** {'Sim' if contexto.get('aceita_animais') else 'Não'}")
+st.sidebar.markdown(f"🏊 **Piscina:** {'Sim' if contexto.get('tem_piscina') else 'Não'}")
+st.sidebar.markdown(f"🔥 **Churrasqueira:** {'Sim' if contexto.get('tem_churrasqueira') else 'Não'}")
+
 
 # =====================================================
 # 👋 SAUDAÇÃO
