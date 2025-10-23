@@ -62,9 +62,9 @@ def get_contexto_base(raw=False):
             dados = json.load(f)
 
         if raw:
-            return dados  # ✅ devolve o dicionário original
+            return dados  # ✅ devolve o dicionário original para o app
 
-        # Versão textual (para LLM)
+        # ✅ Caso contrário, devolve texto formatado para o LLM
         texto = []
         for k, v in dados.items():
             if isinstance(v, bool):
@@ -78,6 +78,7 @@ def get_contexto_base(raw=False):
     except Exception as e:
         print(f"⚠️ Erro ao ler contexto base: {e}")
         return {} if raw else "Informações da festa indisponíveis."
+
 
 
 # =====================================================
