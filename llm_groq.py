@@ -56,26 +56,43 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
     nome = perfil.get("nome", "Utilizador")
     personalidade = perfil.get("personalidade", "neutro")
 
+    # ✅ Verifica chave da API
     if not GROQ_API_KEY:
         raise ValueError("❌ Falta a variável de ambiente GROQ_API_KEY. Define-a no Streamlit secrets ou no ambiente local.")
+
+    # ✅ Garante que temos um dicionário para o contexto
+    if contexto_base is None:
+        contexto_base = {}
+
+    # ✅ Extrai coordenadas
+    coords = contexto_base.get("coordenadas", {})
+    latitude = coords.get("latitude", "desconhecida")
+    longitude = coords.get("longitude", "desconhecida")
 
     # ✅ Formata o contexto legível
     if isinstance(contexto_base, dict):
         contexto_texto = (
-            f"📍 Local: {contexto_base.get('local', 'desconhecido')}, "
-            f"{contexto_base.get('morada', 'morada não disponível')}.\n"
-            f"🗺️ Coordenadas: {contexto_base.get('coordenadas', 'não definidas')}.\n"
-            f"🐾 Aceita animais: {'Sim' if contexto_base.get('aceita_animais') else 'Não'}.\n"
-            f"🏊 Piscina: {'Sim' if contexto_base.get('tem_piscina') else 'Não'}.\n"
-            f"🔥 Churrasqueira: {'Sim' if contexto_base.get('tem_churrasqueira') else 'Não'}.\n"
-            f"🎱 Snooker: {'Sim' if contexto_base.get('tem_snooker') else 'Não'}."
+            f"📍 Local: {contexto_base.get('nome_local', 'local desconhecido')}\n"
+            f"🏠 Morada: {contexto_base.get('morada', 'morada não disponível')}\n"
+            f"🗺️ Coordenadas: {latitude}, {longitude}\n"
+            f"🔗 Google Maps: {contexto_base.get('link_google_maps', 'sem link')}\n"
+            f"🐾 Aceita animais: {'Sim' if contexto_base.get('aceita_animais') else 'Não'}\n"
+            f"🏊 Piscina: {'Sim' if contexto_base.get('tem_piscina') else 'Não'}\n"
+            f"🔥 Churrasqueira: {'Sim' if contexto_base.get('tem_churrasqueira') else 'Não'}\n"
+            f"🎱 Snooker: {'Sim' if contexto_base.get('tem_snooker') else 'Não'}\n"
+            f"🍷 Pode levar vinho: {'Sim' if contexto_base.get('pode_levar_vinho') else 'Não'}\n"
+            f"🥘 Pode levar comida: {'Sim' if contexto_base.get('pode_levar_comida') else 'Não'}\n"
+            f"💃 Dress code: {contexto_base.get('dress_code', 'não especificado')}\n"
+            f"⏰ Hora de início: {contexto_base.get('hora_inicio', 'não definida')}\n"
+            f"📶 Wi-Fi: {contexto_base.get('wifi', 'não indicado')}\n"
+            f"🌐 Link oficial: {contexto_base.get('link', 'sem link')}"
         )
     else:
-        contexto_texto = str(contexto_base or "")
+        contexto_texto = str(contexto_base)
 
-    # ✅ Prompt final
+    # ✅ Prompt completo
     prompt = f"""
-Tu és o assistente oficial da festa de passagem de ano.
+Tu és o assistente oficial da festa de passagem de ano 🎆.
 Responde de forma breve (máximo 2 frases), divertida e natural.
 
 🎯 Contexto real do evento:
@@ -90,10 +107,10 @@ Responde de forma breve (máximo 2 frases), divertida e natural.
 
 🎙️ Instruções:
 - Usa sempre os dados reais do JSON e nunca inventes.
-- Se perguntarem sobre o local, morada ou mapa, usa a informação do contexto.
-- Se perguntarem sobre animais, piscina, churrasqueira ou snooker, responde com base no JSON.
-- Se perguntarem algo pessoal ou sem relação (ex: "estás a brincar", "bom dia"), responde com humor leve e coerente com a personalidade.
-- Mantém sempre Português de Portugal e a segunda pessoa do singular.
+- Se perguntarem sobre o local, morada, mapa ou coordenadas, usa a informação do contexto.
+- Se perguntarem sobre animais, piscina, churrasqueira, snooker, vinho ou comida, responde com base no JSON.
+- Se perguntarem algo pessoal ou fora do tema (ex: "estás a brincar", "bom dia", etc.), responde com humor leve, sem repetir a morada.
+- Mantém sempre o Português de Portugal e a segunda pessoa do singular.
 - Evita respostas longas (máximo 2 frases curtas).
 """
 
@@ -121,3 +138,4 @@ Responde de forma breve (máximo 2 frases), divertida e natural.
     except Exception as e:
         print(f"⚠️ Erro no LLM Groq: {e}")
         return "Estou com interferências celestiais... tenta outra vez 😅"
+
