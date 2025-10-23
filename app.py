@@ -86,7 +86,7 @@ perfil = next(p for p in profiles if p["nome"] == nome)
 # 🎉 SIDEBAR — INFO DO EVENTO
 # =====================================================
 contexto = get_contexto_base(raw=True)
-#confirmados = get_confirmacoes()
+confirmados = get_confirmacoes()
 
 st.sidebar.image(
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFzoOQTUJFcyDqfSEWSEJM1TeJaVrZXpzVA&s",  # 🏡 foto real do Monte da Galega
@@ -122,18 +122,6 @@ st.sidebar.markdown(f"🔥 **Churrasqueira:** {'Sim' if contexto.get('tem_churra
 hora = datetime.now().hour
 saud = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
 st.success(f"{saud}, {nome}! 👋 Bem-vindo! E sou o teu assistente virtual da festa 🎉")
-
-# =====================================================
-# 🎉 LISTA DE CONFIRMADOS (Sidebar)
-# =====================================================
-with st.sidebar:
-    st.header("🎉 Confirmados")
-    confirmados = get_confirmacoes()
-    if confirmados:
-        for pessoa in confirmados:
-            st.write(f"✅ {pessoa}")
-    else:
-        st.write("Ainda ninguém confirmou 😅")
 
 # =====================================================
 # 🧠 MOTOR DE RESPOSTA
