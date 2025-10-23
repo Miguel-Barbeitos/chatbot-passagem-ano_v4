@@ -57,21 +57,24 @@ else:
 def get_contexto_base(raw=False):
     """
     Carrega o contexto base da festa.
-    Se raw=True devolve o dicionário original (para lógica interna).
-    Caso contrário, devolve texto formatado (para o LLM ou exibição).
+    Se raw=True devolve o dicionário original (para uso interno no código).
+    Caso contrário, devolve um texto formatado legível.
     """
     try:
         with open(DATA_PATH, "r", encoding="utf-8") as f:
             dados = json.load(f)
 
         if raw:
-            return dados  # ✅ devolve o dicionário original para o app
+            return dados  # devolve o dicionário real
 
-        # ✅ Caso contrário, devolve texto formatado para o LLM
+        # caso queira apenas uma string legível
         texto = []
         for k, v in dados.items():
             if isinstance(v, bool):
                 texto.append(f"{k.replace('_', ' ')}: {'sim' if v else 'não'}")
+            elif isinstance(v, dict):
+                subtxt = ", ".join(f"{sk}: {sv}" for sk, sv in v.items())
+                texto.append(f"{k.replace('_', ' ')}: {subtxt}")
             elif isinstance(v, list):
                 texto.append(f"{k.replace('_', ' ')}: {', '.join(v)}")
             else:
@@ -81,6 +84,7 @@ def get_contexto_base(raw=False):
     except Exception as e:
         print(f"⚠️ Erro ao ler contexto base: {e}")
         return {} if raw else "Informações da festa indisponíveis."
+
 
 
 
