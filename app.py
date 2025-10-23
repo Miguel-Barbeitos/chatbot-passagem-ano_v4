@@ -88,6 +88,7 @@ perfil = next(p for p in profiles if p["nome"] == nome)
 contexto = get_contexto_base(raw=True)
 confirmados = get_confirmacoes()
 
+with st.sidebar:
 st.sidebar.image(
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFzoOQTUJFcyDqfSEWSEJM1TeJaVrZXpzVA&s",  # 🏡 foto real do Monte da Galega
     caption="Agroturismo Monte da Galega",
@@ -122,6 +123,8 @@ st.sidebar.markdown(f"🔥 **Churrasqueira:** {'Sim' if contexto.get('tem_churra
 hora = datetime.now().hour
 saud = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
 st.success(f"{saud}, {nome}! 👋 Bem-vindo! E sou o teu assistente virtual da festa 🎉")
+
+
 
 # =====================================================
 # 🧠 MOTOR DE RESPOSTA
