@@ -34,18 +34,46 @@ st.set_page_config(
 # Fundo do chat com imagem suave
 page_bg = """
 <style>
+/* 🔹 Fundo geral com imagem */
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://cms.cimbal.pt//upload_files/client_id_1/website_id_2/Mina%20de%20S%C3%A3o%20Domingos%20(p%C3%A1g.7)%20Foto%20Ricardo%20Zambujo.jpg");
+    background: 
+        linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.70)),  /* camada escura transparente */
+        url("https://cms.cimbal.pt//upload_files/client_id_1/website_id_2/Mina%20de%20S%C3%A3o%20Domingos%20(p%C3%A1g.7)%20Foto%20Ricardo%20Zambujo.jpg"); /* imagem de festa */
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
 }
+
+/* 🔹 Cabeçalho transparente */
 [data-testid="stHeader"] {
     background: rgba(0, 0, 0, 0);
 }
+
+/* 🔹 Sidebar com vidro fosco */
 [data-testid="stSidebar"] {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+}
+
+/* 🔹 Chat com transparência */
+.block-container {
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    margin-top: 10px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.2);
+}
+
+/* 🔹 Mensagens do assistente */
+[data-testid="stChatMessage"][data-testid="assistant"] {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* 🔹 Mensagens do utilizador */
+[data-testid="stChatMessage"][data-testid="user"] {
+    background: rgba(230, 255, 230, 0.4);
 }
 </style>
 """
