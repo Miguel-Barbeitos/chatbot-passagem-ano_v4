@@ -89,32 +89,32 @@ contexto = get_contexto_base(raw=True)
 confirmados = get_confirmacoes()
 
 with st.sidebar:
-    st.sidebar.image(
-    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFzoOQTUJFcyDqfSEWSEJM1TeJaVrZXpzVA&s",  # 🏡 foto real do Monte da Galega
-    caption="Agroturismo Monte da Galega",
-    use_container_width=True,
-)
+    st.image(
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFzoOQTUJFcyDqfSEWSEJM1TeJaVrZXpzVA&s",  # 🏡 foto real do Monte da Galega
+        caption="Agroturismo Monte da Galega",
+        use_container_width=True,
+    )
 
-    st.sidebar.markdown("### 📍 Localização")
-    st.sidebar.markdown(f"**{contexto.get('nome_local')}**")
-    st.sidebar.markdown(f"{contexto.get('morada')}")
-st.sidebar.markdown(f"[🗺️ Ver no Google Maps]({contexto.get('link_google_maps')})")
+    st.markdown("### 📍 Localização")
+    st.markdown(f"**{contexto.get('nome_local')}**")
+    st.markdown(f"{contexto.get('morada')}")
+    st.markdown(f"[🗺️ Ver no Google Maps]({contexto.get('link_google_maps')})")
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🧍‍♂️ Confirmados")
+    st.markdown("---")
+    st.markdown("### 🧍‍♂️ Confirmados")
     if confirmados:
         for nome in confirmados:
-        st.sidebar.markdown(f"- ✅ **{nome}**")
+            st.markdown(f"- ✅ **{nome}**")
     else:
-        st.sidebar.markdown("_Ainda ninguém confirmou 😅_")
+        st.markdown("_Ainda ninguém confirmou 😅_")
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🎆 Detalhes")
-    st.sidebar.markdown(f"🕗 **Hora:** {contexto.get('hora_inicio')}")
-    st.sidebar.markdown(f"💃 **Dress code:** {contexto.get('dress_code')}")
-    st.sidebar.markdown(f"🐾 **Aceita animais:** {'Sim' if contexto.get('aceita_animais') else 'Não'}")
-    st.sidebar.markdown(f"🏊 **Piscina:** {'Sim' if contexto.get('tem_piscina') else 'Não'}")
-    st.sidebar.markdown(f"🔥 **Churrasqueira:** {'Sim' if contexto.get('tem_churrasqueira') else 'Não'}")
+    st.markdown("---")
+    st.markdown("### 🎆 Detalhes")
+    st.markdown(f"🕗 **Hora:** {contexto.get('hora_inicio')}")
+    st.markdown(f"💃 **Dress code:** {contexto.get('dress_code')}")
+    st.markdown(f"🐾 **Aceita animais:** {'Sim' if contexto.get('aceita_animais') else 'Não'}")
+    st.markdown(f"🏊 **Piscina:** {'Sim' if contexto.get('tem_piscina') else 'Não'}")
+    st.markdown(f"🔥 **Churrasqueira:** {'Sim' if contexto.get('tem_churrasqueira') else 'Não'}")
 
 
 # =====================================================
