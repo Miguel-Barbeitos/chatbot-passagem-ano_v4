@@ -35,7 +35,7 @@ st.set_page_config(
 page_bg = """
 <style>
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://images.unsplash.com/photo-1519677100203-a0e668c92439");
+    background-image: url("https://cms.cimbal.pt//upload_files/client_id_1/website_id_2/Mina%20de%20S%C3%A3o%20Domingos%20(p%C3%A1g.7)%20Foto%20Ricardo%20Zambujo.jpg");
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
