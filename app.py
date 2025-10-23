@@ -14,7 +14,7 @@ from learning_qdrant import (
     get_confirmacoes,
     get_contexto_base,
 )
-from llm_groq import gerar_resposta_llm
+from llm_groq import gerar_resposta_llm 
 
 # =====================================================
 # ⚙️ CONFIGURAÇÃO
@@ -98,7 +98,7 @@ with st.sidebar:
 # =====================================================
 def gerar_resposta(pergunta: str, perfil: dict):
     pergunta_l = normalizar(pergunta)
-    contexto_base = get_contexto_base()
+    contexto_base = get_contexto_base(raw=True)
     confirmados = get_confirmacoes()
 
     # ✅ 1 — Confirmação de presença

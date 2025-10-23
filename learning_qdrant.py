@@ -51,11 +51,20 @@ print(f"🚀 Qdrant ativo (Streamlit): {os.path.abspath(QDRANT_PATH)}")
 # =====================================================
 # 📂 CONTEXTO BASE (event.json)
 # =====================================================
-def get_contexto_base():
-    """Carrega e devolve o contexto base da festa"""
+def get_contexto_base(raw=False):
+    """
+    Carrega o contexto base da festa.
+    Se raw=True devolve o dicionário original (para lógica interna).
+    Caso contrário, devolve texto formatado (para o LLM ou exibição).
+    """
     try:
         with open(DATA_PATH, "r", encoding="utf-8") as f:
             dados = json.load(f)
+
+        if raw:
+            return dados  # ✅ devolve o dicionário original
+
+        # Versão textual (para LLM)
         texto = []
         for k, v in dados.items():
             if isinstance(v, bool):
@@ -65,9 +74,11 @@ def get_contexto_base():
             else:
                 texto.append(f"{k.replace('_', ' ')}: {v}")
         return "\n".join(texto)
+
     except Exception as e:
         print(f"⚠️ Erro ao ler contexto base: {e}")
-        return "Informações da festa indisponíveis."
+        return {} if raw else "Informações da festa indisponíveis."
+
 
 # =====================================================
 # 💾 GUARDAR MENSAGEM
