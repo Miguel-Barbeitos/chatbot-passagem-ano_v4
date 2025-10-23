@@ -39,31 +39,47 @@ def carregar_contexto_base():
 # =====================================================
 # 🤖 GERAÇÃO DE RESPOSTAS NATURAIS
 # =====================================================
-def gerar_resposta_llm(pergunta, perfil=None, confirmados=None, contexto_base=None):
+import requests
+import streamlit as st
+import os
+
+GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+MODEL = "llama-3.1-8b-instant"
+
+def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
     """
     Gera uma resposta contextual, divertida e factual sobre a festa.
     Usa o modelo LLaMA 3.1 via Groq API.
     """
     perfil = perfil or {}
-    confirmados = confirmados or []
     nome = perfil.get("nome", "Utilizador")
     personalidade = perfil.get("personalidade", "neutro")
 
     if not GROQ_API_KEY:
-        raise ValueError("❌ Falta a variável de ambiente GROQ_API_KEY. Define-a antes de correr o app.")
+        raise ValueError("❌ Falta a variável de ambiente GROQ_API_KEY. Define-a no Streamlit secrets ou no ambiente local.")
 
-    if not contexto_base:
-        contexto_base = carregar_contexto_base()
+    # ✅ Formata o contexto legível
+    if isinstance(contexto_base, dict):
+        contexto_texto = (
+            f"📍 Local: {contexto_base.get('local', 'desconhecido')}, "
+            f"{contexto_base.get('morada', 'morada não disponível')}.\n"
+            f"🗺️ Coordenadas: {contexto_base.get('coordenadas', 'não definidas')}.\n"
+            f"🐾 Aceita animais: {'Sim' if contexto_base.get('aceita_animais') else 'Não'}.\n"
+            f"🏊 Piscina: {'Sim' if contexto_base.get('tem_piscina') else 'Não'}.\n"
+            f"🔥 Churrasqueira: {'Sim' if contexto_base.get('tem_churrasqueira') else 'Não'}.\n"
+            f"🎱 Snooker: {'Sim' if contexto_base.get('tem_snooker') else 'Não'}."
+        )
+    else:
+        contexto_texto = str(contexto_base or "")
 
+    # ✅ Prompt final
     prompt = f"""
-Tu és o assistente oficial da festa de passagem de ano no {contexto_base}.
-Responde de forma breve (máximo 2 frases), divertida e direta.
+Tu és o assistente oficial da festa de passagem de ano.
+Responde de forma breve (máximo 2 frases), divertida e natural.
 
-🎯 Contexto base da festa (informações verdadeiras do JSON):
-{contexto_base}
-
-✅ Confirmados até agora:
-{', '.join(confirmados) if confirmados else 'Ainda ninguém confirmou.'}
+🎯 Contexto real do evento:
+{contexto_texto}
 
 🧍 Perfil do utilizador:
 - Nome: {nome}
@@ -73,17 +89,12 @@ Responde de forma breve (máximo 2 frases), divertida e direta.
 {pergunta}
 
 🎙️ Instruções:
-- Usa SEMPRE as informações do JSON e evita inventar detalhes.
-- Se perguntarem "quem vai", "quem confirmou" ou "quantos somos", indica o número e nomes confirmados.
-- Se perguntarem "onde é", "local", "morada" ou "sitio", responde com a morada **e adiciona o link do Google Maps se disponível**.
-- Se perguntarem "mapa" ou "como chegar", responde com o link de localização.
-- Se perguntarem "posso levar cão" ou "animais", usa o campo `aceita_animais`.
-- Se perguntarem "tem piscina", "churrasqueira", "snooker", responde com base nesses campos.
-- Se perguntarem "posso levar vinho" ou "comida", usa `pode_levar_vinho` ou `pode_levar_comida`.
-- Se o tema não for da festa (ex: perguntas pessoais, "estás a brincar", ou mensagens sem sentido), responde de forma leve e divertida, **sem repetir a morada nem o contexto da festa**.
-- Se a pergunta for repetida, **varia o tom** e dá uma versão resumida ou diferente da resposta anterior.
-- Responde sempre em Português de Portugal e usa a segunda pessoa do singular.
-- Mantém o estilo coerente com a personalidade do utilizador (ex: sarcástico, simpático, extrovertido).
+- Usa sempre os dados reais do JSON e nunca inventes.
+- Se perguntarem sobre o local, morada ou mapa, usa a informação do contexto.
+- Se perguntarem sobre animais, piscina, churrasqueira ou snooker, responde com base no JSON.
+- Se perguntarem algo pessoal ou sem relação (ex: "estás a brincar", "bom dia"), responde com humor leve e coerente com a personalidade.
+- Mantém sempre Português de Portugal e a segunda pessoa do singular.
+- Evita respostas longas (máximo 2 frases curtas).
 """
 
     headers = {
@@ -94,11 +105,11 @@ Responde de forma breve (máximo 2 frases), divertida e direta.
     data = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": "És um assistente sociável e divertido que fala em Português de Portugal."},
+            {"role": "system", "content": "És um assistente sociável e divertido que fala Português de Portugal."},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.8,
-        "max_tokens": 200,
+        "temperature": 0.7,
+        "max_tokens": 180,
     }
 
     try:
@@ -109,4 +120,4 @@ Responde de forma breve (máximo 2 frases), divertida e direta.
         return resposta
     except Exception as e:
         print(f"⚠️ Erro no LLM Groq: {e}")
-        return "Estou com interferências celestiais... tenta outra vez 🙏😅"
+        return "Estou com interferências celestiais... tenta outra vez 😅"
