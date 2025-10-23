@@ -28,25 +28,28 @@ print("✅ Modelo carregado com sucesso.")
 # 💾 CONEXÃO AO QDRANT
 # =====================================================
 def inicializar_qdrant():
-    """Inicializa Qdrant local, criando coleção se necessário"""
-    if not os.path.exists(QDRANT_PATH):
-        os.makedirs(QDRANT_PATH, exist_ok=True)
+    """Inicializa Qdrant (usa Cloud se variável de ambiente configurada)."""
+    qdrant_url = os.getenv("QDRANT_URL")
+    qdrant_key = os.getenv("QDRANT_API_KEY")
 
-    client = QdrantClient(path=QDRANT_PATH)
-    collections = [c.name for c in client.get_collections().collections]
+    if qdrant_url and qdrant_key:
+        print("☁️ Conectado ao Qdrant Cloud.")
+        return QdrantClient(url=qdrant_url, api_key=qdrant_key)
 
-    if COLLECTION_NAME not in collections:
-        client.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE)
-        )
-        print("✨ Coleção Qdrant criada.")
-    else:
-        print("🔗 Coleção Qdrant conectada.")
-    return client
+    # fallback local (apenas em desenvolvimento local)
+    print("💾 A usar Qdrant local (modo desenvolvimento).")
+    return QdrantClient(path=QDRANT_PATH)
+
 
 client = inicializar_qdrant()
-print(f"🚀 Qdrant ativo (Streamlit): {os.path.abspath(QDRANT_PATH)}")
+
+# 🔍 Deteta se está a usar Qdrant local ou Cloud
+if hasattr(client, "_location") and client._location:
+    print(f"💾 Qdrant local ativo em: {os.path.abspath(QDRANT_PATH)}")
+elif os.getenv("QDRANT_URL"):
+    print(f"☁️ Qdrant Cloud ativo: {os.getenv('QDRANT_URL')}")
+else:
+    print("⚙️ Qdrant inicializado (modo desconhecido).")
 
 # =====================================================
 # 📂 CONTEXTO BASE (event.json)
