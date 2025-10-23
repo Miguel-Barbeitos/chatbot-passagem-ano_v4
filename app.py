@@ -89,7 +89,7 @@ contexto = get_contexto_base(raw=True)
 confirmados = get_confirmacoes()
 
 st.sidebar.image(
-    "https://cf.bstatic.com/xdata/images/hotel/max1024x768/283222599.jpg",  # 🏡 foto real do Monte da Galega
+    "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0a/ac/0d/f3/agroturismo-monte-da.jpg?w=900&h=500&s=1",  # 🏡 foto real do Monte da Galega
     caption="Agroturismo Monte da Galega",
     use_container_width=True,
 )
