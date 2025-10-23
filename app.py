@@ -100,47 +100,48 @@ with st.sidebar:
 # =====================================================
 def gerar_resposta(pergunta: str, perfil: dict):
     pergunta_l = normalizar(pergunta)
-    intencao = identificar_intencao(pergunta_l)
     contexto_base = get_contexto_base()
+    confirmados = get_confirmacoes()
 
-    # ✅ 1 — Se o utilizador confirmar presença
+    # ✅ 1 — Confirmação de presença
     if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar"]):
         guardar_confirmacao(perfil["nome"])
-        confirmados = get_confirmacoes()  # 🔄 Atualiza lista logo após guardar
-        resposta = f"Boa! 🎉 Fico feliz por saber que vais, {perfil['nome']}. Já estás na lista!"
-        guardar_mensagem(perfil["nome"], pergunta, resposta, contexto="confirmacoes", perfil=perfil)
-        return resposta
+        return f"Boa, {perfil['nome']} 🎉 Já estás na lista! Vê a lista ao lado 👈"
 
-    # ✅ 2 — Perguntas sobre confirmações
-    confirmados = get_confirmacoes()  # 🔄 Garante que lê sempre do Qdrant atualizado
-    if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "vai à festa", "vai a festa", "quantos somos", "quantos sao"]):
-        if confirmados:
-            lista = ", ".join(confirmados)
-            num = len(confirmados)
-            resposta = f"Até agora confirmaram: {lista} 🎉 (Somos {num})"
-        else:
-            resposta = f"Ainda ninguém confirmou oficialmente 😅 E tu, {perfil['nome']}, já confirmaste?"
-        guardar_mensagem(perfil["nome"], pergunta, resposta, contexto="confirmacoes", perfil=perfil)
-        return resposta
+    # ✅ 2 — Perguntas sobre confirmados
+    if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao"]):
+        return "Vê a lista de confirmados ao lado 👈"
 
-    # ✅ 3 — Procura em Qdrant / regras
-    resposta_memoria = procurar_resposta_semelhante(pergunta_l, intencao, limite_conf=0.6)
-    if resposta_memoria and not USE_GROQ_ALWAYS:
-        guardar_mensagem(perfil["nome"], pergunta, resposta_memoria, contexto=intencao, perfil=perfil)
-        return resposta_memoria
+    # ✅ 3 — Perguntas sobre o local (dados do JSON)
+    if any(p in pergunta_l for p in ["onde", "local", "morada", "sitio"]):
+        return f"A festa é no {contexto_base.get('local', 'local não definido')}, {contexto_base.get('morada', '')} 🎆"
 
-    # ✅ 4 — Caso não encontre, usa o LLM (Groq)
-    confirmados = get_confirmacoes()  # 🧩 Atualiza mais uma vez antes de enviar ao LLM
+    if any(p in pergunta_l for p in ["mapa", "coordenadas", "google", "chegar"]):
+        return f"Podes ver no Google Maps 🗺️: {contexto_base.get('link_google_maps', 'Link não disponível')}"
+
+    # ✅ 4 — Perguntas sobre características do local
+    if "piscina" in pergunta_l:
+        return "Sim, tem piscina 🏊" if contexto_base.get("tem_piscina") else "Não, não há piscina 😅"
+
+    if "churrasqueira" in pergunta_l or "grelhados" in pergunta_l:
+        return "Claro! Há churrasqueira 🔥" if contexto_base.get("tem_churrasqueira") else "Não há churrasqueira 😅"
+
+    if "snooker" in pergunta_l:
+        return "Sim, há mesa de snooker 🎱" if contexto_base.get("tem_snooker") else "Não há snooker 😅"
+
+    if any(p in pergunta_l for p in ["animais", "cao", "cão", "gato"]):
+        return "Sim, podes levar o teu cão 🐶" if contexto_base.get("aceita_animais") else "Infelizmente não é permitido levar animais 😔"
+
+    # ✅ 5 — Perguntas genéricas (LLM trata do resto)
     resposta_llm = gerar_resposta_llm(
         pergunta=pergunta,
         perfil=perfil,
         confirmados=confirmados,
         contexto_base=contexto_base,
     )
-    guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto=intencao, perfil=perfil)
+
+    guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil)
     return resposta_llm
-
-
 
 # =====================================================
 # 💬 INTERFACE STREAMLIT (CHAT)
