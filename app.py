@@ -84,6 +84,18 @@ saud = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
 st.success(f"{saud}, {nome}! 👋 Bem-vindo! E sou o teu assistente virtual da festa 🎉")
 
 # =====================================================
+# 🎉 LISTA DE CONFIRMADOS (Sidebar)
+# =====================================================
+with st.sidebar:
+    st.header("🎉 Confirmados")
+    confirmados = get_confirmacoes()
+    if confirmados:
+        for pessoa in confirmados:
+            st.write(f"✅ {pessoa}")
+    else:
+        st.write("Ainda ninguém confirmou 😅")
+
+# =====================================================
 # 🧠 MOTOR DE RESPOSTA
 # =====================================================
 def gerar_resposta(pergunta: str, perfil: dict):
