@@ -86,10 +86,10 @@ perfil = next(p for p in profiles if p["nome"] == nome)
 # 🎉 SIDEBAR — INFO DO EVENTO
 # =====================================================
 contexto = get_contexto_base(raw=True)
-confirmados = get_confirmacoes()
+#confirmados = get_confirmacoes()
 
 st.sidebar.image(
-    "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0a/ac/0d/f3/agroturismo-monte-da.jpg?w=900&h=500&s=1",  # 🏡 foto real do Monte da Galega
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFzoOQTUJFcyDqfSEWSEJM1TeJaVrZXpzVA&s",  # 🏡 foto real do Monte da Galega
     caption="Agroturismo Monte da Galega",
     use_container_width=True,
 )
