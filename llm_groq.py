@@ -55,7 +55,7 @@ def gerar_resposta_llm(pergunta, perfil=None, confirmados=None, contexto_base=No
     if not contexto_base:
         contexto_base = carregar_contexto_base()
 
-prompt = f"""
+    prompt = f"""
 Tu és o assistente oficial da festa de passagem de ano no {contexto_base}.
 Responde sempre de forma breve (máximo 2 frases), divertida e direta.
 Usa sempre as informações reais abaixo sobre o evento e **nunca inventes** nada.
@@ -96,7 +96,6 @@ Só volta a falar da festa se o utilizador mencionar algo relacionado (ex: local
 - Usa a segunda pessoa do singular.
 - Evita respostas longas (máximo 2 frases curtas).
 """
-
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
