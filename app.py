@@ -87,6 +87,9 @@ perfil = next(p for p in profiles if p["nome"] == nome)
 # =====================================================
 contexto = get_contexto_base(raw=True)
 confirmados = get_confirmacoes()
+if st.sidebar.button("🔄 Atualizar base de quintas"):
+    os.system("python importar_quintas.py")
+    st.sidebar.success("Base de dados atualizada com sucesso!")
 
 with st.sidebar:
     st.image(
@@ -113,9 +116,7 @@ with st.sidebar:
             st.markdown(f"- ✅ **{nome}**")
     else:
         st.markdown("_Ainda ninguém confirmou 😅_")
-    if st.sidebar.button("🔄 Atualizar base de quintas"):
-    os.system("python importar_quintas.py")
-    st.sidebar.success("Base de dados atualizada com sucesso!")
+    
 
 
 # =====================================================
