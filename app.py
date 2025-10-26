@@ -88,7 +88,6 @@ perfil = next(p for p in profiles if p["nome"] == nome)
 contexto = get_contexto_base(raw=True)
 confirmados = get_confirmacoes()
 
-
 with st.sidebar:
     st.image(
         "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFzoOQTUJFcyDqfSEWSEJM1TeJaVrZXpzVA&s",  # 🏡 foto real do Monte da Galega
@@ -114,8 +113,6 @@ with st.sidebar:
             st.markdown(f"- ✅ **{nome}**")
     else:
         st.markdown("_Ainda ninguém confirmou 😅_")
-   
-    
 
 
 # =====================================================
