@@ -113,6 +113,9 @@ with st.sidebar:
             st.markdown(f"- ✅ **{nome}**")
     else:
         st.markdown("_Ainda ninguém confirmou 😅_")
+     if st.sidebar.button("🔄 Atualizar base de quintas"):
+    os.system("python importar_quintas.py")
+    st.sidebar.success("Base de dados atualizada com sucesso!")
 
 
 # =====================================================
