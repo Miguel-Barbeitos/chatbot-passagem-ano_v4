@@ -90,7 +90,12 @@ confirmados = get_confirmacoes()
 
 
 with st.sidebar:
-    
+    st.image(
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFzoOQTUJFcyDqfSEWSEJM1TeJaVrZXpzVA&s",  # 🏡 foto real do Monte da Galega
+        caption="Agroturismo Monte da Galega",
+        use_container_width=True,
+    )
+
     st.markdown("### 📍 Localização")
     st.markdown(f"**{contexto.get('nome_local')}**")
     st.markdown(f"{contexto.get('morada')}")
