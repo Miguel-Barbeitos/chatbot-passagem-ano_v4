@@ -1,299 +1,196 @@
-﻿# llm_groq.py
-import os
-import json
-import requests
-import sqlite3
-import pandas as pd
+﻿import os
 import streamlit as st
+import json
+import random
+import time
+import re
+import unicodedata
+from datetime import datetime
 
-from learning_qdrant import procurar_resposta_semelhante
+# Importações internas
+from learning_qdrant import (
+    guardar_mensagem,
+    guardar_confirmacao,
+    get_confirmacoes,
+    get_contexto_base,
+)
+from llm_groq import gerar_resposta_llm 
 
 # =====================================================
-# ⚙️ CONFIGURAÇÃO GERAL
+# ⚙️ CONFIGURAÇÃO
 # =====================================================
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
-if not GROQ_API_KEY:
-    raise ValueError("❌ Falta a variável de ambiente GROQ_API_KEY. Define-a no Streamlit secrets ou no ambiente local.")
-
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "llama-3.1-8b-instant"
-
-DATA_PATH = "data/event.json"
+USE_GROQ_ALWAYS = False  # 👈 muda para True se quiseres usar sempre o LLM
 
 # =====================================================
-# 📂 LEITURA DO CONTEXTO BASE (event.json)
+# 🎨 LAYOUT E VISUAL
 # =====================================================
-def carregar_contexto_base():
-    """Lê o contexto base do JSON da festa"""
+st.set_page_config(
+    page_title="🎆 Chat da Festa 2025/2026",
+    page_icon="🎉",
+    layout="wide",
+)
+
+# =====================================================
+# 🔧 FUNÇÕES AUXILIARES
+# =====================================================
+def normalizar(txt: str) -> str:
+    if not isinstance(txt, str):
+        return ""
+    t = txt.lower().strip()
+    t = unicodedata.normalize("NFKD", t)
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    t = re.sub(r"[^\w\s]", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+def carregar_json(path, default=None):
+    import json
     try:
-        with open(DATA_PATH, "r", encoding="utf-8") as f:
-            dados = json.load(f)
-        contexto = []
-        for k, v in dados.items():
-            if isinstance(v, bool):
-                contexto.append(f"{k.replace('_', ' ')}: {'sim' if v else 'não'}")
-            elif isinstance(v, list):
-                contexto.append(f"{k.replace('_', ' ')}: {', '.join(v)}")
-            elif isinstance(v, dict):
-                sub = ", ".join(f"{sk}: {sv}" for sk, sv in v.items())
-                contexto.append(f"{k}: {sub}")
-            else:
-                contexto.append(f"{k.replace('_', ' ')}: {v}")
-        return "\n".join(contexto)
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        print(f"⚠️ Erro ao carregar contexto base: {e}")
-        return "Informações da festa indisponíveis."
+        st.error(f"⚠️ Erro a carregar JSON em {path}: {e}")
+        return default or []
 
 # =====================================================
-# 🔍 DETEÇÃO DE PERGUNTAS SOBRE QUINTAS (MELHORADA)
+# 📂 DADOS BASE
 # =====================================================
-def e_pergunta_de_quintas(pergunta: str) -> bool:
-    """Deteta se a pergunta é sobre quintas / base de dados."""
-    p = pergunta.lower()
-    chaves = [
-        "quinta", "quintas", "contactadas", "contactaste", "responderam", "falamos",
-        "piscina", "capacidade", "custo", "barata", "animais", "resposta", 
-        "zona", "morada", "vimos", "opcoes", "opções", "disponivel", "disponível",
-        "preco", "preço", "churrasqueira", "snooker", "estado", "procura"
-    ]
-    return any(c in p for c in chaves)
-
-def e_pergunta_estado(pergunta: str) -> bool:
-    """Deteta perguntas sobre o estado das quintas (porquê, resposta, atualização)."""
-    termos = ["porquê", "porque", "motivo", "estado", "respondeu", "atualização", 
-              "contactaste", "falaste", "ja vimos", "já vimos", "progresso"]
-    return any(t in pergunta.lower() for t in termos)
+profiles_path = os.path.join(os.path.dirname(__file__), "data", "profiles.json")
+profiles = carregar_json(profiles_path, default=[])
+if not profiles:
+    st.error("⚠️ Faltam perfis em 'profiles.json'.")
+    st.stop()
 
 # =====================================================
-# 🤖 GERAR SQL AUTOMATICAMENTE
+# 🧍 UTILIZADOR ATUAL
 # =====================================================
-def gerar_sql_da_pergunta(pergunta: str) -> str:
-    """Usa o LLM para gerar um SQL seguro (apenas SELECT)."""
-    schema = """
-    Tabela: quintas
-    Colunas: nome, zona, morada, email, telefone, website, estado, resposta,
-    capacidade_43, custo_4500, estimativa_custo, capacidade_confirmada,
-    ultima_resposta, proposta_tarifaria, unidades_detalhe, num_unidades,
-    observacao_unidades, custo_total, resumo_resposta, observacoes, notas_calculo.
-    
-    Nota: A coluna 'estado' contém valores como 'Contactada', 'Aguarda resposta', 'Respondeu', etc.
-    """
+nomes = [p["nome"] for p in profiles]
+params = st.query_params
 
-    prompt_sql = f"""
-Gera apenas o SQL (SELECT ...) para responder à pergunta do utilizador.
-O SQL deve ser simples, compatível com SQLite e usar apenas as colunas listadas.
-Pergunta: "{pergunta}"
-{schema}
+if "user" in params and params["user"] in nomes:
+    nome = params["user"]
+else:
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        nome_sel = st.selectbox("Quem és tu?", nomes, index=0)
+    with col2:
+        if st.button("Confirmar"):
+            st.query_params.update({"user": nome_sel})
+            st.rerun()
+    st.stop()
 
-Exemplos:
-- "Quantas quintas já contactámos?" → SELECT COUNT(*) FROM quintas WHERE estado LIKE '%Contactada%'
-- "Quais quintas têm piscina?" → SELECT nome, zona FROM quintas WHERE tem_piscina = 1
-- "Quintas mais baratas" → SELECT nome, zona, custo_4500 FROM quintas ORDER BY custo_4500 ASC LIMIT 5
-"""
-
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
-    data = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": "És um assistente que converte linguagem natural em SQL seguro (apenas SELECT)."},
-            {"role": "user", "content": prompt_sql},
-        ],
-        "temperature": 0.0,
-        "max_tokens": 150,
-    }
-
-    try:
-        resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
-        query = resp.json()["choices"][0]["message"]["content"].strip()
-        # Remove markdown se existir
-        if "```sql" in query:
-            query = query.split("```sql")[1].split("```")[0].strip()
-        elif "```" in query:
-            query = query.split("```")[1].split("```")[0].strip()
-        
-        if query.lower().startswith("select"):
-            return query
-    except Exception as e:
-        print(f"⚠️ Erro a gerar SQL: {e}")
-    return None
+perfil = next(p for p in profiles if p["nome"] == nome)
 
 # =====================================================
-# 🧠 EXECUTAR SQL NO SQLITE
+# 🎉 SIDEBAR — INFO DO EVENTO
 # =====================================================
-def executar_sql(query: str):
-    """Executa um SELECT no SQLite e devolve os resultados como lista de dicionários."""
-    try:
-        conn = sqlite3.connect("data/quintas.db")
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df.to_dict(orient="records")
-    except Exception as e:
-        print(f"⚠️ Erro ao executar SQL: {e}")
-        return []
+contexto = get_contexto_base(raw=True)
+confirmados = get_confirmacoes()
+
+with st.sidebar:
+    st.markdown("### 🧍‍♂️ Confirmados")
+    if confirmados:
+        for nome in confirmados:
+            st.markdown(f"- ✅ **{nome}**")
+    else:
+        st.markdown("_Ainda ninguém confirmou 😅_")
+
 
 # =====================================================
-# 💬 GERAR RESPOSTA NATURAL A PARTIR DOS DADOS
+# 👋 SAUDAÇÃO
 # =====================================================
-def gerar_resposta_dados_llm(pergunta, dados):
-    """Usa o LLM para transformar os resultados do SQL em texto natural."""
-    json_data = json.dumps(dados, ensure_ascii=False, indent=2)
-    
-    prompt = f"""
-Transforma estes dados JSON numa resposta breve e natural à pergunta "{pergunta}".
+hora = datetime.now().hour
+saud = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
+st.success(f"{saud}, {nome}! 👋 Bem-vindo! E sou o teu assistente virtual da festa 🎉")
 
-IMPORTANTE:
-- Responde em Português de Portugal, num tom simpático e direto
-- Máximo 3 frases
-- Se forem muitos resultados, menciona os 3-4 mais relevantes
-- Inclui detalhes importantes (zona, preço, capacidade) quando relevante
-- Lembra que ainda não há quinta fechada, mas já há várias opções
 
-Dados:
-{json_data}
-"""
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
-    data = {
-        "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.6,
-        "max_tokens": 200,
-    }
-    try:
-        resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
-        return resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        print(f"⚠️ Erro a gerar resposta natural: {e}")
-        return "Não consegui interpretar os dados agora 😅"
 
 # =====================================================
-# 🎆 GERAÇÃO DE RESPOSTAS NATURAIS (FESTA OU QUINTAS)
+# 🧠 MOTOR DE RESPOSTA
 # =====================================================
-def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
-    """
-    Gera uma resposta contextual:
-    - sobre a festa (usa event.json)
-    - ou sobre as quintas (usa SQLite ou Qdrant)
-    """
-    perfil = perfil or {}
-    nome = perfil.get("nome", "Utilizador")
-    personalidade = perfil.get("personalidade", "neutro")
+def gerar_resposta(pergunta: str, perfil: dict):
+    pergunta_l = normalizar(pergunta)
+    contexto_base = get_contexto_base(raw=True)
+    confirmados = get_confirmacoes()
 
-    # ✅ 1 — Consultas sobre quintas (base SQLite ou Qdrant)
-    if e_pergunta_de_quintas(pergunta):
-        if e_pergunta_estado(pergunta):
-            # Perguntas tipo "porquê", "respondeu", "estado"
-            nota = procurar_resposta_semelhante(pergunta, contexto="quintas")
-            if nota:
-                return nota
-            else:
-                # Fallback: tenta consultar a base de dados
-                sql = "SELECT COUNT(*) as total, SUM(CASE WHEN estado LIKE '%Respondeu%' THEN 1 ELSE 0 END) as respondidas FROM quintas"
-                dados = executar_sql(sql)
-                if dados and dados[0].get('total'):
-                    total = dados[0]['total']
-                    resp = dados[0]['respondidas']
-                    return (
-                        f"Já contactámos {total} quintas e temos {resp} respostas 📞 "
-                        f"Temos o Monte da Galega reservado como backup! Pergunta sobre alguma específica 😊"
-                    )
-                return "Ainda não há quinta fechada, mas já contactámos várias! Temos o Monte da Galega como plano B 😉"
+    # ✅ 1 — Confirmação de presença
+    if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar"]):
+        guardar_confirmacao(perfil["nome"])
+        return f"Boa, {perfil['nome']} 🎉 Já estás na lista! Vê a lista ao lado 👈"
+
+    # ✅ 2 — Perguntas sobre confirmados
+    if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao"]):
+        return "Vê a lista de confirmados ao lado 👈"
+
+    # ✅ 3 — Perguntas sobre o estado da procura de quintas
+    if any(p in pergunta_l for p in ["sitio", "local", "onde", "quinta", "quintas", "ja ha", "reservado", "fechado", "decidido"]):
+        # Verifica se é sobre o estado geral ou sobre quintas específicas
+        if any(p in pergunta_l for p in ["ja vimos", "contactaram", "contactaste", "falamos", "procura", "estado"]):
+            return (
+                "Ainda não temos quinta fechada 🏡 Mas já temos o **Monte da Galega** reservado como backup. "
+                "Entretanto, já contactámos várias quintas — pergunta-me sobre alguma específica ou sobre o que já foi feito! 😉"
+            )
         else:
-            # Perguntas factuais → usar SQLite
-            sql = gerar_sql_da_pergunta(pergunta)
-            if sql:
-                print(f"📊 SQL gerado: {sql}")
-                dados = executar_sql(sql)
-                if dados:
-                    return gerar_resposta_dados_llm(pergunta, dados)
-                else:
-                    return "Não encontrei nenhuma quinta que corresponda a isso 😅 Tenta outra pergunta!"
-            else:
-                return "Não consegui interpretar bem a tua pergunta sobre as quintas 😅 Tenta reformular?"
+            # Resposta genérica sobre o local
+            return (
+                "Ainda estamos a ver o local final 🏡 Já temos o **Monte da Galega** reservado como plano B, "
+                "mas estamos a contactar outras quintas para ver as melhores opções! 😊"
+            )
 
-    # ✅ 2 — Caso contrário, responde sobre a festa
-    if not contexto_base:
-        try:
-            with open(DATA_PATH, "r", encoding="utf-8") as f:
-                contexto_base = json.load(f)
-        except Exception:
-            contexto_base = {}
+    # ✅ 4 — Perguntas sobre características do local (futuro)
+    if "piscina" in pergunta_l:
+        return "Ainda não temos quinta fechada, mas já perguntámos quais têm piscina 🏊 Queres saber quais são?"
 
-    # Verifica se o event.json tem dados válidos
-    if not contexto_base or not contexto_base.get("nome_local"):
+    if "churrasqueira" in pergunta_l or "grelhados" in pergunta_l:
+        return "Ainda não decidimos o local, mas já sabemos quais quintas têm churrasqueira 🔥 Queres que te diga?"
+
+    if "snooker" in pergunta_l:
+        return "Ainda estamos a decidir o local, mas já vimos quintas com snooker 🎱 Pergunta-me sobre as opções!"
+
+    if any(p in pergunta_l for p in ["animais", "cao", "cão", "gato"]):
+        return "Ainda não fechámos o local, mas posso dizer-te quais quintas aceitam animais 🐶 Queres saber?"
+
+    # ✅ 5 — Perguntas sobre o que já foi feito
+    if any(p in pergunta_l for p in ["fizeram", "fizeste", "andaram a fazer", "trabalho", "progresso"]):
         return (
-            "Ainda estamos a organizar os detalhes da festa 🎆 "
-            "Já temos o Monte da Galega reservado como backup, mas estamos a ver outras opções! "
-            "Pergunta-me sobre as quintas que já contactámos 😊"
+            "Já contactámos várias quintas e temos o **Monte da Galega** reservado como backup 🏡 "
+            "Pergunta-me sobre quintas específicas, zonas, preços ou capacidades! 😊"
         )
 
-    coords = contexto_base.get("coordenadas", {})
-    latitude = coords.get("latitude", "desconhecida")
-    longitude = coords.get("longitude", "desconhecida")
-
-    contexto_texto = (
-        f"📍 Local: {contexto_base.get('nome_local', 'ainda a definir')}\n"
-        f"🏠 Morada: {contexto_base.get('morada', 'ainda a confirmar')}\n"
-        f"🗺️ Coordenadas: {latitude}, {longitude}\n"
-        f"🔗 Google Maps: {contexto_base.get('link_google_maps', 'sem link')}\n"
-        f"🐾 Aceita animais: {'Sim' if contexto_base.get('aceita_animais') else 'Não'}\n"
-        f"🏊 Piscina: {'Sim' if contexto_base.get('tem_piscina') else 'Não'}\n"
-        f"🔥 Churrasqueira: {'Sim' if contexto_base.get('tem_churrasqueira') else 'Não'}\n"
-        f"🎱 Snooker: {'Sim' if contexto_base.get('tem_snooker') else 'Não'}\n"
-        f"🍷 Pode levar vinho: {'Sim' if contexto_base.get('pode_levar_vinho') else 'Não'}\n"
-        f"🥘 Pode levar comida: {'Sim' if contexto_base.get('pode_levar_comida') else 'Não'}\n"
-        f"💃 Dress code: {contexto_base.get('dress_code', 'não especificado')}\n"
-        f"⏰ Hora de início: {contexto_base.get('hora_inicio', 'não definida')}\n"
-        f"📶 Wi-Fi: {contexto_base.get('wifi', 'não indicado')}\n"
-        f"🌐 Link oficial: {contexto_base.get('link', 'sem link')}"
+    # ✅ 6 — Perguntas genéricas (LLM trata do resto)
+    resposta_llm = gerar_resposta_llm(
+        pergunta=pergunta,
+        perfil=perfil,
+        contexto_base=contexto_base,
     )
 
-    # ✅ Prompt para o evento
-    prompt = f"""
-Tu és o assistente oficial da festa de passagem de ano 🎆.
-Responde de forma breve (máximo 2 frases), divertida e natural.
+    guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil)
+    return resposta_llm
 
-🎯 Contexto real do evento:
-{contexto_texto}
+# =====================================================
+# 💬 INTERFACE STREAMLIT (CHAT)
+# =====================================================
+if "historico" not in st.session_state:
+    st.session_state.historico = []
 
-NOTA IMPORTANTE: Se o local ainda não estiver definido, menciona que estão a ver opções e que já têm o Monte da Galega como backup.
+# Mostrar histórico
+for msg in st.session_state.historico:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-🧍 Perfil do utilizador:
-- Nome: {nome}
-- Personalidade: {personalidade}
+# Input do utilizador
+prompt = st.chat_input("Escreve a tua mensagem…")
 
-💬 Pergunta do utilizador:
-{pergunta}
+if prompt:
+    with st.chat_message("user"):
+        st.markdown(f"**{nome}:** {prompt}")
 
-🎙️ Instruções:
-- Usa sempre os dados reais do JSON quando disponíveis
-- Se os dados não estiverem completos, menciona que ainda estão a organizar
-- Se perguntarem sobre o local e ainda não houver, diz que têm o Monte da Galega como plano B
-- Se perguntarem algo pessoal ou fora do tema, responde com humor leve
-- Mantém sempre o Português de Portugal e a segunda pessoa do singular
-- Evita respostas longas (máximo 2 frases curtas)
-"""
+    with st.spinner("💭 A pensar..."):
+        time.sleep(0.3)
+        resposta = gerar_resposta(prompt, perfil)
 
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json",
-    }
+    with st.chat_message("assistant"):
+        st.markdown(f"**Assistente:** {resposta}")
 
-    data = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": "És um assistente sociável e divertido que fala Português de Portugal."},
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": 0.7,
-        "max_tokens": 180,
-    }
-
-    try:
-        response = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
-        response.raise_for_status()
-        result = response.json()
-        resposta = result["choices"][0]["message"]["content"].strip()
-        return resposta
-    except Exception as e:
-        print(f"⚠️ Erro no LLM Groq: {e}")
-        return "Estou com interferências celestiais... tenta outra vez 😅"
+    st.session_state.historico.append({"role": "user", "content": f"**{nome}:** {prompt}"})
+    st.session_state.historico.append({"role": "assistant", "content": f"**Assistente:** {resposta}"})
