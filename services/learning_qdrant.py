@@ -49,7 +49,7 @@ def inicializar_qdrant():
     return QdrantClient(path=QDRANT_PATH)
 
 # =====================================================
-# 🧱 CRIAR COLEÇÃO SE NÃO EXISTIR
+# 🧱 CRIAR COLEÇÃO SE NÃO EXISTIR + ÍNDICES NECESSÁRIOS
 # =====================================================
 client = inicializar_qdrant()
 
@@ -64,8 +64,24 @@ try:
         print("✅ Coleção criada com sucesso!")
     else:
         print(f"ℹ️ Coleção '{COLLECTION_NAME}' já existe.")
+
+    # ✅ Criar índice para o campo 'contexto' (necessário para filtros)
+    try:
+        client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="contexto",
+            field_schema=models.PayloadSchemaType.KEYWORD,
+        )
+        print("✅ Índice criado para o campo 'contexto'.")
+    except Exception as e:
+        if "already exists" in str(e):
+            print("ℹ️ Índice 'contexto' já existe.")
+        else:
+            print(f"⚠️ Erro ao criar índice 'contexto': {e}")
+
 except Exception as e:
     print(f"⚠️ Erro ao criar/verificar coleção: {e}")
+
 
 # =====================================================
 # 📂 CONTEXTO BASE (event.json)
