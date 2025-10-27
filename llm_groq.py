@@ -166,11 +166,21 @@ Dados: {json_data}
 # =====================================================
 # 🎆 GERAÇÃO DE RESPOSTAS
 # =====================================================
-def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
+def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None, contexto_conversa=""):
     """Gera resposta sobre festa ou quintas."""
     perfil = perfil or {}
     nome = perfil.get("nome", "Utilizador")
     p = pergunta.lower()
+    
+    # Se há contexto da conversa anterior, usa para melhorar a compreensão
+    if contexto_conversa:
+        # Verifica se a resposta anterior mencionou quintas e a pergunta atual é vaga
+        if "quinta" in contexto_conversa.lower() or "contacta" in contexto_conversa.lower():
+            if p in ["diz-me", "mostra", "quais", "lista", "as quintas", "essas"]:
+                # Reformula a pergunta com contexto
+                pergunta = "que quintas já contactámos"
+                p = pergunta.lower()
+                print(f"🔄 Contexto aplicado: '{pergunta}'")
 
     # ✅ CONSULTAS SOBRE QUINTAS
     if e_pergunta_de_quintas(pergunta):

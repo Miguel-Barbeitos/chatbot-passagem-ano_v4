@@ -112,6 +112,14 @@ def gerar_resposta(pergunta: str, perfil: dict):
     pergunta_l = normalizar(pergunta)
     contexto_base = get_contexto_base(raw=True)
     confirmados = get_confirmacoes()
+    
+    # ✅ Pega contexto da última resposta do assistente (se existir)
+    contexto_anterior = ""
+    if "historico" in st.session_state and len(st.session_state.historico) > 0:
+        # Pega as últimas 2 mensagens (última do user e última do assistente)
+        ultimas = [msg for msg in st.session_state.historico[-4:] if msg["role"] == "assistant"]
+        if ultimas:
+            contexto_anterior = ultimas[-1]["content"].replace("**Assistente:** ", "")
 
     # ✅ 1 — Saudação
     if any(p in pergunta_l for p in ["ola", "olá", "bom dia", "boa tarde", "boa noite", "oi", "hey"]) and len(pergunta_l.split()) <= 3:
@@ -130,6 +138,14 @@ def gerar_resposta(pergunta: str, perfil: dict):
     if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao"]):
         return "Vê a lista de confirmados ao lado 👈"
 
+    # ✅ 4 — CONTEXTO: Se mencionou "quintas" antes e agora usa pronomes/referências
+    mencoes_contextuais = ["as quintas", "essas quintas", "diz-me", "mostra", "lista", "quais sao", "quais são"]
+    if contexto_anterior and any(palavra in contexto_anterior.lower() for palavra in ["quinta", "contactamos", "vimos"]):
+        if any(ref in pergunta_l for ref in mencoes_contextuais) or (len(pergunta_l.split()) <= 3 and any(p in pergunta_l for p in ["quais", "quintas", "diz", "mostra"])):
+            # Redireciona para query de quintas
+            pergunta = "que quintas já contactámos"
+            pergunta_l = normalizar(pergunta)
+
     # ✅ 4 — Perguntas ESPECÍFICAS sobre quintas (por nome) ou informações detalhadas
     # Deteta nomes de quintas na pergunta (palavras começadas com maiúscula ou termos específicos)
     import re
@@ -146,6 +162,7 @@ def gerar_resposta(pergunta: str, perfil: dict):
             pergunta=pergunta,
             perfil=perfil,
             contexto_base=contexto_base,
+            contexto_conversa=contexto_anterior
         )
         guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
         return resposta_llm
@@ -157,12 +174,13 @@ def gerar_resposta(pergunta: str, perfil: dict):
         "em ", "zona", "quais", "mais perto", "proxima", "próxima",
         "responderam", "resposta", "numero de pessoas", "número de pessoas",
         "capacidade", "pessoas", "tem capacidade", "quantas tem",
-        "ja vimos", "vimos", "contactamos"  # ← ADICIONADO AQUI
+        "ja vimos", "vimos", "contactamos"
     ]):
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
             perfil=perfil,
             contexto_base=contexto_base,
+            contexto_conversa=contexto_anterior  # ← PASSA O CONTEXTO
         )
         guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
         return resposta_llm
