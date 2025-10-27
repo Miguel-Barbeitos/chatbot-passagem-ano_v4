@@ -27,15 +27,15 @@ print(f"📄 Ficheiro de contexto: {DATA_PATH}")
 # =====================================================
 _model = None
 
-
 def get_model():
-global _model
-if _model is None:
-print("🧠 A inicializar modelo de embeddings...")
-from sentence_transformers import SentenceTransformer
-_model = SentenceTransformer("intfloat/multilingual-e5-base")
-print("✅ Modelo carregado com sucesso.")
-return _model
+    global _model
+    if _model is None:
+        print("🧠 A inicializar modelo de embeddings...")
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("intfloat/multilingual-e5-base")
+        print("✅ Modelo carregado com sucesso.")
+    return _model
+
 
 # =====================================================
 # 💾 CONEXÃO AO QDRANT
