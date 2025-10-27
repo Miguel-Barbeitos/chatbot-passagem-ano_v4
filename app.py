@@ -157,7 +157,7 @@ def gerar_resposta(pergunta: str, perfil: dict):
         "quinta": 4, "5a": 4, "5ª": 4, "5": 4,
         "sexta": 5, "6a": 5, "6ª": 5, "6": 5,
         "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "7": 6,
-        "oitava": 7, "8a": 7, "8ª": , "8": 7
+        "oitava": 7, "8a": 7, "8ª": 7 , "8": 7
     }
     
     # Verifica se há referência a posição + se há lista anterior
