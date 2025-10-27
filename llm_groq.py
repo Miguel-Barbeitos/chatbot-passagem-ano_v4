@@ -104,7 +104,7 @@ def gerar_sql_da_pergunta(pergunta: str) -> str:
     - morada (TEXT): Morada completa
     - email (TEXT): Email de contacto
     - telefone (TEXT): Número de telefone
-    - website (TEXT): Website da quinta
+    - website (TEXT): Website da quinta (ex: "link", endereço web")
     - estado (TEXT): Estado do contacto (ex: "Contactada", "Aguarda resposta", "Respondeu")
     - resposta (TEXT): Resposta da quinta
     - capacidade_43 (TEXT): Se aceita 43 pessoas
