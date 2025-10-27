@@ -115,11 +115,57 @@ def gerar_resposta(pergunta: str, perfil: dict):
     
     # ✅ Pega contexto da última resposta do assistente (se existir)
     contexto_anterior = ""
+    lista_quintas_anterior = []
+    
     if "historico" in st.session_state and len(st.session_state.historico) > 0:
-        # Pega as últimas 2 mensagens (última do user e última do assistente)
+        # Pega as últimas mensagens do assistente
         ultimas = [msg for msg in st.session_state.historico[-4:] if msg["role"] == "assistant"]
         if ultimas:
             contexto_anterior = ultimas[-1]["content"].replace("**Assistente:** ", "")
+            
+            # Extrai lista de quintas se existir (formato: • Nome (Zona))
+            import re
+            quintas_match = re.findall(r'•\s*([^(]+)\s*\(', contexto_anterior)
+            if quintas_match:
+                lista_quintas_anterior = [q.strip() for q in quintas_match]
+                print(f"📋 Lista anterior: {lista_quintas_anterior}")
+    
+    # ✅ CONTEXTO: Referências a posições (primeira, segunda, 3ª, etc.)
+    referencias_posicao = {
+        "primeira": 0, "1a": 0, "1ª": 0,
+        "segunda": 1, "2a": 1, "2ª": 1,
+        "terceira": 2, "3a": 2, "3ª": 2,
+        "quarta": 3, "4a": 3, "4ª": 3,
+        "quinta": 4, "5a": 4, "5ª": 4,
+        "sexta": 5, "6a": 5, "6ª": 5,
+        "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
+        "oitava": 7, "8a": 7, "8ª": 7
+    }
+    
+    # Verifica se há referência a posição + se há lista anterior
+    if lista_quintas_anterior:
+        for ref, idx in referencias_posicao.items():
+            if ref in pergunta_l and idx < len(lista_quintas_anterior):
+                quinta_referida = lista_quintas_anterior[idx]
+                print(f"🎯 Referência '{ref}' → {quinta_referida}")
+                
+                # Se pede info específica (link, morada, etc)
+                if any(p in pergunta_l for p in ["link", "website", "site", "morada", "endereco", "endereço", "contacto", "email", "telefone"]):
+                    # Reformula a pergunta com o nome da quinta
+                    if "link" in pergunta_l or "website" in pergunta_l or "site" in pergunta_l:
+                        pergunta = f"website da {quinta_referida}"
+                    elif "morada" in pergunta_l or "endereco" in pergunta_l:
+                        pergunta = f"morada da {quinta_referida}"
+                    elif "email" in pergunta_l:
+                        pergunta = f"email da {quinta_referida}"
+                    elif "telefone" in pergunta_l or "contacto" in pergunta_l:
+                        pergunta = f"telefone da {quinta_referida}"
+                    else:
+                        pergunta = f"informação sobre {quinta_referida}"
+                    
+                    pergunta_l = normalizar(pergunta)
+                    print(f"🔄 Reformulado: '{pergunta}'")
+                    break
 
     # ✅ 1 — Saudação
     if any(p in pergunta_l for p in ["ola", "olá", "bom dia", "boa tarde", "boa noite", "oi", "hey"]) and len(pergunta_l.split()) <= 3:
