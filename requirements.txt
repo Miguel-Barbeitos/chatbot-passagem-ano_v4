@@ -5,6 +5,4 @@ numpy
 requests
 groq
 pandas
-unicodedata
-python-dateutil
 loguru
