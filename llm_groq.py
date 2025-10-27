@@ -45,20 +45,29 @@ def carregar_contexto_base():
         return "Informações da festa indisponíveis."
 
 # =====================================================
-# 🔍 DETEÇÃO DE PERGUNTAS SOBRE QUINTAS
+# 🔍 DETEÇÃO DE PERGUNTAS SOBRE QUINTAS (MELHORADA)
 # =====================================================
 def e_pergunta_de_quintas(pergunta: str) -> bool:
     """Deteta se a pergunta é sobre quintas / base de dados."""
     p = pergunta.lower()
     chaves = [
-        "quinta", "quintas", "contactadas", "contactaste", "responderam",
-        "piscina", "capacidade", "custo", "barata", "animais", "resposta", "zona", "morada"
+        # Perguntas diretas
+        "quinta", "quintas", "que quintas", "quais quintas", "quantas quintas",
+        # Estado e contactos
+        "contactadas", "contactaste", "responderam", "falamos", "vimos",
+        # Características
+        "piscina", "capacidade", "custo", "barata", "animais", "resposta", 
+        "zona", "morada", "opcoes", "opções", "disponivel", "disponível",
+        "preco", "preço", "churrasqueira", "snooker", "estado", "procura",
+        # Quantificadores
+        "quantas", "quais", "lista", "nomes"
     ]
     return any(c in p for c in chaves)
 
 def e_pergunta_estado(pergunta: str) -> bool:
     """Deteta perguntas sobre o estado das quintas (porquê, resposta, atualização)."""
-    termos = ["porquê", "porque", "motivo", "estado", "respondeu", "atualização"]
+    termos = ["porquê", "porque", "motivo", "estado", "respondeu", "atualização", 
+              "contactaste", "falaste", "ja vimos", "já vimos", "progresso"]
     return any(t in pergunta.lower() for t in termos)
 
 # =====================================================
@@ -72,6 +81,8 @@ def gerar_sql_da_pergunta(pergunta: str) -> str:
     capacidade_43, custo_4500, estimativa_custo, capacidade_confirmada,
     ultima_resposta, proposta_tarifaria, unidades_detalhe, num_unidades,
     observacao_unidades, custo_total, resumo_resposta, observacoes, notas_calculo.
+    
+    Nota: A coluna 'estado' contém valores como 'Contactada', 'Aguarda resposta', 'Respondeu', etc.
     """
 
     prompt_sql = f"""
@@ -79,6 +90,17 @@ Gera apenas o SQL (SELECT ...) para responder à pergunta do utilizador.
 O SQL deve ser simples, compatível com SQLite e usar apenas as colunas listadas.
 Pergunta: "{pergunta}"
 {schema}
+
+Exemplos de perguntas e SQL:
+- "Quantas quintas já contactámos?" → SELECT COUNT(*) as total FROM quintas
+- "Que quintas já contactámos?" ou "Quais quintas?" → SELECT nome, zona, morada FROM quintas LIMIT 20
+- "Quantas quintas já vimos?" → SELECT COUNT(*) as total FROM quintas
+- "Lista de quintas" → SELECT nome, zona FROM quintas LIMIT 20
+- "Quais quintas têm piscina?" → SELECT nome, zona FROM quintas WHERE tem_piscina = 1
+- "Quintas mais baratas" → SELECT nome, zona, custo_4500 FROM quintas ORDER BY custo_4500 ASC LIMIT 5
+- "Quintas na zona de Lisboa" → SELECT nome, morada FROM quintas WHERE zona LIKE '%Lisboa%'
+
+IMPORTANTE: Para perguntas genéricas como "que quintas" ou "quantas", retorna TODAS as quintas (ou o COUNT).
 """
 
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
@@ -89,12 +111,18 @@ Pergunta: "{pergunta}"
             {"role": "user", "content": prompt_sql},
         ],
         "temperature": 0.0,
-        "max_tokens": 120,
+        "max_tokens": 150,
     }
 
     try:
         resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
         query = resp.json()["choices"][0]["message"]["content"].strip()
+        # Remove markdown se existir
+        if "```sql" in query:
+            query = query.split("```sql")[1].split("```")[0].strip()
+        elif "```" in query:
+            query = query.split("```")[1].split("```")[0].strip()
+        
         if query.lower().startswith("select"):
             return query
     except Exception as e:
@@ -120,10 +148,18 @@ def executar_sql(query: str):
 # =====================================================
 def gerar_resposta_dados_llm(pergunta, dados):
     """Usa o LLM para transformar os resultados do SQL em texto natural."""
-    json_data = json.dumps(dados, ensure_ascii=False)
+    json_data = json.dumps(dados, ensure_ascii=False, indent=2)
+    
     prompt = f"""
 Transforma estes dados JSON numa resposta breve e natural à pergunta "{pergunta}".
-Responde em Português de Portugal, num tom simpático e direto, em no máximo 2 frases.
+
+IMPORTANTE:
+- Responde em Português de Portugal, num tom simpático e direto
+- Máximo 3 frases
+- Se forem muitos resultados, menciona os 3-4 mais relevantes
+- Inclui detalhes importantes (zona, preço, capacidade) quando relevante
+- Lembra que ainda não há quinta fechada, mas já há várias opções
+
 Dados:
 {json_data}
 """
@@ -132,7 +168,7 @@ Dados:
         "model": MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.6,
-        "max_tokens": 150,
+        "max_tokens": 200,
     }
     try:
         resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
@@ -162,18 +198,29 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
             if nota:
                 return nota
             else:
-                return "Ainda não há resposta confirmada dessa quinta 😉"
+                # Fallback: tenta consultar a base de dados
+                sql = "SELECT COUNT(*) as total, SUM(CASE WHEN estado LIKE '%Respondeu%' THEN 1 ELSE 0 END) as respondidas FROM quintas"
+                dados = executar_sql(sql)
+                if dados and dados[0].get('total'):
+                    total = dados[0]['total']
+                    resp = dados[0]['respondidas']
+                    return (
+                        f"Já contactámos {total} quintas e temos {resp} respostas 📞 "
+                        f"Temos o Monte da Galega reservado como backup! Pergunta sobre alguma específica 😊"
+                    )
+                return "Ainda não há quinta fechada, mas já contactámos várias! Temos o Monte da Galega como plano B 😉"
         else:
             # Perguntas factuais → usar SQLite
             sql = gerar_sql_da_pergunta(pergunta)
             if sql:
+                print(f"📊 SQL gerado: {sql}")
                 dados = executar_sql(sql)
                 if dados:
                     return gerar_resposta_dados_llm(pergunta, dados)
                 else:
-                    return "Não encontrei nenhuma quinta que corresponda a isso 😅"
+                    return "Não encontrei nenhuma quinta que corresponda a isso 😅 Tenta outra pergunta!"
             else:
-                return "Não consegui interpretar bem a tua pergunta sobre as quintas 😅"
+                return "Não consegui interpretar bem a tua pergunta sobre as quintas 😅 Tenta reformular?"
 
     # ✅ 2 — Caso contrário, responde sobre a festa
     if not contexto_base:
@@ -183,13 +230,21 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
         except Exception:
             contexto_base = {}
 
+    # Verifica se o event.json tem dados válidos
+    if not contexto_base or not contexto_base.get("nome_local"):
+        return (
+            "Ainda estamos a organizar os detalhes da festa 🎆 "
+            "Já temos o Monte da Galega reservado como backup, mas estamos a ver outras opções! "
+            "Pergunta-me sobre as quintas que já contactámos 😊"
+        )
+
     coords = contexto_base.get("coordenadas", {})
     latitude = coords.get("latitude", "desconhecida")
     longitude = coords.get("longitude", "desconhecida")
 
     contexto_texto = (
-        f"📍 Local: {contexto_base.get('nome_local', 'local desconhecido')}\n"
-        f"🏠 Morada: {contexto_base.get('morada', 'morada não disponível')}\n"
+        f"📍 Local: {contexto_base.get('nome_local', 'ainda a definir')}\n"
+        f"🏠 Morada: {contexto_base.get('morada', 'ainda a confirmar')}\n"
         f"🗺️ Coordenadas: {latitude}, {longitude}\n"
         f"🔗 Google Maps: {contexto_base.get('link_google_maps', 'sem link')}\n"
         f"🐾 Aceita animais: {'Sim' if contexto_base.get('aceita_animais') else 'Não'}\n"
@@ -212,6 +267,8 @@ Responde de forma breve (máximo 2 frases), divertida e natural.
 🎯 Contexto real do evento:
 {contexto_texto}
 
+NOTA IMPORTANTE: Se o local ainda não estiver definido, menciona que estão a ver opções e que já têm o Monte da Galega como backup.
+
 🧍 Perfil do utilizador:
 - Nome: {nome}
 - Personalidade: {personalidade}
@@ -220,12 +277,12 @@ Responde de forma breve (máximo 2 frases), divertida e natural.
 {pergunta}
 
 🎙️ Instruções:
-- Usa sempre os dados reais do JSON e nunca inventes.
-- Se perguntarem sobre o local, morada, mapa ou coordenadas, usa a informação do contexto.
-- Se perguntarem sobre animais, piscina, churrasqueira, snooker, vinho ou comida, responde com base no JSON.
-- Se perguntarem algo pessoal ou fora do tema (ex: "estás a brincar", "bom dia", etc.), responde com humor leve, sem repetir a morada.
-- Mantém sempre o Português de Portugal e a segunda pessoa do singular.
-- Evita respostas longas (máximo 2 frases curtas).
+- Usa sempre os dados reais do JSON quando disponíveis
+- Se os dados não estiverem completos, menciona que ainda estão a organizar
+- Se perguntarem sobre o local e ainda não houver, diz que têm o Monte da Galega como plano B
+- Se perguntarem algo pessoal ou fora do tema, responde com humor leve
+- Mantém sempre o Português de Portugal e a segunda pessoa do singular
+- Evita respostas longas (máximo 2 frases curtas)
 """
 
     headers = {

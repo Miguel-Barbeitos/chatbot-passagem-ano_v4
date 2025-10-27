@@ -123,19 +123,22 @@ def gerar_resposta(pergunta: str, perfil: dict):
         return "Vê a lista de confirmados ao lado 👈"
 
     # ✅ 3 — Perguntas sobre o estado da procura de quintas
-    if any(p in pergunta_l for p in ["sitio", "local", "onde", "quinta", "quintas", "ja ha", "reservado", "fechado", "decidido"]):
-        # Verifica se é sobre o estado geral ou sobre quintas específicas
-        if any(p in pergunta_l for p in ["ja vimos", "contactaram", "contactaste", "falamos", "procura", "estado"]):
-            return (
-                "Ainda não temos quinta fechada 🏡 Mas já temos o **Monte da Galega** reservado como backup. "
-                "Entretanto, já contactámos várias quintas — pergunta-me sobre alguma específica ou sobre o que já foi feito! 😉"
-            )
-        else:
-            # Resposta genérica sobre o local
-            return (
-                "Ainda estamos a ver o local final 🏡 Já temos o **Monte da Galega** reservado como plano B, "
-                "mas estamos a contactar outras quintas para ver as melhores opções! 😊"
-            )
+    # Perguntas ESPECÍFICAS sobre quintas → envia para o LLM/SQL
+    if any(p in pergunta_l for p in ["que quintas", "quais quintas", "quantas quintas", "quantas vimos", "quantas contactamos", "lista", "opcoes", "opções", "nomes"]):
+        resposta_llm = gerar_resposta_llm(
+            pergunta=pergunta,
+            perfil=perfil,
+            contexto_base=contexto_base,
+        )
+        guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
+        return resposta_llm
+    
+    # Perguntas GENÉRICAS sobre o local/quinta → resposta rápida
+    if any(p in pergunta_l for p in ["sitio", "local", "onde", "quinta", "quintas", "ja ha", "reservado", "fechado", "decidido", "ja temos"]):
+        return (
+            "Ainda estamos a ver o local final 🏡 Já temos o **Monte da Galega** reservado como plano B, "
+            "mas estamos a contactar outras quintas. Pergunta-me 'que quintas já contactámos?' para saberes mais! 😊"
+        )
 
     # ✅ 4 — Perguntas sobre características do local (futuro)
     if "piscina" in pergunta_l:
