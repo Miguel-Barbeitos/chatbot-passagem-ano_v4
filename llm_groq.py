@@ -6,6 +6,8 @@ import sqlite3
 import pandas as pd
 import streamlit as st
 
+from learning_qdrant import procurar_resposta_semelhante, guardar_nota_quinta
+
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
 # =====================================================
@@ -57,6 +59,10 @@ def e_pergunta_de_quintas(pergunta: str) -> bool:
 # =====================================================
 # 🤖 GERAR SQL AUTOMATICAMENTE
 # =====================================================
+def e_pergunta_estado(pergunta: str) -> bool:
+    termos = ["porquê", "porque", "motivo", "estado", "respondeu", "atualização"]
+    return any(t in pergunta.lower() for t in termos)
+
 def gerar_sql_da_pergunta(pergunta: str) -> str:
     """Usa o LLM para gerar um SQL seguro (apenas SELECT)."""
     schema = """
@@ -138,6 +144,16 @@ Dados:
 # 🎆 GERAÇÃO DE RESPOSTAS NATURAIS (FESTA OU QUINTAS)
 # =====================================================
 def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
+
+if e_pergunta_de_quintas(pergunta):
+    if e_pergunta_estado(pergunta):
+        # Pergunta de contexto (porquê, estado, resposta)
+        nota = procurar_resposta_semelhante(pergunta, contexto="quintas")
+        if nota:
+            return nota
+        else:
+            return "Ainda não há resposta confirmada dessa quinta 😉"
+    else:
     """
     Gera uma resposta contextual:
     - sobre a festa (usa event.json)
