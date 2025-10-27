@@ -129,7 +129,7 @@ if (enviar or prompt) and prompt.strip():
         st.session_state.historico = []
     st.session_state.historico.append({"role": "user", "content": f"**{nome} ({ts}):** {prompt}"})
     st.session_state.historico.append({"role": "assistant", "content": f"**Assistente ({ts}):** {resposta}"})
-    st.experimental_rerun()
+    st.rerun()
 
 
     if prompt:
