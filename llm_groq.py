@@ -70,19 +70,30 @@ def normalizar_zona(texto: str) -> str:
 def e_pergunta_de_quintas(pergunta: str) -> bool:
     """Deteta se a pergunta é sobre quintas / base de dados."""
     p = pergunta.lower()
+    
+    # Verifica se tem nome de quinta (maiúsculas ou padrões específicos)
+    import re
+    tem_nome_quinta = (
+        re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or
+        'c.r.' in p or 'quinta' in p or 'casa' in p or 'monte' in p or 'herdade' in p
+    )
+    
     chaves = [
         # Perguntas diretas
         "quinta", "quintas", "que quintas", "quais quintas", "quantas quintas",
         # Estado e contactos
         "contactadas", "contactaste", "responderam", "falamos", "vimos",
-        # Características
-        "piscina", "capacidade", "custo", "barata", "animais", "resposta", 
-        "zona", "morada", "opcoes", "opções", "disponivel", "disponível",
+        # Características e informações
+        "website", "link", "site", "endereco", "endereço", "morada", "contacto",
+        "email", "telefone", "piscina", "capacidade", "custo", "barata", "animais", 
+        "resposta", "zona", "opcoes", "opções", "disponivel", "disponível",
         "preco", "preço", "churrasqueira", "snooker", "estado", "procura",
-        # Quantificadores
-        "quantas", "quais", "lista", "nomes"
+        # Quantificadores e localização
+        "quantas", "quais", "lista", "nomes", "em ", "mais perto", "proxima", "próxima",
+        "onde e", "onde fica"
     ]
-    return any(c in p for c in chaves)
+    
+    return tem_nome_quinta or any(c in p for c in chaves)
 
 def e_pergunta_estado(pergunta: str) -> bool:
     """Deteta perguntas sobre o estado das quintas (porquê, resposta, atualização)."""
@@ -296,14 +307,159 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
             # ✅ PERGUNTAS SIMPLES - SQL direto sem LLM
             p = pergunta.lower()
             
+            # ✅ PERGUNTAS SOBRE QUINTA ESPECÍFICA (por nome)
+            # Ex: "website da Casa Lagoa", "morada do C.R. Camino", "onde é a Quinta X"
+            if any(t in p for t in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]):
+                # Extrai o nome da quinta da pergunta
+                # Remove palavras comuns
+                nome_busca = re.sub(r'\b(website|link|site|endereco|endereço|morada|contacto|email|telefone|onde|e|fica|da|do|de|desta|deste|qual|me|o)\b', '', p, flags=re.IGNORECASE)
+                nome_busca = re.sub(r'[?!.,;:]', '', nome_busca).strip()
+                
+                if nome_busca and len(nome_busca) > 3:
+                    print(f"🔍 Busca por quinta: '{nome_busca}'")
+                    
+                    # Busca a quinta pelo nome (flexível)
+                    sql = f"SELECT nome, zona, morada, website, email, telefone FROM quintas WHERE LOWER(nome) LIKE '%{nome_busca.lower()}%' LIMIT 1"
+                    dados = executar_sql(sql)
+                    
+                    if dados:
+                        quinta = dados[0]
+                        resposta_partes = [f"📍 **{quinta['nome']}** ({quinta.get('zona', 'zona n/d')})\n"]
+                        
+                        # Determina o que foi pedido
+                        if "website" in p or "link" in p or "site" in p:
+                            website = quinta.get('website')
+                            if website and website.strip():
+                                resposta_partes.append(f"🌐 Website: {website}")
+                            else:
+                                resposta_partes.append("⚠️ Não temos o website registado")
+                        
+                        if "morada" in p or "endereco" in p or "onde" in p:
+                            morada = quinta.get('morada')
+                            if morada and morada.strip():
+                                resposta_partes.append(f"📍 Morada: {morada}")
+                            else:
+                                resposta_partes.append("⚠️ Não temos a morada registada")
+                        
+                        if "email" in p:
+                            email = quinta.get('email')
+                            if email and email.strip():
+                                resposta_partes.append(f"📧 Email: {email}")
+                            else:
+                                resposta_partes.append("⚠️ Não temos o email registado")
+                        
+                        if "telefone" in p or "contacto" in p:
+                            telefone = quinta.get('telefone')
+                            if telefone and telefone.strip():
+                                resposta_partes.append(f"📞 Telefone: {telefone}")
+                            else:
+                                resposta_partes.append("⚠️ Não temos o telefone registado")
+                        
+                        # Se não foi pedido nada específico, mostra tudo
+                        if len(resposta_partes) == 1:
+                            info = []
+                            if quinta.get('morada'): info.append(f"📍 Morada: {quinta['morada']}")
+                            if quinta.get('website'): info.append(f"🌐 Website: {quinta['website']}")
+                            if quinta.get('email'): info.append(f"📧 Email: {quinta['email']}")
+                            if quinta.get('telefone'): info.append(f"📞 Telefone: {quinta['telefone']}")
+                            resposta_partes.extend(info if info else ["⚠️ Não temos informações detalhadas registadas"])
+                        
+                        return "\n".join(resposta_partes)
+                    else:
+                        return f"Não encontrei a quinta '{nome_busca}' 😅\n\nTenta listar as quintas de uma zona específica primeiro!"
+            
+            # "qual é a mais perto de Lisboa?"
+            if any(t in p for t in ["mais perto", "proxima", "próxima"]):
+                # Extrai a zona de referência
+                zona_ref = re.sub(r'\b(mais|perto|proxima|próxima|de|da|do)\b', '', p, flags=re.IGNORECASE).strip()
+                if zona_ref and len(zona_ref) > 3:
+                    zona_norm = normalizar_zona(zona_ref)
+                    sql = f"""
+                    SELECT nome, zona, morada 
+                    FROM quintas 
+                    WHERE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(zona, 'ã', 'a'), 'á', 'a'), 'à', 'a'), 'ó', 'o')) 
+                    LIKE '%{zona_norm}%' 
+                    LIMIT 5
+                    """
+                    dados = executar_sql(sql)
+                    if dados:
+                        return gerar_resposta_dados_llm(pergunta, dados)
+                return "Para te ajudar a encontrar a quinta mais perto, diz-me de que zona queres? (ex: 'mais perto de Lisboa') 😊"
+            
             # "quantas quintas?"
-            if any(t in p for t in ["quantas", "quantas quintas", "numero", "número", "total"]) and "zona" not in p:
+            if any(t in p for t in ["quantas", "quantas quintas", "numero", "número", "total"]) and "zona" not in p and "responderam" not in p and "pessoas" not in p:
                 sql = "SELECT COUNT(*) as total FROM quintas"
                 dados = executar_sql(sql)
                 if dados and dados[0].get('total'):
                     total = dados[0]['total']
                     return f"Já contactámos {total} quintas no total 📊 Pergunta-me sobre zonas, preços ou características específicas!"
                 return "Ainda não temos quintas na base de dados 😅"
+            
+            # "quantas responderam?" / "já alguma respondeu?"
+            if any(t in p for t in ["responderam", "respondeu", "alguma respondeu", "quantas responderam"]):
+                sql = "SELECT COUNT(*) as total FROM quintas WHERE resposta IS NOT NULL AND resposta != ''"
+                dados = executar_sql(sql)
+                if dados:
+                    total = dados[0].get('total', 0)
+                    if total > 0:
+                        # Mostra quais responderam
+                        sql_nomes = "SELECT nome, zona FROM quintas WHERE resposta IS NOT NULL AND resposta != '' LIMIT 10"
+                        quintas = executar_sql(sql_nomes)
+                        nomes = "\n".join([f"• **{q['nome']}** ({q.get('zona', 'n/d')})" for q in quintas])
+                        return f"Sim! {total} quinta{'s' if total > 1 else ''} responderam:\n\n{nomes}"
+                    else:
+                        return "Ainda não tivemos respostas confirmadas 😅 Mas já contactámos várias quintas!"
+                return "Ainda não temos respostas 😅"
+            
+            # "quantas têm capacidade para X pessoas?" / "número de pessoas que precisamos"
+            if any(t in p for t in ["capacidade", "pessoas", "numero de pessoas", "número de pessoas", "tem capacidade", "quantas tem"]):
+                # Tenta extrair o número de pessoas
+                import re
+                num_match = re.search(r'\d+', pergunta)
+                num_pessoas = num_match.group() if num_match else "43"
+                
+                # Verifica se a pergunta menciona 43 ou se não tem número (assume 43)
+                if "43" in pergunta or not num_match:
+                    sql = """
+                    SELECT COUNT(*) as total 
+                    FROM quintas 
+                    WHERE capacidade_43 LIKE '%sim%' 
+                       OR capacidade_43 LIKE '%Sim%'
+                       OR capacidade_confirmada LIKE '%43%'
+                       OR capacidade_confirmada LIKE '%sim%'
+                    """
+                    dados = executar_sql(sql)
+                    if dados:
+                        total = dados[0].get('total', 0)
+                        if total > 0:
+                            # Mostra as quintas
+                            sql_lista = """
+                            SELECT nome, zona, capacidade_43, capacidade_confirmada 
+                            FROM quintas 
+                            WHERE capacidade_43 LIKE '%sim%' 
+                               OR capacidade_43 LIKE '%Sim%'
+                               OR capacidade_confirmada LIKE '%43%'
+                               OR capacidade_confirmada LIKE '%sim%'
+                            LIMIT 10
+                            """
+                            quintas = executar_sql(sql_lista)
+                            nomes = "\n".join([f"• **{q['nome']}** ({q.get('zona', 'n/d')})" for q in quintas])
+                            return f"Temos {total} quintas com capacidade para 43 pessoas:\n\n{nomes}\n\nQueres saber mais sobre alguma? 😊"
+                        else:
+                            return "Ainda não temos confirmação de capacidade para 43 pessoas nas quintas contactadas 😅"
+                
+                # Número genérico de pessoas
+                sql = f"""
+                SELECT nome, zona, capacidade_confirmada 
+                FROM quintas 
+                WHERE capacidade_confirmada LIKE '%{num_pessoas}%' 
+                   OR capacidade_confirmada LIKE '%sim%'
+                LIMIT 10
+                """
+                dados = executar_sql(sql)
+                if dados:
+                    return gerar_resposta_dados_llm(pergunta, dados)
+                return f"Não tenho informação clara sobre capacidade para {num_pessoas} pessoas 😅"
             
             # "que quintas?" / "lista de quintas"
             if any(t in p for t in ["que quintas", "quais quintas", "lista", "nomes das quintas"]) and "zona" not in p:
@@ -347,12 +503,12 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
                     return gerar_resposta_dados_llm(pergunta, dados)
                 return "Não encontrei quintas em Lisboa 😅"
             
-            # Busca genérica por zona (ex: "em Coruña", "quintas em X")
-            if any(t in p for t in ["em ", "zona de ", "zona ", "quais"]):
+            # Busca genérica por zona (ex: "em Coruña", "quintas em X", "Coruna? Quais?")
+            if any(t in p for t in ["em ", "zona de ", "zona ", "quais"]) or re.search(r'[A-Z][a-z]+\?', pergunta):
                 # Extrai o nome da zona da pergunta
-                import re
-                # Remove palavras comuns e fica com o nome da zona
+                # Remove palavras comuns, pontuação e fica com o nome da zona
                 zona_busca = re.sub(r'\b(em|zona|de|da|do|das|dos|quintas|quais|que|qual)\b', '', p, flags=re.IGNORECASE)
+                zona_busca = re.sub(r'[?!.,;:]', '', zona_busca)  # Remove pontuação
                 zona_busca = zona_busca.strip()
                 
                 if zona_busca and len(zona_busca) > 2:
@@ -362,11 +518,10 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
                     print(f"🔍 Busca por zona: '{zona_busca}' → normalizado: '{zona_normalizada}'")
                     
                     # Tenta encontrar quintas nessa zona (busca flexível)
-                    # Usa LOWER e remove acentos no SQL também
                     sql = f"""
-                    SELECT nome, zona, morada 
+                    SELECT nome, zona, morada, website 
                     FROM quintas 
-                    WHERE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(zona, 'ã', 'a'), 'á', 'a'), 'à', 'a'), 'ñ', 'n')) 
+                    WHERE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(zona, 'ã', 'a'), 'á', 'a'), 'à', 'a'), 'ñ', 'n'), 'ó', 'o')) 
                     LIKE '%{zona_normalizada}%' 
                     LIMIT 10
                     """
@@ -375,7 +530,7 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
                     if dados:
                         zona_real = dados[0].get('zona', zona_busca)
                         nomes = "\n".join([f"• **{d['nome']}**" for d in dados])
-                        return f"Quintas em **{zona_real}** ({len(dados)} encontrada{'s' if len(dados) > 1 else ''}):\n\n{nomes}\n\nQueres saber mais sobre alguma? 😊"
+                        return f"Quintas em **{zona_real}** ({len(dados)} encontrada{'s' if len(dados) > 1 else ''}):\n\n{nomes}\n\nQueres saber mais sobre alguma? (morada, website, preço...) 😊"
                     else:
                         return f"Não encontrei quintas em '{zona_busca}' 😅\n\nTenta 'que zonas temos?' para ver as disponíveis!"
             

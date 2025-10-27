@@ -141,8 +141,34 @@ def gerar_resposta(pergunta: str, perfil: dict):
             "• Ou qualquer outra coisa específica 😊"
         )
 
-    # ✅ 5 — Perguntas ESPECÍFICAS sobre quintas → envia para o LLM/SQL
-    if any(p in pergunta_l for p in ["que quintas", "quais quintas", "quantas quintas", "quantas vimos", "quantas contactamos", "lista", "opcoes", "opções", "nomes"]):
+    # ✅ 5 — Perguntas sobre QUINTAS ESPECÍFICAS (por nome)
+    # Deteta nomes de quintas na pergunta (palavras começadas com maiúscula ou termos específicos)
+    import re
+    # Procura por nomes próprios ou padrões tipo "C.R. Nome" ou "Quinta X"
+    tem_nome_quinta = (
+        re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or  # "Casa Lagoa", "Monte Verde"
+        re.search(r'C\.R\.|quinta|casa|monte|herdade', pergunta_l) or
+        any(len(palavra) > 3 and palavra[0].isupper() for palavra in pergunta.split())
+    )
+    
+    # Perguntas sobre características específicas de quintas
+    if any(p in pergunta_l for p in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]) and tem_nome_quinta:
+        resposta_llm = gerar_resposta_llm(
+            pergunta=pergunta,
+            perfil=perfil,
+            contexto_base=contexto_base,
+        )
+        guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
+        return resposta_llm
+
+    # ✅ 6 — Perguntas sobre ZONAS ou listas de quintas
+    if any(p in pergunta_l for p in [
+        "que quintas", "quais quintas", "quantas quintas", "quantas vimos", 
+        "quantas contactamos", "lista", "opcoes", "opções", "nomes", 
+        "em ", "zona", "quais", "mais perto", "proxima", "próxima",
+        "responderam", "resposta", "numero de pessoas", "número de pessoas",
+        "capacidade", "pessoas", "tem capacidade", "quantas tem"
+    ]):
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
             perfil=perfil,
@@ -151,7 +177,7 @@ def gerar_resposta(pergunta: str, perfil: dict):
         guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
         return resposta_llm
     
-    # ✅ 6 — Perguntas GENÉRICAS sobre o local/quinta → resposta rápida
+    # ✅ 7 — Perguntas GENÉRICAS sobre o local/quinta → resposta rápida
     if any(p in pergunta_l for p in ["sitio", "local", "onde", "quinta", "ja ha", "reservado", "fechado", "decidido", "ja temos"]) and not any(p in pergunta_l for p in ["que", "quais", "quantas", "lista"]):
         return (
             "Ainda estamos a ver o local final 🏡\n\n"
