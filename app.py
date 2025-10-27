@@ -8,7 +8,6 @@ import json
 from datetime import datetime
 import streamlit as st
 
-
 # 🧩 Diagnóstico automático: onde estamos realmente?
 print("📍 Diretório atual (CWD):", os.getcwd())
 print("📂 Conteúdo do diretório atual:", os.listdir())
