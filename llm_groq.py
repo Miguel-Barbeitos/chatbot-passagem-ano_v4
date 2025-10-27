@@ -47,6 +47,26 @@ def carregar_contexto_base():
 # =====================================================
 # 🔍 DETEÇÃO DE PERGUNTAS SOBRE QUINTAS (MELHORADA)
 # =====================================================
+def normalizar_zona(texto: str) -> str:
+    """Normaliza nome de zona para fazer buscas flexíveis"""
+    import unicodedata
+    import re
+    
+    # Remove acentos
+    texto = unicodedata.normalize('NFKD', texto)
+    texto = ''.join(c for c in texto if not unicodedata.combining(c))
+    
+    # Lowercase
+    texto = texto.lower().strip()
+    
+    # Remove plural (s final)
+    texto = texto.rstrip('s')
+    
+    # Remove pontuação
+    texto = re.sub(r'[^\w\s]', '', texto)
+    
+    return texto
+
 def e_pergunta_de_quintas(pergunta: str) -> bool:
     """Deteta se a pergunta é sobre quintas / base de dados."""
     p = pergunta.lower()
@@ -327,13 +347,47 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
                     return gerar_resposta_dados_llm(pergunta, dados)
                 return "Não encontrei quintas em Lisboa 😅"
             
+            # Busca genérica por zona (ex: "em Coruña", "quintas em X")
+            if any(t in p for t in ["em ", "zona de ", "zona ", "quais"]):
+                # Extrai o nome da zona da pergunta
+                import re
+                # Remove palavras comuns e fica com o nome da zona
+                zona_busca = re.sub(r'\b(em|zona|de|da|do|das|dos|quintas|quais|que|qual)\b', '', p, flags=re.IGNORECASE)
+                zona_busca = zona_busca.strip()
+                
+                if zona_busca and len(zona_busca) > 2:
+                    # Normaliza a zona para fazer match
+                    zona_normalizada = normalizar_zona(zona_busca)
+                    
+                    print(f"🔍 Busca por zona: '{zona_busca}' → normalizado: '{zona_normalizada}'")
+                    
+                    # Tenta encontrar quintas nessa zona (busca flexível)
+                    # Usa LOWER e remove acentos no SQL também
+                    sql = f"""
+                    SELECT nome, zona, morada 
+                    FROM quintas 
+                    WHERE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(zona, 'ã', 'a'), 'á', 'a'), 'à', 'a'), 'ñ', 'n')) 
+                    LIKE '%{zona_normalizada}%' 
+                    LIMIT 10
+                    """
+                    dados = executar_sql(sql)
+                    
+                    if dados:
+                        zona_real = dados[0].get('zona', zona_busca)
+                        nomes = "\n".join([f"• **{d['nome']}**" for d in dados])
+                        return f"Quintas em **{zona_real}** ({len(dados)} encontrada{'s' if len(dados) > 1 else ''}):\n\n{nomes}\n\nQueres saber mais sobre alguma? 😊"
+                    else:
+                        return f"Não encontrei quintas em '{zona_busca}' 😅\n\nTenta 'que zonas temos?' para ver as disponíveis!"
+            
             # "que zonas" / "zonas disponíveis"
             if any(t in p for t in ["que zonas", "quais zonas", "zonas", "regioes", "regiões"]):
                 sql = "SELECT zona, COUNT(*) as total FROM quintas WHERE zona IS NOT NULL AND zona != '' GROUP BY zona ORDER BY total DESC"
                 dados = executar_sql(sql)
                 if dados:
-                    zonas_txt = ", ".join([f"**{d['zona']}** ({d['total']})" for d in dados])
-                    return f"As zonas contactadas são: {zonas_txt} 📍"
+                    zonas_txt = ", ".join([f"**{d['zona']}** ({d['total']})" for d in dados[:10]])
+                    if len(dados) > 10:
+                        zonas_txt += f" e mais {len(dados) - 10} zonas"
+                    return f"As principais zonas contactadas são:\n{zonas_txt} 📍"
                 return "Ainda não temos zonas definidas 😅"
             
             # Perguntas complexas → usar SQLite + LLM
