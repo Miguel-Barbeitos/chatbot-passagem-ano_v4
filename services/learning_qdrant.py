@@ -76,27 +76,18 @@ except Exception as e:
 # =====================================================
 # 📂 CONTEXTO BASE (event.json)
 # =====================================================
-def get_contexto_base(raw=False):
-try:
-with open(DATA_PATH, "r", encoding="utf-8") as f:
-dados = json.load(f)
-if raw:
-return dados
-texto = []
-for k, v in dados.items():
-if isinstance(v, bool):
-texto.append(f"{k.replace('_', ' ')}: {'sim' if v else 'não'}")
-elif isinstance(v, dict):
-subtxt = ", ".join(f"{sk}: {sv}" for sk, sv in v.items())
-texto.append(f"{k.replace('_', ' ')}: {subtxt}")
-elif isinstance(v, list):
-texto.append(f"{k.replace('_', ' ')}: {', '.join(v)}")
-else:
-texto.append(f"{k.replace('_', ' ')}: {v}")
-return "\n".join(texto)
-except Exception as e:
-print(f"⚠️ Erro ao ler contexto base: {e}")
-return {} if raw else "Informações da festa indisponíveis."
+def get_contexto_base():
+    try:
+        ficheiro = os.path.join(DATA_DIR, "contexto_base.json")
+        if os.path.exists(ficheiro):
+            with open(ficheiro, "r", encoding="utf-8") as f:
+                return json.load(f)
+        else:
+            print("⚠️ Ficheiro de contexto base não encontrado.")
+            return {}
+    except Exception as e:
+        print(f"⚠️ Erro ao carregar contexto base: {e}")
+        return {}
 
 # =====================================================
 # 💾 GUARDAR MENSAGEM E CONFIRMAÇÕES
@@ -143,34 +134,29 @@ print(f"✅ {nome} registado como confirmado no Qdrant.")
 except Exception as e:
 print(f"⚠️ Erro ao guardar confirmação: {e}")
 
-
 def get_confirmacoes():
-try:
-pontos, _ = client.scroll(
-collection_name=COLLECTION_NAME,
-scroll_filter=models.Filter(must=[models.FieldCondition(key="contexto", match=models.MatchValue(value="confirmacoes"))]),
-limit=200,
-)
-confirmados = sorted({p.payload.get("user") for p in pontos if p.payload.get("user")})
-print(f"📋 Confirmados no Qdrant: {confirmados}")
-return confirmados
-except Exception as e:
-print(f"⚠️ Erro ao obter confirmações: {e}")
-return []
+    try:
+        colecao = client.get_collection(COLLECTION_NAME)
+        pontos = client.scroll(
+            collection_name=COLLECTION_NAME,
+            limit=1000,
+        )
+        confirmacoes = [p.payload for p in pontos[0] if p.payload]
+        print(f"📋 {len(confirmacoes)} confirmações carregadas do Qdrant.")
+        return confirmacoes
+    except Exception as e:
+        print(f"⚠️ Erro ao carregar confirmações: {e}")
+        return []
 
 
-def exportar_confirmacoes_json(caminho=None):
-try:
-if caminho is None:
-os.makedirs(DATA_DIR, exist_ok=True)
-caminho = os.path.join(DATA_DIR, "confirmados.json")
-confirmados = get_confirmacoes()
-dados = {"total_confirmados": len(confirmados), "confirmados": confirmados}
-with open(caminho, "w", encoding="utf-8") as f:
-json.dump(dados, f, ensure_ascii=False, indent=2)
-print(f"💾 Exportação concluída: {caminho}")
-except Exception as e:
-print(f"⚠️ Erro ao exportar confirmações: {e}")
+def exportar_confirmacoes_json(output_path="data/confirmacoes_exportadas.json"):
+    try:
+        confirmacoes = get_confirmacoes()
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(confirmacoes, f, ensure_ascii=False, indent=2)
+        print(f"✅ Exportadas {len(confirmacoes)} confirmações para {output_path}")
+    except Exception as e:
+        print(f"⚠️ Erro ao exportar confirmações: {e}")
 
 # =====================================================
 # 🧠 DETEÇÃO SIMPLES DE INTENÇÃO
