@@ -51,6 +51,20 @@ return QdrantClient(path=QDRANT_PATH)
 
 
 client = inicializar_qdrant()
+# Criar coleção se não existir
+try:
+    if COLLECTION_NAME not in [c.name for c in client.get_collections().collections]:
+        print(f"🆕 A criar coleção '{COLLECTION_NAME}' no Qdrant Cloud...")
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE),
+        )
+        print("✅ Coleção criada com sucesso!")
+    else:
+        print(f"ℹ️ Coleção '{COLLECTION_NAME}' já existe.")
+except Exception as e:
+    print(f"⚠️ Erro ao criar/verificar coleção: {e}")
+
 
 # =====================================================
 # 📂 CONTEXTO BASE (event.json)
