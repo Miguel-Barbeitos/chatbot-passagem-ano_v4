@@ -2,10 +2,22 @@
 # app.py  —  Entrada principal (UI)
 # ─────────────────────────────────────────────────────────────────────────────
 import os
+import sys
 import json
 from datetime import datetime
 import streamlit as st
 
+# 🧩 Garantir que o diretório raiz está no sys.path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
+
+# 🧩 Garantir que 'services' é importável
+SERVICES_DIR = os.path.join(BASE_DIR, "services")
+if SERVICES_DIR not in sys.path:
+    sys.path.append(SERVICES_DIR)
+
+# Imports
 from services.utils import carregar_json, logger
 from services.learning_qdrant import get_confirmacoes, get_contexto_base, exportar_confirmacoes_json
 from ui_components import (
