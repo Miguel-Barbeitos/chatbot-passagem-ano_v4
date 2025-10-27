@@ -77,37 +77,85 @@ def gerar_sql_da_pergunta(pergunta: str) -> str:
     """Usa o LLM para gerar um SQL seguro (apenas SELECT)."""
     schema = """
     Tabela: quintas
-    Colunas: nome, zona, morada, email, telefone, website, estado, resposta,
-    capacidade_43, custo_4500, estimativa_custo, capacidade_confirmada,
-    ultima_resposta, proposta_tarifaria, unidades_detalhe, num_unidades,
-    observacao_unidades, custo_total, resumo_resposta, observacoes, notas_calculo.
     
-    Nota: A coluna 'estado' contém valores como 'Contactada', 'Aguarda resposta', 'Respondeu', etc.
+    Colunas disponíveis:
+    - nome (TEXT): Nome da quinta
+    - zona (TEXT): Zona/região (ex: Lisboa, Alentejo, Comporta)
+    - morada (TEXT): Morada completa
+    - email (TEXT): Email de contacto
+    - telefone (TEXT): Número de telefone
+    - website (TEXT): Website da quinta
+    - estado (TEXT): Estado do contacto (ex: "Contactada", "Aguarda resposta", "Respondeu")
+    - resposta (TEXT): Resposta da quinta
+    - capacidade_43 (TEXT): Se aceita 43 pessoas
+    - custo_4500 (TEXT): Custo para evento
+    - estimativa_custo (TEXT): Estimativa de preço
+    - capacidade_confirmada (TEXT): Capacidade confirmada
+    - ultima_resposta (TEXT): Data da última resposta
+    - proposta_tarifaria (TEXT): Proposta de preços
+    - unidades_detalhe (TEXT): Detalhes das unidades
+    - num_unidades (TEXT): Número de unidades/quartos
+    - observacao_unidades (TEXT): Observações sobre unidades
+    - custo_total (REAL): Custo total em euros
+    - resumo_resposta (TEXT): Resumo da resposta recebida
+    - observacoes (TEXT): Observações gerais
+    - notas_calculo (TEXT): Notas sobre cálculos de preço
+    
+    NOTA: Todos os campos são TEXT exceto custo_total que é REAL (numérico).
     """
 
     prompt_sql = f"""
-Gera apenas o SQL (SELECT ...) para responder à pergunta do utilizador.
-O SQL deve ser simples, compatível com SQLite e usar apenas as colunas listadas.
+Gera APENAS o SQL (SELECT ...) para responder à pergunta.
+SQL deve ser simples, compatível com SQLite e usar apenas as colunas listadas.
+
 Pergunta: "{pergunta}"
+
 {schema}
 
-Exemplos de perguntas e SQL:
-- "Quantas quintas já contactámos?" → SELECT COUNT(*) as total FROM quintas
-- "Que quintas já contactámos?" ou "Quais quintas?" → SELECT nome, zona, morada FROM quintas LIMIT 20
-- "Quantas quintas já vimos?" → SELECT COUNT(*) as total FROM quintas
-- "Lista de quintas" → SELECT nome, zona FROM quintas LIMIT 20
-- "Quais quintas têm piscina?" → SELECT nome, zona FROM quintas WHERE tem_piscina = 1
-- "Quintas mais baratas" → SELECT nome, zona, custo_4500 FROM quintas ORDER BY custo_4500 ASC LIMIT 5
-- "Quintas na zona de Lisboa" → SELECT nome, morada FROM quintas WHERE zona LIKE '%Lisboa%'
+Exemplos de perguntas → SQL correto:
 
-IMPORTANTE: Para perguntas genéricas como "que quintas" ou "quantas", retorna TODAS as quintas (ou o COUNT).
+1. "Quantas quintas já contactámos?" 
+   → SELECT COUNT(*) as total FROM quintas
+
+2. "Que quintas já contactámos?" ou "Lista de quintas"
+   → SELECT nome, zona, morada FROM quintas LIMIT 20
+
+3. "Quantas quintas já vimos?"
+   → SELECT COUNT(*) as total FROM quintas
+
+4. "Quintas na zona de Lisboa" ou "Quintas em Lisboa"
+   → SELECT nome, zona, morada FROM quintas WHERE zona LIKE '%Lisboa%'
+
+5. "Quintas no Porto" ou "Quintas na zona do Porto"
+   → SELECT nome, zona, morada FROM quintas WHERE zona LIKE '%Porto%'
+
+6. "Quintas mais baratas" ou "Qual a mais barata"
+   → SELECT nome, zona, custo_total FROM quintas WHERE custo_total IS NOT NULL AND custo_total > 0 ORDER BY custo_total ASC LIMIT 5
+
+7. "Quintas que responderam" ou "Quantas responderam"
+   → SELECT COUNT(*) as total FROM quintas WHERE estado LIKE '%Respondeu%' OR resposta IS NOT NULL
+
+8. "Qual a capacidade das quintas"
+   → SELECT nome, zona, capacidade_43, capacidade_confirmada FROM quintas
+
+9. "Quintas com mais de 40 pessoas" ou "Capacidade para 43"
+   → SELECT nome, zona, capacidade_43, capacidade_confirmada FROM quintas WHERE capacidade_43 LIKE '%sim%' OR capacidade_43 LIKE '%Sim%'
+
+REGRAS IMPORTANTES:
+- Para pesquisas de texto use LIKE '%texto%' (case insensitive)
+- Para contar use COUNT(*) as total
+- Para preços use custo_total (REAL) e WHERE custo_total IS NOT NULL
+- LIMIT 20 para listas grandes
+- Apenas SELECT - nunca UPDATE, DELETE, INSERT ou DROP
+
+Gera apenas o SQL, sem explicações.
 """
 
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
     data = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": "És um assistente que converte linguagem natural em SQL seguro (apenas SELECT)."},
+            {"role": "system", "content": "És um assistente que converte linguagem natural em SQL seguro (apenas SELECT). Responde APENAS com o SQL, sem explicações."},
             {"role": "user", "content": prompt_sql},
         ],
         "temperature": 0.0,
@@ -117,14 +165,21 @@ IMPORTANTE: Para perguntas genéricas como "que quintas" ou "quantas", retorna T
     try:
         resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
         query = resp.json()["choices"][0]["message"]["content"].strip()
+        
         # Remove markdown se existir
         if "```sql" in query:
             query = query.split("```sql")[1].split("```")[0].strip()
         elif "```" in query:
             query = query.split("```")[1].split("```")[0].strip()
         
+        # Remove quebras de linha extras
+        query = " ".join(query.split())
+        
         if query.lower().startswith("select"):
+            print(f"✅ SQL gerado: {query}")
             return query
+        else:
+            print(f"⚠️ SQL inválido gerado: {query}")
     except Exception as e:
         print(f"⚠️ Erro a gerar SQL: {e}")
     return None
@@ -222,7 +277,7 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
             p = pergunta.lower()
             
             # "quantas quintas?"
-            if any(t in p for t in ["quantas", "quantas quintas", "numero", "número", "total"]):
+            if any(t in p for t in ["quantas", "quantas quintas", "numero", "número", "total"]) and "zona" not in p:
                 sql = "SELECT COUNT(*) as total FROM quintas"
                 dados = executar_sql(sql)
                 if dados and dados[0].get('total'):
@@ -231,7 +286,7 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
                 return "Ainda não temos quintas na base de dados 😅"
             
             # "que quintas?" / "lista de quintas"
-            if any(t in p for t in ["que quintas", "quais quintas", "lista", "nomes das quintas"]):
+            if any(t in p for t in ["que quintas", "quais quintas", "lista", "nomes das quintas"]) and "zona" not in p:
                 sql = "SELECT nome, zona, morada FROM quintas LIMIT 10"
                 dados = executar_sql(sql)
                 if dados:
@@ -246,6 +301,40 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
                         resposta += f"\n\n...e mais {total - 5} quintas! Pergunta-me sobre zonas ou características específicas 😊"
                     return resposta
                 return "Ainda não temos quintas contactadas 😅"
+            
+            # "quintas no Porto" / "zona Porto"
+            if any(t in p for t in ["porto", "no porto", "zona porto", "zona do porto"]):
+                sql = "SELECT COUNT(*) as total FROM quintas WHERE zona LIKE '%Porto%'"
+                dados = executar_sql(sql)
+                if dados and dados[0].get('total', 0) > 0:
+                    sql_lista = "SELECT nome, morada FROM quintas WHERE zona LIKE '%Porto%' LIMIT 5"
+                    lista = executar_sql(sql_lista)
+                    return gerar_resposta_dados_llm(pergunta, lista)
+                else:
+                    # Ver que zonas existem
+                    sql_zonas = "SELECT DISTINCT zona FROM quintas WHERE zona IS NOT NULL AND zona != '' LIMIT 10"
+                    zonas = executar_sql(sql_zonas)
+                    if zonas:
+                        zonas_txt = ", ".join([z['zona'] for z in zonas if z.get('zona')])
+                        return f"Não temos quintas na zona do Porto 😅 As zonas que já contactámos são: {zonas_txt}. Queres ver alguma destas?"
+                    return "Não temos quintas na zona do Porto 😅"
+            
+            # "quintas em Lisboa" / "zona Lisboa"
+            if any(t in p for t in ["lisboa", "em lisboa", "zona lisboa", "zona de lisboa"]):
+                sql = "SELECT nome, zona, morada FROM quintas WHERE zona LIKE '%Lisboa%' LIMIT 10"
+                dados = executar_sql(sql)
+                if dados:
+                    return gerar_resposta_dados_llm(pergunta, dados)
+                return "Não encontrei quintas em Lisboa 😅"
+            
+            # "que zonas" / "zonas disponíveis"
+            if any(t in p for t in ["que zonas", "quais zonas", "zonas", "regioes", "regiões"]):
+                sql = "SELECT zona, COUNT(*) as total FROM quintas WHERE zona IS NOT NULL AND zona != '' GROUP BY zona ORDER BY total DESC"
+                dados = executar_sql(sql)
+                if dados:
+                    zonas_txt = ", ".join([f"**{d['zona']}** ({d['total']})" for d in dados])
+                    return f"As zonas contactadas são: {zonas_txt} 📍"
+                return "Ainda não temos zonas definidas 😅"
             
             # Perguntas complexas → usar SQLite + LLM
             sql = gerar_sql_da_pergunta(pergunta)
