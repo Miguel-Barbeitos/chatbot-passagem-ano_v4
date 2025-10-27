@@ -1,10 +1,8 @@
 ﻿import os
 import json
 import random
-import hashlib
 import numpy as np
 from qdrant_client import QdrantClient, models
-from sentence_transformers import SentenceTransformer, util
 
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
@@ -18,11 +16,19 @@ print(f"📂 Qdrant ativo em: {QDRANT_PATH}")
 print(f"📄 Ficheiro de contexto: {DATA_PATH}")
 
 # =====================================================
-# 🧠 MODELO DE EMBEDDINGS
+# 🧠 MODELO DE EMBEDDINGS (LAZY LOADING)
 # =====================================================
-print("🧠 A inicializar modelo de embeddings...")
-model = SentenceTransformer("intfloat/multilingual-e5-base")
-print("✅ Modelo carregado com sucesso.")
+_model = None
+
+def get_model():
+    """Carrega o modelo apenas quando necessário (lazy loading)"""
+    global _model
+    if _model is None:
+        print("🧠 A inicializar modelo de embeddings...")
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("intfloat/multilingual-e5-base")
+        print("✅ Modelo carregado com sucesso.")
+    return _model
 
 # =====================================================
 # 💾 CONEXÃO AO QDRANT
@@ -86,14 +92,13 @@ def get_contexto_base(raw=False):
         return {} if raw else "Informações da festa indisponíveis."
 
 
-
-
 # =====================================================
 # 💾 GUARDAR MENSAGEM
 # =====================================================
 def guardar_mensagem(user, pergunta, resposta, contexto="geral", perfil=None):
     """Guarda interação geral no Qdrant"""
     try:
+        model = get_model()
         vector = model.encode(pergunta).tolist()
         payload = {
             "user": user,
@@ -354,6 +359,7 @@ def importar_confirmacoes_json(caminho=None):
 def procurar_resposta_semelhante(pergunta, contexto=None, limite_conf=0.6, top_k=3):
     """Procura uma resposta relevante no histórico"""
     try:
+        model = get_model()
         vector = model.encode(pergunta).tolist()
         filtro = None
         if contexto:
@@ -373,7 +379,6 @@ def procurar_resposta_semelhante(pergunta, contexto=None, limite_conf=0.6, top_k
     except Exception as e:
         print(f"❌ Erro ao procurar resposta: {e}")
     return None
- 
 
 
 # =====================================================
@@ -381,8 +386,6 @@ def procurar_resposta_semelhante(pergunta, contexto=None, limite_conf=0.6, top_k
 # =====================================================
 def limpar_qdrant():
     """Apaga toda a coleção do Qdrant e recria-a (apenas usar manualmente)."""
-    from qdrant_client import models
-
     try:
         client.delete_collection(COLLECTION_NAME)
         print("🧹 Coleção Qdrant apagada.")
