@@ -459,20 +459,20 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
                     return gerar_resposta_dados_llm(pergunta, dados)
                 return f"Não tenho informação clara sobre capacidade para {num_pessoas} pessoas 😅"
             
-            # "que quintas?" / "lista de quintas"
-            if any(t in p for t in ["que quintas", "quais quintas", "lista", "nomes das quintas"]) and "zona" not in p:
+            # "que quintas?" / "lista de quintas" / "que quintas já vimos?"
+            if any(t in p for t in ["que quintas", "quais quintas", "lista", "nomes das quintas", "ja vimos", "já vimos"]) and "zona" not in p:
                 sql = "SELECT nome, zona, morada FROM quintas LIMIT 10"
                 dados = executar_sql(sql)
                 if dados:
-                    nomes = [f"**{d['nome']}** ({d.get('zona', 'zona n/d')})" for d in dados[:5]]
+                    nomes = [f"• **{d['nome']}** ({d.get('zona', 'zona n/d')})" for d in dados[:8]]
                     total_sql = "SELECT COUNT(*) as total FROM quintas"
                     total_dados = executar_sql(total_sql)
                     total = total_dados[0]['total'] if total_dados else len(dados)
                     
                     resposta = f"Já contactámos {total} quintas. Aqui estão algumas:\n\n"
-                    resposta += "\n".join(f"• {n}" for n in nomes)
-                    if total > 5:
-                        resposta += f"\n\n...e mais {total - 5} quintas! Pergunta-me sobre zonas ou características específicas 😊"
+                    resposta += "\n".join(nomes)
+                    if total > 8:
+                        resposta += f"\n\n...e mais {total - 8} quintas! Pergunta-me sobre zonas específicas ou características 😊"
                     return resposta
                 return "Ainda não temos quintas contactadas 😅"
             
