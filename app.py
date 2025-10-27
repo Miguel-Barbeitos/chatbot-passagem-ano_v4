@@ -1,21 +1,29 @@
 ﻿# ─────────────────────────────────────────────────────────────────────────────
 # app.py  —  Entrada principal (UI)
 # ─────────────────────────────────────────────────────────────────────────────
-import os
-import sys
-import json
-from datetime import datetime
-import streamlit as st
+# 🧩 Diagnóstico automático: onde estamos realmente?
+print("📍 Diretório atual (CWD):", os.getcwd())
+print("📂 Conteúdo do diretório atual:", os.listdir())
 
-# 🧩 Garantir que o diretório raiz está no sys.path
+# 🧠 Determinar raiz do projeto de forma robusta
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-if BASE_DIR not in sys.path:
-    sys.path.append(BASE_DIR)
-
-# 🧩 Garantir que 'services' é importável
 SERVICES_DIR = os.path.join(BASE_DIR, "services")
-if SERVICES_DIR not in sys.path:
-    sys.path.append(SERVICES_DIR)
+
+# Se a pasta 'services' não existir no diretório corrente,
+# tenta procurar uma acima (caso o Streamlit esteja a correr num subdiretório)
+if not os.path.exists(SERVICES_DIR):
+    PARENT_DIR = os.path.dirname(BASE_DIR)
+    SERVICES_DIR = os.path.join(PARENT_DIR, "services")
+    if os.path.exists(SERVICES_DIR):
+        BASE_DIR = PARENT_DIR
+
+# Adicionar caminhos ao sys.path para garantir imports
+for path in [BASE_DIR, SERVICES_DIR]:
+    if path not in sys.path and os.path.exists(path):
+        sys.path.append(path)
+        print(f"✅ Adicionado ao sys.path: {path}")
+    else:
+        print(f"⚠️ Caminho inexistente ou já presente: {path}")
 
 # Imports
 from services.utils import carregar_json, logger
