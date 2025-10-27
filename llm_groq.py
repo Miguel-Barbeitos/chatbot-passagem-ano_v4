@@ -144,16 +144,6 @@ Dados:
 # 🎆 GERAÇÃO DE RESPOSTAS NATURAIS (FESTA OU QUINTAS)
 # =====================================================
 def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
-
-if e_pergunta_de_quintas(pergunta):
-    if e_pergunta_estado(pergunta):
-        # Pergunta de contexto (porquê, estado, resposta)
-        nota = procurar_resposta_semelhante(pergunta, contexto="quintas")
-        if nota:
-            return nota
-        else:
-            return "Ainda não há resposta confirmada dessa quinta 😉"
-    else:
     """
     Gera uma resposta contextual:
     - sobre a festa (usa event.json)
@@ -164,7 +154,15 @@ if e_pergunta_de_quintas(pergunta):
     personalidade = perfil.get("personalidade", "neutro")
 
     # ✅ 1 — Consultas sobre quintas (base SQLite)
+    def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
     if e_pergunta_de_quintas(pergunta):
+        if e_pergunta_estado(pergunta):
+            nota = procurar_resposta_semelhante(pergunta, contexto="quintas")
+            if nota:
+                return nota
+            else:
+                return "Ainda não há resposta confirmada dessa quinta 😉"
+        else:
         sql = gerar_sql_da_pergunta(pergunta)
         if sql:
             dados = executar_sql(sql)
@@ -172,8 +170,6 @@ if e_pergunta_de_quintas(pergunta):
                 return gerar_resposta_dados_llm(pergunta, dados)
             else:
                 return "Não encontrei nenhuma quinta que corresponda a isso 😅"
-        else:
-            return "Não consegui interpretar bem a tua pergunta sobre as quintas 😅"
 
     # ✅ 2 — Caso contrário, responde sobre a festa
     if not contexto_base:
