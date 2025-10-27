@@ -5,3 +5,5 @@ numpy
 requests
 groq
 pandas
+sqlite3
+unicodedata
