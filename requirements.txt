@@ -5,10 +5,6 @@ numpy
 requests
 groq
 pandas
-<<<<<<< HEAD
-sqlite3
 unicodedata
-=======
 python-dateutil
 loguru
->>>>>>> 0a30408d48c3037dde28254bf943474c793f7184
