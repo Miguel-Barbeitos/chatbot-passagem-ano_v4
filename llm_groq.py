@@ -6,7 +6,7 @@ import sqlite3
 import pandas as pd
 import streamlit as st
 
-from services.learning_qdrant import procurar_resposta_semelhante
+from learning_qdrant import procurar_resposta_semelhante
 
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
@@ -104,7 +104,7 @@ def gerar_sql_da_pergunta(pergunta: str) -> str:
     - morada (TEXT): Morada completa
     - email (TEXT): Email de contacto
     - telefone (TEXT): Número de telefone
-    - website (TEXT): Website da quinta (ex: "link", endereço web")
+    - website (TEXT): Website da quinta
     - estado (TEXT): Estado do contacto (ex: "Contactada", "Aguarda resposta", "Respondeu")
     - resposta (TEXT): Resposta da quinta
     - capacidade_43 (TEXT): Se aceita 43 pessoas
