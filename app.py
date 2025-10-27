@@ -125,12 +125,28 @@ if (enviar or prompt) and prompt.strip():
 
     # Guardar no histórico (com hora)
     ts = datetime.now().strftime('%H:%M')
-    if "historico" not in st.session_state:
-        st.session_state.historico = []
-    st.session_state.historico.append({"role": "user", "content": f"**{nome} ({ts}):** {prompt}"})
-    st.session_state.historico.append({"role": "assistant", "content": f"**Assistente ({ts}):** {resposta}"})
-    st.session_state.input_mensagem = ""
-    st.rerun()
+
+# ✅ Inicializar histórico se ainda não existir
+if "historico" not in st.session_state:
+    st.session_state.historico = []
+
+# Guardar mensagens no histórico
+st.session_state.historico.append(
+    {"role": "user", "content": f"**{nome} ({ts}):** {prompt}"}
+)
+st.session_state.historico.append(
+    {"role": "assistant", "content": f"**Assistente ({ts}):** {resposta}"}
+)
+
+# ✅ Limpar o campo de input de forma segura
+if "input_mensagem" in st.session_state:
+    st.session_state["input_mensagem"] = ""
+else:
+    st.session_state.setdefault("input_mensagem", "")
+
+# Recarregar a interface sem duplicações
+st.rerun()
+
 
 
     if prompt:
