@@ -89,24 +89,6 @@ contexto = get_contexto_base(raw=True)
 confirmados = get_confirmacoes()
 
 with st.sidebar:
-    st.image(
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvFzoOQTUJFcyDqfSEWSEJM1TeJaVrZXpzVA&s",  # 🏡 foto real do Monte da Galega
-        caption="Agroturismo Monte da Galega",
-        use_container_width=True,
-    )
-
-    st.markdown("### 📍 Localização")
-    st.markdown(f"**{contexto.get('nome_local')}**")
-    st.markdown(f"{contexto.get('morada')}")
-    st.markdown(f"[🗺️ Ver no Google Maps]({contexto.get('link_google_maps')})")
-    st.markdown("---")  
-    st.markdown("### 🎆 Detalhes")
-    st.markdown(f"🕗 **Hora:** {contexto.get('hora_inicio')}")
-    st.markdown(f"💃 **Dress code:** {contexto.get('dress_code')}")
-    st.markdown(f"🐾 **Aceita animais:** {'Sim' if contexto.get('aceita_animais') else 'Não'}")
-    st.markdown(f"🏊 **Piscina:** {'Sim' if contexto.get('tem_piscina') else 'Não'}")
-    st.markdown(f"🔥 **Churrasqueira:** {'Sim' if contexto.get('tem_churrasqueira') else 'Não'}")
-    st.markdown("---")
     st.markdown("### 🧍‍♂️ Confirmados")
     if confirmados:
         for nome in confirmados:
