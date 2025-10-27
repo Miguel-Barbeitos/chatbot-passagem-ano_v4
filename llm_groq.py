@@ -56,13 +56,14 @@ def e_pergunta_de_quintas(pergunta: str) -> bool:
     ]
     return any(c in p for c in chaves)
 
-# =====================================================
-# 🤖 GERAR SQL AUTOMATICAMENTE
-# =====================================================
 def e_pergunta_estado(pergunta: str) -> bool:
+    """Deteta perguntas sobre o estado das quintas (porquê, resposta, atualização)."""
     termos = ["porquê", "porque", "motivo", "estado", "respondeu", "atualização"]
     return any(t in pergunta.lower() for t in termos)
 
+# =====================================================
+# 🤖 GERAR SQL AUTOMATICAMENTE
+# =====================================================
 def gerar_sql_da_pergunta(pergunta: str) -> str:
     """Usa o LLM para gerar um SQL seguro (apenas SELECT)."""
     schema = """
