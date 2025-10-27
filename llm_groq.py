@@ -5,6 +5,7 @@ import requests
 import sqlite3
 import pandas as pd
 import streamlit as st
+import re  # ← ADICIONAR AQUI
 
 from learning_qdrant import procurar_resposta_semelhante
 
@@ -50,7 +51,6 @@ def carregar_contexto_base():
 def normalizar_zona(texto: str) -> str:
     """Normaliza nome de zona para fazer buscas flexíveis"""
     import unicodedata
-    import re
     
     # Remove acentos
     texto = unicodedata.normalize('NFKD', texto)
@@ -62,7 +62,7 @@ def normalizar_zona(texto: str) -> str:
     # Remove plural (s final)
     texto = texto.rstrip('s')
     
-    # Remove pontuação
+    # Remove pontuação (usa o re global)
     texto = re.sub(r'[^\w\s]', '', texto)
     
     return texto
@@ -72,7 +72,6 @@ def e_pergunta_de_quintas(pergunta: str) -> bool:
     p = pergunta.lower()
     
     # Verifica se tem nome de quinta (maiúsculas ou padrões específicos)
-    import re
     tem_nome_quinta = (
         re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or
         'c.r.' in p or 'quinta' in p or 'casa' in p or 'monte' in p or 'herdade' in p
@@ -414,7 +413,6 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
             # "quantas têm capacidade para X pessoas?" / "número de pessoas que precisamos"
             if any(t in p for t in ["capacidade", "pessoas", "numero de pessoas", "número de pessoas", "tem capacidade", "quantas tem"]):
                 # Tenta extrair o número de pessoas
-                import re
                 num_match = re.search(r'\d+', pergunta)
                 num_pessoas = num_match.group() if num_match else "43"
                 
