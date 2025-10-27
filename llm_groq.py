@@ -153,21 +153,29 @@ def gerar_resposta_dados_llm(pergunta, dados):
     prompt = f"""
 Transforma estes dados JSON numa resposta breve e natural à pergunta "{pergunta}".
 
-IMPORTANTE:
+⚠️ REGRAS CRÍTICAS:
+- USA APENAS OS DADOS FORNECIDOS - NUNCA inventes informação
+- Se os dados estiverem vazios ou incompletos, diz isso claramente
 - Responde em Português de Portugal, num tom simpático e direto
 - Máximo 3 frases
 - Se forem muitos resultados, menciona os 3-4 mais relevantes
 - Inclui detalhes importantes (zona, preço, capacidade) quando relevante
 - Lembra que ainda não há quinta fechada, mas já há várias opções
+- Se perguntarem por características que não existem nos dados (como "Porto"), menciona que não há ou que são poucas
 
-Dados:
+Dados fornecidos:
 {json_data}
+
+IMPORTANTE: Se os dados não tiverem a informação pedida, diz "Não encontrei essa informação específica" em vez de inventar.
 """
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
     data = {
         "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.6,
+        "messages": [
+            {"role": "system", "content": "És um assistente que transforma dados estruturados em respostas naturais. NUNCA inventes informação que não está nos dados fornecidos."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.3,  # Reduzido para ser mais factual
         "max_tokens": 200,
     }
     try:
@@ -210,12 +218,55 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
                     )
                 return "Ainda não há quinta fechada, mas já contactámos várias! Temos o Monte da Galega como plano B 😉"
         else:
-            # Perguntas factuais → usar SQLite
+            # ✅ PERGUNTAS SIMPLES - SQL direto sem LLM
+            p = pergunta.lower()
+            
+            # "quantas quintas?"
+            if any(t in p for t in ["quantas", "quantas quintas", "numero", "número", "total"]):
+                sql = "SELECT COUNT(*) as total FROM quintas"
+                dados = executar_sql(sql)
+                if dados and dados[0].get('total'):
+                    total = dados[0]['total']
+                    return f"Já contactámos {total} quintas no total 📊 Pergunta-me sobre zonas, preços ou características específicas!"
+                return "Ainda não temos quintas na base de dados 😅"
+            
+            # "que quintas?" / "lista de quintas"
+            if any(t in p for t in ["que quintas", "quais quintas", "lista", "nomes das quintas"]):
+                sql = "SELECT nome, zona, morada FROM quintas LIMIT 10"
+                dados = executar_sql(sql)
+                if dados:
+                    nomes = [f"**{d['nome']}** ({d.get('zona', 'zona n/d')})" for d in dados[:5]]
+                    total_sql = "SELECT COUNT(*) as total FROM quintas"
+                    total_dados = executar_sql(total_sql)
+                    total = total_dados[0]['total'] if total_dados else len(dados)
+                    
+                    resposta = f"Já contactámos {total} quintas. Aqui estão algumas:\n\n"
+                    resposta += "\n".join(f"• {n}" for n in nomes)
+                    if total > 5:
+                        resposta += f"\n\n...e mais {total - 5} quintas! Pergunta-me sobre zonas ou características específicas 😊"
+                    return resposta
+                return "Ainda não temos quintas contactadas 😅"
+            
+            # Perguntas complexas → usar SQLite + LLM
             sql = gerar_sql_da_pergunta(pergunta)
             if sql:
                 print(f"📊 SQL gerado: {sql}")
                 dados = executar_sql(sql)
                 if dados:
+                    # ✅ VALIDAÇÃO: só usar LLM se houver dados reais
+                    if len(dados) == 0:
+                        return "Não encontrei nenhuma quinta que corresponda a isso 😅 Tenta outra pergunta!"
+                    
+                    # Verifica se tem campos válidos (não vazios ou None)
+                    campos_validos = any(
+                        v is not None and v != "" and v != 0 
+                        for d in dados 
+                        for v in d.values()
+                    )
+                    
+                    if not campos_validos:
+                        return "Não encontrei informação específica sobre isso 😅 Tenta reformular!"
+                    
                     return gerar_resposta_dados_llm(pergunta, dados)
                 else:
                     return "Não encontrei nenhuma quinta que corresponda a isso 😅 Tenta outra pergunta!"
