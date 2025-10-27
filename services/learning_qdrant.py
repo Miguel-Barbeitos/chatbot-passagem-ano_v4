@@ -41,19 +41,25 @@ def get_model():
 # 💾 CONEXÃO AO QDRANT
 # =====================================================
 def inicializar_qdrant():
-qdrant_url = os.getenv("QDRANT_URL")
-qdrant_key = os.getenv("QDRANT_API_KEY")
-if qdrant_url and qdrant_key:
-print("☁️ Conectado ao Qdrant Cloud.")
-return QdrantClient(url=qdrant_url, api_key=qdrant_key)
-print("💾 A usar Qdrant local (modo desenvolvimento).")
-return QdrantClient(path=QDRANT_PATH)
+    qdrant_url = os.getenv("QDRANT_URL")
+    qdrant_key = os.getenv("QDRANT_API_KEY")
+
+    if qdrant_url and qdrant_key:
+        print("☁️ Conectado ao Qdrant Cloud.")
+        return QdrantClient(url=qdrant_url, api_key=qdrant_key)
+
+    print("💾 A usar Qdrant local (modo desenvolvimento).")
+    return QdrantClient(path=QDRANT_PATH)
 
 
+# =====================================================
+# 🧱 CRIAR COLEÇÃO SE NÃO EXISTIR
+# =====================================================
 client = inicializar_qdrant()
-# Criar coleção se não existir
+
 try:
-    if COLLECTION_NAME not in [c.name for c in client.get_collections().collections]:
+    colecoes_existentes = [c.name for c in client.get_collections().collections]
+    if COLLECTION_NAME not in colecoes_existentes:
         print(f"🆕 A criar coleção '{COLLECTION_NAME}' no Qdrant Cloud...")
         client.create_collection(
             collection_name=COLLECTION_NAME,
@@ -64,6 +70,7 @@ try:
         print(f"ℹ️ Coleção '{COLLECTION_NAME}' já existe.")
 except Exception as e:
     print(f"⚠️ Erro ao criar/verificar coleção: {e}")
+
 
 
 # =====================================================
