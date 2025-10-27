@@ -150,14 +150,14 @@ def gerar_resposta(pergunta: str, perfil: dict):
     
     # ✅ CONTEXTO: Referências a posições (primeira, segunda, 3ª, etc.)
     referencias_posicao = {
-        "primeira": 0, "1a": 0, "1ª": 0,
-        "segunda": 1, "2a": 1, "2ª": 1,
-        "terceira": 2, "3a": 2, "3ª": 2,
-        "quarta": 3, "4a": 3, "4ª": 3,
-        "quinta": 4, "5a": 4, "5ª": 4,
-        "sexta": 5, "6a": 5, "6ª": 5,
-        "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "oitava": 7, "8a": 7, "8ª": 7
+        "primeira": 0, "1a": 0, "1ª": 0, "1": 0,
+        "segunda": 1, "2a": 1, "2ª": 1, "2": 1,
+        "terceira": 2, "3a": 2, "3ª": 2, "3": 2,
+        "quarta": 3, "4a": 3, "4ª": 3, "4": 3,
+        "quinta": 4, "5a": 4, "5ª": 4, "5": 4,
+        "sexta": 5, "6a": 5, "6ª": 5, "6": 5,
+        "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "7": 6,
+        "oitava": 7, "8a": 7, "8ª": , "8": 7
     }
     
     # Verifica se há referência a posição + se há lista anterior
