@@ -372,9 +372,17 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
 
     # Verifica se o event.json tem dados válidos
     if not contexto_base or not contexto_base.get("nome_local"):
+        # Para conversas casuais/saudações, resposta muito breve
+        if any(t in pergunta.lower() for t in ["olá", "ola", "oi", "hey", "bom dia", "boa tarde", "boa noite"]):
+            return (
+                f"Olá, {nome}! 👋\n\n"
+                "Estamos a organizar os detalhes da festa de passagem de ano 🎆\n"
+                "Estou disponível para responder a qualquer questão!"
+            )
+        
         return (
-            "Ainda estamos a organizar os detalhes da festa 🎆 "
-            "Já temos o Monte da Galega reservado como backup, mas estamos a ver outras opções! "
+            "Ainda estamos a organizar os detalhes da festa 🎆\n"
+            "Já temos o Monte da Galega reservado como backup, mas estamos a ver outras opções!\n"
             "Pergunta-me sobre as quintas que já contactámos 😊"
         )
 

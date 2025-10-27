@@ -113,17 +113,35 @@ def gerar_resposta(pergunta: str, perfil: dict):
     contexto_base = get_contexto_base(raw=True)
     confirmados = get_confirmacoes()
 
-    # ✅ 1 — Confirmação de presença
+    # ✅ 1 — Saudação
+    if any(p in pergunta_l for p in ["ola", "olá", "bom dia", "boa tarde", "boa noite", "oi", "hey"]) and len(pergunta_l.split()) <= 3:
+        return (
+            f"Olá, {perfil['nome']}! 👋\n\n"
+            "Estamos a organizar os detalhes da festa de passagem de ano 🎆\n"
+            "Estou disponível para responder a qualquer questão que tenhas!"
+        )
+
+    # ✅ 2 — Confirmação de presença
     if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar"]):
         guardar_confirmacao(perfil["nome"])
         return f"Boa, {perfil['nome']} 🎉 Já estás na lista! Vê a lista ao lado 👈"
 
-    # ✅ 2 — Perguntas sobre confirmados
+    # ✅ 3 — Perguntas sobre confirmados
     if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao"]):
         return "Vê a lista de confirmados ao lado 👈"
 
-    # ✅ 3 — Perguntas sobre o estado da procura de quintas
-    # Perguntas ESPECÍFICAS sobre quintas → envia para o LLM/SQL
+    # ✅ 4 — Perguntas diretas sobre "já vimos quintas" / "outras quintas"
+    if any(p in pergunta_l for p in ["ja vimos", "já vimos", "vimos quintas", "outras quintas", "vimos outras", "ja contactamos", "já contactámos"]):
+        return (
+            "Sim, já contactámos várias quintas! 🏡\n\n"
+            "Pergunta-me:\n"
+            "• 'Quantas quintas já contactámos?'\n"
+            "• 'Que quintas já vimos?'\n"
+            "• 'Quintas em que zonas?'\n"
+            "• Ou qualquer outra coisa específica 😊"
+        )
+
+    # ✅ 5 — Perguntas ESPECÍFICAS sobre quintas → envia para o LLM/SQL
     if any(p in pergunta_l for p in ["que quintas", "quais quintas", "quantas quintas", "quantas vimos", "quantas contactamos", "lista", "opcoes", "opções", "nomes"]):
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
@@ -133,11 +151,12 @@ def gerar_resposta(pergunta: str, perfil: dict):
         guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
         return resposta_llm
     
-    # Perguntas GENÉRICAS sobre o local/quinta → resposta rápida
-    if any(p in pergunta_l for p in ["sitio", "local", "onde", "quinta", "quintas", "ja ha", "reservado", "fechado", "decidido", "ja temos"]):
+    # ✅ 6 — Perguntas GENÉRICAS sobre o local/quinta → resposta rápida
+    if any(p in pergunta_l for p in ["sitio", "local", "onde", "quinta", "ja ha", "reservado", "fechado", "decidido", "ja temos"]) and not any(p in pergunta_l for p in ["que", "quais", "quantas", "lista"]):
         return (
-            "Ainda estamos a ver o local final 🏡 Já temos o **Monte da Galega** reservado como plano B, "
-            "mas estamos a contactar outras quintas. Pergunta-me 'que quintas já contactámos?' para saberes mais! 😊"
+            "Ainda estamos a ver o local final 🏡\n\n"
+            "Já temos o **Monte da Galega** reservado como plano B, mas estamos a contactar outras quintas.\n"
+            "Pergunta-me sobre as quintas que já vimos! 😊"
         )
 
     # ✅ 4 — Perguntas sobre características do local (futuro)
