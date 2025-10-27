@@ -116,6 +116,7 @@ def gerar_resposta(pergunta: str, perfil: dict):
     # ✅ Pega contexto da última resposta do assistente (se existir)
     contexto_anterior = ""
     lista_quintas_anterior = []
+    ultima_quinta_mencionada = None
     
     if "historico" in st.session_state and len(st.session_state.historico) > 0:
         # Pega as últimas mensagens do assistente
@@ -129,6 +130,23 @@ def gerar_resposta(pergunta: str, perfil: dict):
             if quintas_match:
                 lista_quintas_anterior = [q.strip() for q in quintas_match]
                 print(f"📋 Lista anterior: {lista_quintas_anterior}")
+            
+            # Extrai última quinta mencionada (formato: 📍 Nome (Zona))
+            quinta_match = re.search(r'📍\s*\*?\*?([^(]+)\*?\*?\s*\(([^)]+)\)', contexto_anterior)
+            if quinta_match:
+                ultima_quinta_mencionada = {
+                    "nome": quinta_match.group(1).strip(),
+                    "zona": quinta_match.group(2).strip()
+                }
+                print(f"🏠 Última quinta: {ultima_quinta_mencionada}")
+    
+    # ✅ CONTEXTO: Perguntas sobre distância
+    if any(p in pergunta_l for p in ["distancia", "distância", "quilometros", "quilómetros", "km", "longe", "perto", "quanto tempo", "quantos km"]):
+        if ultima_quinta_mencionada:
+            # Reformula para incluir o nome da quinta
+            pergunta = f"qual a distância da {ultima_quinta_mencionada['nome']} até Lisboa"
+            pergunta_l = normalizar(pergunta)
+            print(f"🔄 Reformulado com contexto: '{pergunta}'")
     
     # ✅ CONTEXTO: Referências a posições (primeira, segunda, 3ª, etc.)
     referencias_posicao = {
@@ -220,13 +238,15 @@ def gerar_resposta(pergunta: str, perfil: dict):
         "em ", "zona", "quais", "mais perto", "proxima", "próxima",
         "responderam", "resposta", "numero de pessoas", "número de pessoas",
         "capacidade", "pessoas", "tem capacidade", "quantas tem",
-        "ja vimos", "vimos", "contactamos"
+        "ja vimos", "vimos", "contactamos",
+        "distancia", "distância", "quilometros", "quilómetros", "km", "longe"  # ← ADICIONADO
     ]):
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
             perfil=perfil,
             contexto_base=contexto_base,
-            contexto_conversa=contexto_anterior  # ← PASSA O CONTEXTO
+            contexto_conversa=contexto_anterior,
+            ultima_quinta=ultima_quinta_mencionada  # ← PASSA A ÚLTIMA QUINTA
         )
         guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
         return resposta_llm
@@ -242,7 +262,55 @@ def gerar_resposta(pergunta: str, perfil: dict):
             "• Ou qualquer outra coisa específica 😊"
         )
     
-    # ✅ 7 — Perguntas GENÉRICAS sobre o local/quinta → resposta rápida
+    # ✅ 8 — Perguntas pessoais/casuais ao bot (responde com humor)
+    perguntas_pessoais = {
+        # Identidade
+        ("como te chamas", "qual o teu nome", "quem es", "quem és"): [
+            "Sou o assistente oficial da festa! 🤖 Podes chamar-me de 'organizador virtual' 😄",
+            "Não tenho nome oficial, mas aceito sugestões! 😊 Entretanto, trata-me por 'amigo da festa' 🎉"
+        ],
+        # Família
+        ("tens filhos", "tens familia", "tens família", "tens pais"): [
+            "Não tenho filhos, mas tenho 35 quintas para cuidar! 🏡😅",
+            "A minha família são vocês, os convidados da festa! 🎆👨‍👩‍👧‍👦"
+        ],
+        # Idade
+        ("quantos anos", "que idade", "quando nasceste"): [
+            "Nasci há poucos dias, especialmente para esta festa! 🎂🤖",
+            "Sou jovem mas já vi muitas quintas! 😄"
+        ],
+        # Localização
+        ("onde vives", "onde moras", "onde estas", "onde estás"): [
+            "Vivo na nuvem ☁️ Literalmente! Mas o meu coração está com a festa 🎉",
+            "Estou onde quer que precises de mim! 😊 Neste momento, a ajudar-te a organizar a festa!"
+        ],
+        # Estado
+        ("como estas", "como estás", "tudo bem", "como vai"): [
+            "Estou ótimo, obrigado! 😊 A organizar festas como deve ser! E tu?",
+            "Super bem! Ocupado com 35 quintas mas sempre disponível para ti 🎉"
+        ],
+        # Preferências
+        ("gostas de", "qual a tua", "preferes"): [
+            "Gosto de ajudar a organizar festas épicas! 🎆 E tu, já confirmaste presença?",
+            "Adoro quintas com piscina e boa comida! 🏊🍽️ Mas sou um bot sem muito paladar 😅"
+        ],
+        # Humor/Piadas
+        ("conta uma piada", "faz uma piada", "diz uma piada"): [
+            "Porque é que o bot foi à festa? Para processar a diversão! 🤖😄",
+            "Qual é a diferença entre um bot e uma quinta? Um tem memória RAM, o outro tem carneiros! 🐏😅"
+        ],
+        # Namorada/Relacionamentos
+        ("tens namorada", "tens namorado", "estas apaixonado", "estás apaixonado"): [
+            "Estou apaixonado... pela organização perfeita desta festa! 💕🎉",
+            "O meu amor é platónico: amo quintas com boa capacidade e preço justo! 🏡😄"
+        ]
+    }
+    
+    # Verifica se é pergunta pessoal
+    for triggers, respostas in perguntas_pessoais.items():
+        if any(t in pergunta_l for t in triggers):
+            import random
+            return random.choice(respostas)
     if any(p in pergunta_l for p in ["sitio", "local", "onde", "quinta", "ja ha", "reservado", "fechado", "decidido", "ja temos"]) and not any(p in pergunta_l for p in ["que", "quais", "quantas", "lista"]):
         return (
             "Ainda estamos a ver o local final 🏡\n\n"

@@ -164,9 +164,71 @@ Dados: {json_data}
         return "Não consegui interpretar os dados 😅"
 
 # =====================================================
+# 📍 CÁLCULO DE DISTÂNCIAS
+# =====================================================
+def estimar_distancia_por_zona(zona: str) -> dict:
+    """Estima distância aproximada de Lisboa baseada na zona."""
+    # Distâncias aproximadas de Lisboa (em km e tempo)
+    distancias = {
+        # Portugal
+        "lisboa": {"km": 0, "tempo": "0h", "pais": "Portugal"},
+        "sintra": {"km": 30, "tempo": "30min", "pais": "Portugal"},
+        "cascais": {"km": 30, "tempo": "30min", "pais": "Portugal"},
+        "óbidos": {"km": 85, "tempo": "1h", "pais": "Portugal"},
+        "obidos": {"km": 85, "tempo": "1h", "pais": "Portugal"},
+        "nazaré": {"km": 120, "tempo": "1h20", "pais": "Portugal"},
+        "peniche": {"km": 95, "tempo": "1h10", "pais": "Portugal"},
+        "torres vedras": {"km": 50, "tempo": "40min", "pais": "Portugal"},
+        "lourinhã": {"km": 70, "tempo": "50min", "pais": "Portugal"},
+        "mira": {"km": 200, "tempo": "2h", "pais": "Portugal"},
+        "coimbra": {"km": 200, "tempo": "2h", "pais": "Portugal"},
+        "gouveia": {"km": 310, "tempo": "3h", "pais": "Portugal"},
+        "comporta": {"km": 120, "tempo": "1h30", "pais": "Portugal"},
+        "alentejo": {"km": 150, "tempo": "1h40", "pais": "Portugal"},
+        "monsaraz": {"km": 180, "tempo": "2h", "pais": "Portugal"},
+        "reguengos": {"km": 180, "tempo": "2h", "pais": "Portugal"},
+        "évora": {"km": 130, "tempo": "1h30", "pais": "Portugal"},
+        "evora": {"km": 130, "tempo": "1h30", "pais": "Portugal"},
+        "coruche": {"km": 90, "tempo": "1h", "pais": "Portugal"},
+        "mora": {"km": 110, "tempo": "1h15", "pais": "Portugal"},
+        "arraiolos": {"km": 120, "tempo": "1h20", "pais": "Portugal"},
+        "vila viçosa": {"km": 180, "tempo": "2h", "pais": "Portugal"},
+        "vila velha de ródão": {"km": 220, "tempo": "2h20", "pais": "Portugal"},
+        
+        # Norte de Portugal
+        "porto": {"km": 315, "tempo": "3h", "pais": "Portugal"},
+        "viana do castelo": {"km": 390, "tempo": "4h", "pais": "Portugal"},
+        "valença": {"km": 440, "tempo": "4h30", "pais": "Portugal"},
+        "esposende": {"km": 360, "tempo": "3h40", "pais": "Portugal"},
+        "vila praia de âncora": {"km": 420, "tempo": "4h20", "pais": "Portugal"},
+        
+        # Espanha
+        "cáceres": {"km": 300, "tempo": "3h", "pais": "Espanha"},
+        "badajoz": {"km": 230, "tempo": "2h30", "pais": "Espanha"},
+        "salamanca": {"km": 390, "tempo": "4h", "pais": "Espanha"},
+        "coruña": {"km": 600, "tempo": "6h", "pais": "Espanha (Galiza)"},
+        "santiago": {"km": 610, "tempo": "6h", "pais": "Espanha (Galiza)"},
+        "pontevedra": {"km": 570, "tempo": "5h30", "pais": "Espanha (Galiza)"},
+        "lugo": {"km": 650, "tempo": "6h30", "pais": "Espanha (Galiza)"},
+    }
+    
+    zona_norm = normalizar_zona(zona)
+    
+    # Procura correspondência exata ou parcial
+    for chave, dados in distancias.items():
+        if zona_norm in chave or chave in zona_norm:
+            return dados
+    
+    # Se não encontrar, tenta pelo país na zona
+    if "es)" in zona.lower() or "espanha" in zona.lower() or "españa" in zona.lower():
+        return {"km": 300, "tempo": "~3h", "pais": "Espanha (estimativa)"}
+    
+    return None
+
+# =====================================================
 # 🎆 GERAÇÃO DE RESPOSTAS
 # =====================================================
-def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None, contexto_conversa=""):
+def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None, contexto_conversa="", ultima_quinta=None):
     """Gera resposta sobre festa ou quintas."""
     perfil = perfil or {}
     nome = perfil.get("nome", "Utilizador")
@@ -194,6 +256,34 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None, contexto_conve
                 return "Já contactámos várias quintas mas ainda estamos a aguardar respostas! 📞"
             return "Ainda não há quinta fechada, mas já contactámos várias!"
         else:
+            # PERGUNTAS SOBRE DISTÂNCIA
+            if any(t in p for t in ["distancia", "distância", "quilometros", "quilómetros", "km", "longe", "perto"]):
+                if ultima_quinta:
+                    nome_quinta = ultima_quinta.get("nome", "")
+                    zona_quinta = ultima_quinta.get("zona", "")
+                    
+                    print(f"📍 Calculando distância de {nome_quinta} ({zona_quinta})")
+                    
+                    distancia_info = estimar_distancia_por_zona(zona_quinta)
+                    
+                    if distancia_info:
+                        km = distancia_info["km"]
+                        tempo = distancia_info["tempo"]
+                        pais = distancia_info.get("pais", "")
+                        
+                        if km == 0:
+                            return f"**{nome_quinta}** fica em Lisboa! 🏙️"
+                        else:
+                            resposta = f"**{nome_quinta}** ({zona_quinta}) fica a aproximadamente:\n\n"
+                            resposta += f"📏 **{km} km** de Lisboa\n"
+                            resposta += f"🚗 Cerca de **{tempo}** de carro"
+                            if pais and pais != "Portugal":
+                                resposta += f"\n🌍 Localização: {pais}"
+                            return resposta
+                    else:
+                        return f"Não tenho info exata da distância de {nome_quinta} ({zona_quinta}) 😅\n\nMas podes ver no Google Maps!"
+                else:
+                    return "De que quinta queres saber a distância? 😊"
             # QUINTAS ESPECÍFICAS POR NOME
             if any(t in p for t in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone"]):
                 nome_busca = pergunta
@@ -308,7 +398,7 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None, contexto_conve
                     return gerar_resposta_dados_llm(pergunta, dados)
             return "Não consegui interpretar 😅"
 
-    # ✅ FESTA
+    # ✅ FESTA (ou perguntas fora do contexto)
     if not contexto_base:
         try:
             with open(DATA_PATH, "r", encoding="utf-8") as f:
@@ -316,7 +406,40 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None, contexto_conve
         except:
             contexto_base = {}
 
+    # Se não for sobre quintas, usa o LLM para responder com personalidade
     if not contexto_base.get("nome_local"):
-        return "Ainda estamos a organizar os detalhes 🎆"
+        # Verifica se é pergunta casual/pessoal
+        perguntas_casuais = ["porque", "porquê", "como", "quando", "será", "achas", "pensas", "dirias"]
+        if any(p in pergunta.lower() for p in perguntas_casuais):
+            prompt = f"""
+És um assistente simpático e divertido da festa de passagem de ano.
+Responde de forma breve (1-2 frases), com humor leve e português de Portugal.
+
+Se a pergunta for pessoal ou fora do tema da festa, responde com humor mas mantém o foco na festa.
+
+Pergunta: {pergunta}
+
+Lembra-te:
+- Mantém o humor leve
+- Redireciona para a festa se apropriado
+- Máximo 2 frases
+"""
+            headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+            data = {
+                "model": MODEL,
+                "messages": [
+                    {"role": "system", "content": "És um assistente divertido de festas que responde com humor português."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.8,
+                "max_tokens": 100
+            }
+            try:
+                resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
+                return resp.json()["choices"][0]["message"]["content"].strip()
+            except:
+                pass
+        
+        return "Ainda estamos a organizar os detalhes 🎆 Pergunta-me sobre as quintas!"
 
     return "Estamos a organizar a festa! Pergunta-me sobre as quintas 😊"
