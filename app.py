@@ -80,55 +80,47 @@ else:
 perfil = next(p for p in profiles if p["nome"] == nome)
 
 # =====================================================
-# 🎨 Layout geral (chat à esquerda, utilidades à direita)
+# ✉️ Campo de mensagem + envio via botão ou Enter
 # =====================================================
-col_chat, col_side = st.columns([3, 1])
 
-with col_side:
-    confirmados = get_confirmacoes()
-    mostrar_sidebar(confirmados)
-    botoes_utilidade()
+def processar_mensagem():
+    prompt = st.session_state.get("input_mensagem", "").strip()
+    if not prompt:
+        return
 
-with col_chat:
-    mostrar_saudacao(nome)
-    mostrar_chat_historico()
+    intencao = identificar_intencao(prompt)
+    indicador_intencao_ui(intencao)
 
-    # Input + botão "Enviar"
-    col1, col2 = st.columns([6, 1])
-    with col1:
-        prompt = st.text_input("Escreve a tua mensagem…", key="input_mensagem")
-    with col2:
-        enviar = st.button("➡️", use_container_width=True)
+    with st.spinner("💭 A pensar..."):
+        resposta = gerar_resposta(prompt, perfil)
 
-    # Processar envio
-    if (enviar or prompt) and prompt.strip():
-        intencao = identificar_intencao(prompt)
-        indicador_intencao_ui(intencao)
+    with st.chat_message("user"):
+        st.markdown(f"**{nome}:** {prompt}")
+    with st.chat_message("assistant"):
+        st.markdown(f"**Assistente:** {resposta}")
 
-        with st.spinner("💭 A pensar..."):
-            resposta = gerar_resposta(prompt, perfil)
+    # Guardar no histórico
+    ts = datetime.now().strftime('%H:%M')
+    st.session_state.setdefault("historico", [])
+    st.session_state.historico.append(
+        {"role": "user", "content": f"**{nome} ({ts}):** {prompt}"}
+    )
+    st.session_state.historico.append(
+        {"role": "assistant", "content": f"**Assistente ({ts}):** {resposta}"}
+    )
 
-        # Render mensagens
-        with st.chat_message("user"):
-            st.markdown(f"**{nome}:** {prompt}")
-        with st.chat_message("assistant"):
-            st.markdown(f"**Assistente:** {resposta}")
+    # ✅ Limpar input de forma segura
+    st.session_state.input_mensagem = ""
 
-        # Guardar histórico
-        ts = datetime.now().strftime('%H:%M')
-        if "historico" not in st.session_state:
-            st.session_state.historico = []
-        st.session_state.historico.append(
-            {"role": "user", "content": f"**{nome} ({ts}):** {prompt}"}
-        )
-        st.session_state.historico.append(
-            {"role": "assistant", "content": f"**Assistente ({ts}):** {resposta}"}
-        )
 
-        # ✅ Limpar campo input de forma segura
-        if "input_mensagem" in st.session_state:
-            st.session_state["input_mensagem"] = ""
-        else:
-            st.session_state.setdefault("input_mensagem", "")
+col1, col2 = st.columns([6, 1])
+with col1:
+    st.text_input(
+        "Escreve a tua mensagem…",
+        key="input_mensagem",
+        on_change=processar_mensagem,  # 🔹 callback seguro
+    )
+with col2:
+    if st.button("➡️", use_container_width=True):
+        processar_mensagem()
 
-        st.rerun()
