@@ -5,5 +5,5 @@ numpy
 requests
 groq
 pandas
-sqlite3
-unicodedata
+python-dateutil
+loguru
