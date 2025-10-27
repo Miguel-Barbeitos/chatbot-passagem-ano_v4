@@ -147,29 +147,32 @@ def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
     """
     Gera uma resposta contextual:
     - sobre a festa (usa event.json)
-    - ou sobre as quintas (usa SQLite)
+    - ou sobre as quintas (usa SQLite ou Qdrant)
     """
     perfil = perfil or {}
     nome = perfil.get("nome", "Utilizador")
     personalidade = perfil.get("personalidade", "neutro")
 
-    # ✅ 1 — Consultas sobre quintas (base SQLite)
-    def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None):
+    # ✅ 1 — Consultas sobre quintas (base SQLite ou Qdrant)
     if e_pergunta_de_quintas(pergunta):
         if e_pergunta_estado(pergunta):
+            # Perguntas tipo "porquê", "respondeu", "estado"
             nota = procurar_resposta_semelhante(pergunta, contexto="quintas")
             if nota:
                 return nota
             else:
                 return "Ainda não há resposta confirmada dessa quinta 😉"
         else:
-        sql = gerar_sql_da_pergunta(pergunta)
-        if sql:
-            dados = executar_sql(sql)
-            if dados:
-                return gerar_resposta_dados_llm(pergunta, dados)
+            # Perguntas factuais → usar SQLite
+            sql = gerar_sql_da_pergunta(pergunta)
+            if sql:
+                dados = executar_sql(sql)
+                if dados:
+                    return gerar_resposta_dados_llm(pergunta, dados)
+                else:
+                    return "Não encontrei nenhuma quinta que corresponda a isso 😅"
             else:
-                return "Não encontrei nenhuma quinta que corresponda a isso 😅"
+                return "Não consegui interpretar bem a tua pergunta sobre as quintas 😅"
 
     # ✅ 2 — Caso contrário, responde sobre a festa
     if not contexto_base:
