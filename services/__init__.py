@@ -1,4 +1,8 @@
-echo '"""Pacote de servi�os do chatbot da passagem de ano."""' > services/__init__.py
-git add services/__init__.py
-git commit -m "Adicionado __init__.py para corrigir imports"
-git push origin main
+﻿"""
+Pacote de servicos do chatbot da passagem de ano.
+
+Contém módulos auxiliares como:
+ - utils.py            → Funções utilitárias, logging e cache
+ - learning_qdrant.py  → Gestão de embeddings e confirmações (Qdrant)
+ - llm_groq.py         → Integração com o modelo Groq
+"""
