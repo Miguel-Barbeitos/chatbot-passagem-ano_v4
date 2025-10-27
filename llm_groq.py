@@ -6,7 +6,7 @@ import sqlite3
 import pandas as pd
 import streamlit as st
 
-from learning_qdrant import procurar_resposta_semelhante, guardar_nota_quinta
+from learning_qdrant import procurar_resposta_semelhante
 
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
