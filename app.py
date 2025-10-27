@@ -101,8 +101,36 @@ with col_chat:
     mostrar_saudacao(nome)
     mostrar_chat_historico()
 
-    # Input adaptável (text_area)
-    prompt = input_mensagem()
+    # Input adaptável (campo + botão "Enviar")
+col1, col2 = st.columns([6, 1])
+with col1:
+    prompt = st.text_input("Escreve a tua mensagem…", key="input_mensagem")
+with col2:
+    enviar = st.button("➡️", use_container_width=True)
+
+# Só processa se clicares na seta ou carregares Enter
+if (enviar or prompt) and prompt.strip():
+    # Intenção (para badge/indicador visual)
+    intencao = identificar_intencao(prompt)
+    indicador_intencao_ui(intencao)
+
+    with st.spinner("💭 A pensar..."):
+        resposta = gerar_resposta(prompt, perfil)
+
+    # Render das mensagens
+    with st.chat_message("user"):
+        st.markdown(f"**{nome}:** {prompt}")
+    with st.chat_message("assistant"):
+        st.markdown(f"**Assistente:** {resposta}")
+
+    # Guardar no histórico (com hora)
+    ts = datetime.now().strftime('%H:%M')
+    if "historico" not in st.session_state:
+        st.session_state.historico = []
+    st.session_state.historico.append({"role": "user", "content": f"**{nome} ({ts}):** {prompt}"})
+    st.session_state.historico.append({"role": "assistant", "content": f"**Assistente ({ts}):** {resposta}"})
+    st.experimental_rerun()
+
 
     if prompt:
         # Intenção (para badge/indicador visual)
