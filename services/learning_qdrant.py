@@ -239,3 +239,36 @@ def identificar_intencao(pergunta: str) -> str:
     if any(t in p for t in ["bebida", "cerveja", "vinho", "champanhe", "cocktail"]):
         return "bebida"
     return "geral"
+
+
+    # =====================================================
+# 🔍 PROCURA DE RESPOSTAS SEMELHANTES
+# =====================================================
+def procurar_resposta_semelhante(pergunta: str, limite: int = 3):
+    """
+    Procura no Qdrant as respostas mais semelhantes à pergunta do utilizador.
+    Retorna a melhor resposta encontrada ou None.
+    """
+    try:
+        model = get_model()
+        vector = model.encode(pergunta).tolist()
+
+        resultados = client.search(
+            collection_name=COLLECTION_NAME,
+            query_vector=vector,
+            limit=limite,
+        )
+
+        if not resultados:
+            print("ℹ️ Nenhuma resposta semelhante encontrada.")
+            return None
+
+        melhor = resultados[0]
+        resposta = melhor.payload.get("resposta")
+        similaridade = melhor.score
+        print(f"🔍 Resposta semelhante encontrada (score={similaridade:.3f}) → {resposta}")
+        return resposta
+
+    except Exception as e:
+        print(f"⚠️ Erro ao procurar resposta semelhante: {e}")
+        return None
