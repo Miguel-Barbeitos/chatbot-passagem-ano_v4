@@ -464,12 +464,39 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         if any(t in pergunta_l for t in triggers):
             import random
             return random.choice(respostas)
-    if any(p in pergunta_l for p in ["sitio", "local", "onde", "quinta", "ja ha", "reservado", "fechado", "decidido", "ja temos"]) and not any(p in pergunta_l for p in ["que", "quais", "quantas", "lista"]):
+    
+    # ✅ NOVO: Perguntas sobre PORQUÊ ainda não há quinta
+    if any(p in pergunta_l for p in ["porque ainda nao", "porquê ainda não", "porque nao temos", "porquê não temos", "porque nao ha", "porquê não há"]) and any(p in pergunta_l for p in ["quinta", "local", "sitio", "sítio"]):
+        return (
+            "Estamos a avaliar várias opções! 🤔\n\n"
+            "Já contactámos 35 quintas e temos o Monte da Galega reservado como backup. "
+            "Queremos garantir que escolhemos o melhor local para a festa! "
+            "Queres saber mais sobre as quintas que já vimos?"
+        )
+    
+    # ✅ NOVO: Perguntas sobre LOCALIZAÇÃO de quinta específica
+    # Deteta nomes de quintas (maiúsculas, C.R., Casa, Monte, etc)
+    if re.search(r'(C\.R\.|Casa|Monte|Herdade|Quinta [A-Z]|[A-Z][a-z]+\s+[A-Z])', pergunta):
+        if any(p in pergunta_l for p in ["onde", "onde fica", "onde e", "onde é", "localizacao", "localização", "morada", "sitio", "sítio"]):
+            # Passa para o LLM que tem acesso à base de dados
+            resposta_llm = gerar_resposta_llm(
+                pergunta=pergunta,
+                perfil_completo=perfil_completo,
+                contexto_base=contexto_base,
+                contexto_conversa=contexto_anterior
+            )
+            guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
+            return resposta_llm
+    
+    # ✅ CORRIGIDO: Perguntas sobre o local DA FESTA (não quintas específicas)
+    # Agora mais específico - só responde para perguntas sobre a festa
+    if any(p in pergunta_l for p in ["sitio da festa", "local da festa", "onde vai ser a festa", "onde sera a festa", "onde é a festa", "ja ha quinta definida", "quinta reservada para a festa", "fechado o local", "decidido o local", "local ja decidido"]):
         return (
             "Ainda estamos a ver o local final 🏡\n\n"
             "Já temos o **Monte da Galega** reservado como plano B, mas estamos a contactar outras quintas.\n"
             "Pergunta-me sobre as quintas que já vimos! 😊"
         )
+
 
     # ✅ 4 — Perguntas sobre características do local (futuro)
     if "piscina" in pergunta_l:
