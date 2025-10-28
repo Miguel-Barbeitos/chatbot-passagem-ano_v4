@@ -200,6 +200,10 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     pergunta_l = normalizar(pergunta)
     contexto_base = get_contexto_base(raw=True)
     
+    # ✅ Inicializa session_state para última quinta mencionada
+    if "ultima_quinta_mencionada" not in st.session_state:
+        st.session_state.ultima_quinta_mencionada = None
+    
     # ✅ Pega contexto da última resposta do assistente (se existir)
     contexto_anterior = ""
     lista_quintas_anterior = []
@@ -225,7 +229,58 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     "nome": quinta_match.group(1).strip(),
                     "zona": quinta_match.group(2).strip()
                 }
+                st.session_state.ultima_quinta_mencionada = quinta_quinta_mencionada["nome"]
                 print(f"🏠 Última quinta: {ultima_quinta_mencionada}")
+    
+    # ✅ NOVO: Detetar e guardar quinta mencionada na pergunta atual
+    import re
+    quinta_na_pergunta = re.search(
+        r'(C\.R\.|Casa|Monte|Herdade|Quinta)\s+([A-Z][^\?]+?)(?:\s+é|\s+fica|\s+tem|\?|$)', 
+        pergunta, 
+        re.IGNORECASE
+    )
+    if quinta_na_pergunta:
+        nome_detectado = quinta_na_pergunta.group(0).strip().rstrip('?').strip()
+        # Remove palavras após "é", "fica", etc
+        nome_detectado = re.sub(r'\s+(é|fica|tem|onde|como|quando|tem).*$', '', nome_detectado, flags=re.IGNORECASE).strip()
+        st.session_state.ultima_quinta_mencionada = nome_detectado
+        print(f"🔍 Quinta detectada na pergunta: {nome_detectado}")
+    
+    # ✅ NOVO: Pedidos de info sem nome da quinta (usa contexto)
+    if any(p in pergunta_l for p in ["manda-me", "manda me", "envia", "envia-me", "qual e", "qual é", "mostra", "diz-me", "dá-me", "da-me"]):
+        if any(p in pergunta_l for p in ["website", "link", "site", "email", "telefone", "contacto", "morada", "endereco", "endereço"]):
+            # Verifica se NÃO tem nome de quinta na pergunta atual
+            if not re.search(r'(C\.R\.|Casa|Monte|Herdade|Quinta)\s+[A-Z]', pergunta):
+                # Usa contexto da última quinta
+                if st.session_state.get("ultima_quinta_mencionada"):
+                    # Identifica tipo de informação pedida
+                    tipo_info = None
+                    if "website" in pergunta_l or "link" in pergunta_l or "site" in pergunta_l:
+                        tipo_info = "website"
+                    elif "email" in pergunta_l:
+                        tipo_info = "email"
+                    elif "telefone" in pergunta_l or "contacto" in pergunta_l:
+                        tipo_info = "telefone"
+                    elif "morada" in pergunta_l or "endereco" in pergunta_l or "endereço" in pergunta_l:
+                        tipo_info = "morada"
+                    
+                    if tipo_info:
+                        # Reconstrói pergunta com contexto
+                        pergunta_expandida = f"{tipo_info} da {st.session_state.ultima_quinta_mencionada}"
+                        print(f"🔄 Contexto usado! Pergunta expandida: {pergunta_expandida}")
+                        
+                        # Chama LLM com pergunta completa
+                        resposta_llm = gerar_resposta_llm(
+                            pergunta=pergunta_expandida,
+                            perfil_completo=perfil_completo,
+                            contexto_base=contexto_base,
+                            contexto_conversa=contexto_anterior
+                        )
+                        guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
+                        return resposta_llm
+                else:
+                    # Não há quinta no contexto
+                    return "De que quinta queres essa informação? 😊"
     
     # ✅ CONTEXTO: Perguntas sobre distância
     if any(p in pergunta_l for p in ["distancia", "distância", "quilometros", "quilómetros", "km", "longe", "perto", "quanto tempo", "quantos km"]):
@@ -249,7 +304,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         "primeira": 0, "1a": 0, "1ª": 0,
         "segunda": 1, "2a": 1, "2ª": 1,
         "terceira": 2, "3a": 2, "3ª": 2,
-        "quarta": 3, "4a": 3, "4ª": 3,
+        "quarta": 3, "4a": 3, "4ª": 4,
         "quinta": 4, "5a": 4, "5ª": 4,
         "sexta": 5, "6a": 5, "6ª": 5,
         "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
@@ -363,10 +418,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             pergunta = "que quintas já contactámos"
             pergunta_l = normalizar(pergunta)
 
-    # ✅ 4 — Perguntas ESPECÍFICAS sobre quintas (por nome) ou informações detalhadas
+    # ✅ 5 — Perguntas ESPECÍFICAS sobre quintas (por nome) ou informações detalhadas
     # Deteta nomes de quintas na pergunta (palavras começadas com maiúscula ou termos específicos)
-    import re
-    # Procura por nomes próprios ou padrões tipo "C.R. Nome" ou "Quinta X"
     tem_nome_quinta = (
         re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or  # "Casa Lagoa", "Monte Verde"
         re.search(r'C\.R\.|quinta|casa|monte|herdade', pergunta_l) or
@@ -377,14 +430,14 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     if any(p in pergunta_l for p in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]) and tem_nome_quinta:
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil_completo=perfil_completo,  # ← CORRIGIDO
+            perfil_completo=perfil_completo,
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior
         )
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
 
-    # ✅ 5 — Perguntas sobre ZONAS, listas de quintas, ou queries SQL
+    # ✅ 6 — Perguntas sobre ZONAS, listas de quintas, ou queries SQL
     if any(p in pergunta_l for p in [
         "que quintas", "quais quintas", "quantas quintas", "quantas vimos", 
         "quantas contactamos", "lista", "opcoes", "opções", "nomes", 
@@ -396,7 +449,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     ]):
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil_completo=perfil_completo,  # ← CORRIGIDO
+            perfil_completo=perfil_completo,
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior,
             ultima_quinta=ultima_quinta_mencionada
@@ -404,7 +457,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
     
-    # ✅ 6 — Perguntas diretas sobre "já vimos quintas" / "outras quintas" (fallback)
+    # ✅ 7 — Perguntas diretas sobre "já vimos quintas" / "outras quintas" (fallback)
     if any(p in pergunta_l for p in ["outras quintas", "vimos outras"]):
         return (
             "Sim, já contactámos várias quintas! 🏡\n\n"
@@ -465,7 +518,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             import random
             return random.choice(respostas)
     
-    # ✅ NOVO: Perguntas sobre PORQUÊ ainda não há quinta
+    # ✅ 9 — Perguntas sobre PORQUÊ ainda não há quinta
     if any(p in pergunta_l for p in ["porque ainda nao", "porquê ainda não", "porque nao temos", "porquê não temos", "porque nao ha", "porquê não há"]) and any(p in pergunta_l for p in ["quinta", "local", "sitio", "sítio"]):
         return (
             "Estamos a avaliar várias opções! 🤔\n\n"
@@ -474,8 +527,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             "Queres saber mais sobre as quintas que já vimos?"
         )
     
-    # ✅ NOVO: Perguntas sobre LOCALIZAÇÃO de quinta específica
-    # Deteta nomes de quintas (maiúsculas, C.R., Casa, Monte, etc)
+    # ✅ 10 — Perguntas sobre LOCALIZAÇÃO de quinta específica
     if re.search(r'(C\.R\.|Casa|Monte|Herdade|Quinta [A-Z]|[A-Z][a-z]+\s+[A-Z])', pergunta):
         if any(p in pergunta_l for p in ["onde", "onde fica", "onde e", "onde é", "localizacao", "localização", "morada", "sitio", "sítio"]):
             # Passa para o LLM que tem acesso à base de dados
@@ -488,8 +540,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
             return resposta_llm
     
-    # ✅ CORRIGIDO: Perguntas sobre o local DA FESTA (não quintas específicas)
-    # Agora mais específico - só responde para perguntas sobre a festa
+    # ✅ 11 — Perguntas sobre o local DA FESTA (não quintas específicas)
     if any(p in pergunta_l for p in ["sitio da festa", "local da festa", "onde vai ser a festa", "onde sera a festa", "onde é a festa", "ja ha quinta definida", "quinta reservada para a festa", "fechado o local", "decidido o local", "local ja decidido"]):
         return (
             "Ainda estamos a ver o local final 🏡\n\n"
@@ -497,8 +548,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             "Pergunta-me sobre as quintas que já vimos! 😊"
         )
 
-
-    # ✅ 4 — Perguntas sobre características do local (futuro)
+    # ✅ 12 — Perguntas sobre características do local (futuro)
     if "piscina" in pergunta_l:
         return "Ainda não temos quinta fechada, mas já perguntámos quais têm piscina 🏊 Queres saber quais são?"
 
@@ -511,14 +561,14 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     if any(p in pergunta_l for p in ["animais", "cao", "cão", "gato"]):
         return "Ainda não fechámos o local, mas posso dizer-te quais quintas aceitam animais 🐶 Queres saber?"
 
-    # ✅ 5 — Perguntas sobre o que já foi feito
+    # ✅ 13 — Perguntas sobre o que já foi feito
     if any(p in pergunta_l for p in ["fizeram", "fizeste", "andaram a fazer", "trabalho", "progresso"]):
         return (
             "Já contactámos várias quintas e temos o **Monte da Galega** reservado como backup 🏡 "
             "Pergunta-me sobre quintas específicas, zonas, preços ou capacidades! 😊"
         )
 
-    # ✅ 6 — Perguntas genéricas (LLM trata do resto)
+    # ✅ 14 — Perguntas genéricas (LLM trata do resto)
     resposta_llm = gerar_resposta_llm(
         pergunta=pergunta,
         perfil_completo=perfil_completo,
@@ -526,7 +576,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     )
 
     guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil_completo)
-    return resposta_llm
+    return resposta_ll
 
 # =====================================================
 # 💬 INTERFACE STREAMLIT (CHAT)
