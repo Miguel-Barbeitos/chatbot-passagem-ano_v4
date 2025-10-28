@@ -61,31 +61,59 @@ def carregar_json(path, default=None):
         return default or []
 
 # =====================================================
-# 📂 DADOS BASE - NOVO SISTEMA
+# 📂 DADOS BASE - NOVO SISTEMA (com fallback)
 # =====================================================
-# Busca todos os perfis do Qdrant
 try:
-    from modules.perfis_manager import listar_todos_perfis
+    import sys
+    sys.path.insert(0, os.path.dirname(__file__))
+    
+    from modules.perfis_manager import listar_todos_perfis, buscar_perfil
+    
+    print("🔍 A carregar perfis do Qdrant...")
     perfis_lista = listar_todos_perfis()
     
-    if not perfis_lista:
-        st.error("⚠️ Nenhum perfil encontrado no Qdrant!")
-        st.info("💡 Corre: python modules/perfis_manager.py")
-        st.stop()
+    print(f"📦 Resultado: {len(perfis_lista)} perfis")
+    
+    if not perfis_lista or len(perfis_lista) == 0:
+        # Fallback: lê do JSON diretamente
+        st.warning("⚠️ Qdrant vazio. A ler do JSON como fallback...")
+        import json
+        json_path = os.path.join(os.path.dirname(__file__), "data", "perfis_base.json")
+        
+        if os.path.exists(json_path):
+            with open(json_path, "r", encoding="utf-8") as f:
+                perfis_lista = json.load(f)
+            st.info(f"✅ {len(perfis_lista)} perfis carregados do JSON")
+        else:
+            st.error(f"❌ Ficheiro não encontrado: {json_path}")
+            st.stop()
+    else:
+        st.success(f"✅ {len(perfis_lista)} perfis carregados do Qdrant")
     
     # Cria lista de nomes para o selectbox
     nomes = sorted([p["nome"] for p in perfis_lista])
-    print(f"✅ {len(nomes)} perfis carregados do Qdrant")
     
 except Exception as e:
-    st.error(f"⚠️ Erro ao carregar perfis do Qdrant: {e}")
-    st.info("💡 Certifica-te que correste: python modules/perfis_manager.py")
-    st.stop()
+    st.error(f"⚠️ Erro ao carregar perfis: {e}")
+    import traceback
+    st.code(traceback.format_exc())
+    
+    # Tenta fallback
+    try:
+        st.warning("Tentando fallback para JSON...")
+        import json
+        json_path = os.path.join(os.path.dirname(__file__), "data", "perfis_base.json")
+        with open(json_path, "r", encoding="utf-8") as f:
+            perfis_lista = json.load(f)
+        nomes = sorted([p["nome"] for p in perfis_lista])
+        st.info(f"✅ {len(perfis_lista)} perfis do JSON")
+    except Exception as e2:
+        st.error(f"❌ Fallback também falhou: {e2}")
+        st.stop()
 
 # =====================================================
 # 🧍 UTILIZADOR ATUAL
 # =====================================================
-nomes = [p["nome"] for p in profiles]
 params = st.query_params
 
 if "user" in params and params["user"] in nomes:
@@ -100,7 +128,19 @@ else:
             st.rerun()
     st.stop()
 
-perfil = next(p for p in profiles if p["nome"] == nome)
+# Busca perfil completo do Qdrant (ou fallback para lista)
+try:
+    perfil_completo = buscar_perfil(nome)
+    if not perfil_completo:
+        # Fallback: busca na lista carregada
+        perfil_completo = next((p for p in perfis_lista if p["nome"] == nome), None)
+    
+    if not perfil_completo:
+        st.error(f"⚠️ Perfil de '{nome}' não encontrado!")
+        st.stop()
+except Exception as e:
+    st.error(f"⚠️ Erro ao buscar perfil: {e}")
+    st.stop()
 
 # =====================================================
 # 🎉 SIDEBAR — INFO DO EVENTO
@@ -129,12 +169,6 @@ with st.sidebar:
 # =====================================================
 # 👋 SAUDAÇÃO PERSONALIZADA
 # =====================================================
-# Busca perfil do utilizador
-perfil_completo = buscar_perfil(nome)
-if not perfil_completo:
-    st.error(f"⚠️ Perfil de '{nome}' não encontrado no sistema!")
-    st.stop()
-
 # Personalidade
 personalidade = perfil_completo.get("personalidade", {})
 humor = personalidade.get("humor", 5)
