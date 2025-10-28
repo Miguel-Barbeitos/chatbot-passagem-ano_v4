@@ -148,7 +148,7 @@
     "familia_id": "familia_ana_gustavo",
     "relacoes": {
       "conjuge": "Gustavo",
-      "filhos": []
+      "filhos": ["Joana","Leonor"]
     },
     "pode_confirmar_por": ["Gustavo"],
     "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
@@ -159,18 +159,18 @@
     "familia_id": "familia_ana_gustavo",
     "relacoes": {
       "conjuge": "Ana",
-      "filhos": []
+      "filhos": ["Joana","Leonor"]
     },
     "pode_confirmar_por": ["Ana"],
     "personalidade": {"humor": 10, "formalidade": 3, "detalhismo": 5, "emojis": 7, "paciencia": 2}
   },
   {
     "nome": "Joana",
-    "tipo": "adulto",
-    "familia_id": "familia_joana",
+    "tipo": "filho",
+    "familia_id": "familia_ana_gustavo",
     "relacoes": {
-      "conjuge": null,
-      "filhos": ["Leonor"]
+      "pais":  ["Gustavo", "Ana"],
+      "irmaos": ["Leonor"]
     },
     "pode_confirmar_por": ["Leonor"],
     "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
@@ -178,10 +178,10 @@
   {
     "nome": "Leonor",
     "tipo": "filho",
-    "familia_id": "familia_joana",
+    "familia_id": "familia_ana_gustavo",
     "relacoes": {
-      "pais": ["Joana"],
-      "irmaos": []
+      "pais":  ["Gustavo", "Ana"],
+      "irmaos": ["Joana"]
     },
     "pode_confirmar_por": [],
     "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
@@ -203,18 +203,18 @@
     "familia_id": "familia_raquel",
     "relacoes": {
       "conjuge": null,
-      "filhos": ["Susana"]
+      "filhos": []
     },
-    "pode_confirmar_por": ["Susana"],
+    "pode_confirmar_por": [],
     "personalidade": {"humor": 7, "formalidade": 7, "detalhismo": 7, "emojis": 9, "paciencia": 3}
   },
   {
     "nome": "Susana",
-    "tipo": "filho",
-    "familia_id": "familia_raquel",
+    "tipo": "adulto",
+    "familia_id": "familia_susana",
     "relacoes": {
-      "pais": ["Raquel"],
-      "irmaos": []
+      "conjuge": null,
+      "filhos": []
     },
     "pode_confirmar_por": [],
     "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}

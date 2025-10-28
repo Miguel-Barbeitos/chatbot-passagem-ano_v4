@@ -22,9 +22,16 @@ from learning_qdrant import procurar_resposta_semelhante
 # =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
 # =====================================================
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
-if not GROQ_API_KEY:
-    raise ValueError("❌ Falta a variável de ambiente GROQ_API_KEY.")
+# IMPORTANTE: A API key DEVE estar em .streamlit/secrets.toml
+# Nunca hardcode API keys no código!
+try:
+    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+except KeyError:
+    raise ValueError(
+        "❌ GROQ_API_KEY não encontrada!\n"
+        "Por favor configura em .streamlit/secrets.toml:\n"
+        "GROQ_API_KEY = \"sua_chave_aqui\""
+    )
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "llama-3.1-8b-instant"
