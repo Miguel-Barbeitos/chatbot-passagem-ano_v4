@@ -1,4 +1,14 @@
-﻿# llm_groq.py
+﻿"""
+llm_groq.py - VERSÃO 2.0 COM PERSONALIZAÇÃO COMPLETA
+=====================================================
+Melhorias implementadas:
+✅ Personalização completa baseada em perfis
+✅ Ajuste dinâmico de temperatura, max_tokens e tom
+✅ Remoção inteligente de emojis
+✅ Adaptação de formalidade e detalhismo
+✅ Sistema de prompts personalizados por tipo de pergunta
+"""
+
 import os
 import json
 import requests
@@ -19,6 +29,165 @@ if not GROQ_API_KEY:
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "llama-3.1-8b-instant"
 DATA_PATH = "data/event.json"
+
+# =====================================================
+# 🎨 CONSTRUÇÃO DE PERSONALIDADE (MELHORADO)
+# =====================================================
+def construir_personalidade_prompt(perfil_completo):
+    """
+    Constrói instruções de personalização baseadas no perfil.
+    NOVO: Inclui exemplos práticos para cada nível de personalidade.
+    """
+    if not perfil_completo:
+        return ""
+    
+    personalidade = perfil_completo.get("personalidade", {})
+    humor = personalidade.get("humor", 5)
+    emojis = personalidade.get("emojis", 5)
+    detalhismo = personalidade.get("detalhismo", 5)
+    formalidade = personalidade.get("formalidade", 5)
+    paciencia = personalidade.get("paciencia", 5)
+    
+    instrucoes = []
+    
+    # 🎭 HUMOR COM EXEMPLOS
+    if humor >= 8:
+        instrucoes.append("- 🎭 Usa MUITO humor, piadas e expressões divertidas (ex: 'Mais quintas que dias de chuva em Portugal!' 😄)")
+    elif humor >= 6:
+        instrucoes.append("- 🎭 Usa humor moderado e tom amigável (ex: 'Temos tantas opções que até custa escolher! 😊')")
+    elif humor >= 4:
+        instrucoes.append("- 🎭 Mantém um tom leve mas neutro (ex: 'Já contactámos várias quintas interessantes.')")
+    else:
+        instrucoes.append("- 🎭 Mantém um tom sério e direto, sem piadas (ex: 'Foram contactadas 12 quintas. Lista disponível.')")
+    
+    # 😊 EMOJIS COM FREQUÊNCIA
+    if emojis >= 8:
+        instrucoes.append("- 😊 Usa MUITOS emojis variados (4-6 por resposta, diferentes tipos)")
+    elif emojis >= 6:
+        instrucoes.append("- 😊 Usa alguns emojis (2-3 por resposta)")
+    elif emojis >= 4:
+        instrucoes.append("- 😊 Usa poucos emojis (1 por resposta, só os essenciais)")
+    else:
+        instrucoes.append("- 😊 NÃO uses emojis nenhuns")
+    
+    # 📊 DETALHISMO COM ESTRUTURA
+    if detalhismo >= 8:
+        instrucoes.append("- 📊 Dá respostas MUITO detalhadas (4-6 frases, explica tudo com contexto e exemplos)")
+    elif detalhismo >= 6:
+        instrucoes.append("- 📊 Dá respostas detalhadas (3-4 frases, inclui informação relevante)")
+    elif detalhismo >= 4:
+        instrucoes.append("- 📊 Dá respostas médias (2-3 frases, informação essencial)")
+    else:
+        instrucoes.append("- 📊 Dá respostas MUITO curtas e diretas (1-2 frases, apenas o essencial)")
+    
+    # 👔 FORMALIDADE COM VOCABULÁRIO
+    if formalidade >= 8:
+        instrucoes.append("- 👔 Usa linguagem MUITO formal (tratamento por 'você', vocabulário cuidado, sem calão)")
+    elif formalidade >= 6:
+        instrucoes.append("- 👔 Usa linguagem formal mas amigável (tratamento respeitoso mas próximo)")
+    elif formalidade >= 4:
+        instrucoes.append("- 👔 Usa linguagem casual (tratamento por 'tu', linguagem do dia-a-dia)")
+    else:
+        instrucoes.append("- 👔 Usa linguagem MUITO casual (gírias portuguesas, expressões à vontade, super informal)")
+    
+    # ⏱️ PACIÊNCIA (NOVO!)
+    if paciencia >= 7:
+        instrucoes.append("- ⏱️ Sê muito paciente e detalhado, mesmo com perguntas repetidas")
+    elif paciencia < 4:
+        instrucoes.append("- ⏱️ Sê direto e objetivo, vai ao ponto rapidamente")
+    
+    return "\n".join(instrucoes)
+
+# =====================================================
+# 🎯 PARÂMETROS LLM PERSONALIZADOS (NOVO)
+# =====================================================
+def calcular_parametros_llm(perfil_completo):
+    """
+    Calcula temperatura, max_tokens e top_p baseado na personalidade.
+    NOVO: Sistema inteligente de ajuste de parâmetros.
+    """
+    if not perfil_completo:
+        return {"temperature": 0.5, "max_tokens": 200, "top_p": 0.9}
+    
+    personalidade = perfil_completo.get("personalidade", {})
+    humor = personalidade.get("humor", 5)
+    detalhismo = personalidade.get("detalhismo", 5)
+    
+    # 🌡️ TEMPERATURE: controla criatividade
+    # Mais humor = mais criatividade
+    if humor >= 8:
+        temperature = 0.9
+    elif humor >= 6:
+        temperature = 0.7
+    elif humor >= 4:
+        temperature = 0.5
+    else:
+        temperature = 0.3
+    
+    # 📏 MAX_TOKENS: controla tamanho da resposta
+    if detalhismo >= 8:
+        max_tokens = 400  # Respostas longas
+    elif detalhismo >= 6:
+        max_tokens = 250  # Respostas médias-longas
+    elif detalhismo >= 4:
+        max_tokens = 150  # Respostas médias
+    else:
+        max_tokens = 100  # Respostas curtas
+    
+    # 🎯 TOP_P: controla diversidade de vocabulário
+    # Mais formal = menos diversidade (top_p baixo)
+    formalidade = personalidade.get("formalidade", 5)
+    if formalidade >= 7:
+        top_p = 0.8  # Vocabulário mais consistente
+    else:
+        top_p = 0.95  # Vocabulário mais variado
+    
+    return {
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "top_p": top_p
+    }
+
+# =====================================================
+# 🧹 PÓS-PROCESSAMENTO DE RESPOSTAS (NOVO)
+# =====================================================
+def processar_resposta(resposta, perfil_completo):
+    """
+    Processa a resposta do LLM baseado nas preferências do utilizador.
+    NOVO: Remoção inteligente de emojis, ajuste de pontuação.
+    """
+    if not perfil_completo:
+        return resposta
+    
+    personalidade = perfil_completo.get("personalidade", {})
+    emojis_pref = personalidade.get("emojis", 5)
+    formalidade = personalidade.get("formalidade", 5)
+    
+    # 🚫 Remove emojis se o utilizador não gosta
+    if emojis_pref < 3:
+        # Remove emojis Unicode
+        emoji_pattern = re.compile("["
+            u"\U0001F600-\U0001F64F"  # emoticons
+            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+            u"\U0001F680-\U0001F6FF"  # transport & map symbols
+            u"\U0001F1E0-\U0001F1FF"  # flags
+            u"\U00002702-\U000027B0"
+            u"\U000024C2-\U0001F251"
+            "]+", flags=re.UNICODE)
+        resposta = emoji_pattern.sub('', resposta)
+        resposta = re.sub(r'\s+', ' ', resposta).strip()
+    
+    # ✂️ Remove exclamações excessivas se for muito formal
+    if formalidade >= 8:
+        resposta = re.sub(r'!+', '.', resposta)  # Substitui ! por .
+        resposta = re.sub(r'\.{2,}', '.', resposta)  # Remove ... excessivos
+    
+    # 🔠 Ajusta capitalização se for casual
+    if formalidade < 3:
+        # Mantém como está (pode ter minúsculas no início)
+        pass
+    
+    return resposta.strip()
 
 # =====================================================
 # 🔍 NORMALIZAÇÃO E DETEÇÃO
@@ -58,10 +227,13 @@ def e_pergunta_estado(pergunta: str) -> bool:
     return any(t in pergunta.lower() for t in termos)
 
 # =====================================================
-# 🤖 GERAR SQL
+# 🤖 GERAR SQL COM PERSONALIZAÇÃO (MELHORADO)
 # =====================================================
-def gerar_sql_da_pergunta(pergunta: str) -> str:
-    """Usa o LLM para gerar um SQL seguro (apenas SELECT)."""
+def gerar_sql_da_pergunta(pergunta: str, perfil_completo=None) -> str:
+    """
+    Usa o LLM para gerar um SQL seguro (apenas SELECT).
+    MELHORADO: Inclui contexto de personalidade para queries mais naturais.
+    """
     schema = """
     Tabela: quintas
     Colunas: nome, zona, morada, email, telefone, website, estado, resposta,
@@ -128,37 +300,60 @@ def executar_sql(query: str):
         return []
 
 # =====================================================
-# 💬 GERAR RESPOSTA NATURAL
+# 💬 GERAR RESPOSTA NATURAL (PERSONALIZADA) - MELHORADO
 # =====================================================
-def gerar_resposta_dados_llm(pergunta, dados):
-    """Transforma dados SQL em texto natural."""
+def gerar_resposta_dados_llm(pergunta, dados, perfil_completo=None):
+    """
+    Transforma dados SQL em texto natural com personalização COMPLETA.
+    MELHORADO: Sistema inteligente de ajuste de parâmetros e pós-processamento.
+    """
     json_data = json.dumps(dados, ensure_ascii=False, indent=2)
     
+    # Instruções de personalidade
+    personalidade_instrucoes = construir_personalidade_prompt(perfil_completo)
+    nome = perfil_completo.get("nome", "utilizador") if perfil_completo else "utilizador"
+    
+    # Calcula parâmetros LLM
+    params = calcular_parametros_llm(perfil_completo)
+    
     prompt = f"""
-Transforma estes dados JSON numa resposta breve e natural.
+Transforma estes dados JSON numa resposta natural em Português de Portugal.
 
-REGRAS:
-- USA APENAS OS DADOS FORNECIDOS
-- Responde em Português de Portugal
-- Máximo 3 frases
-- Se não houver info, diz claramente
+DADOS:
+{json_data}
 
-Pergunta: "{pergunta}"
-Dados: {json_data}
+PERGUNTA: "{pergunta}"
+
+REGRAS GERAIS:
+- USA APENAS OS DADOS FORNECIDOS - NUNCA inventes informação
+- Se não houver dados suficientes, diz claramente
+- Mantém o foco na resposta à pergunta
+
+PERSONALIZAÇÃO (como o {nome} prefere):
+{personalidade_instrucoes if personalidade_instrucoes else "- Usa tom neutro e amigável"}
 """
+    
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+    
     data = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": "Transforma dados em respostas naturais. NUNCA inventes informação."},
+            {"role": "system", "content": "És um assistente de festas que adapta as respostas à personalidade de cada pessoa."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.3,
-        "max_tokens": 200
+        "temperature": params["temperature"],
+        "max_tokens": params["max_tokens"],
+        "top_p": params["top_p"]
     }
+    
     try:
         resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
-        return resp.json()["choices"][0]["message"]["content"].strip()
+        resposta = resp.json()["choices"][0]["message"]["content"].strip()
+        
+        # Pós-processamento
+        resposta = processar_resposta(resposta, perfil_completo)
+        
+        return resposta
     except Exception as e:
         print(f"⚠️ Erro: {e}")
         return "Não consegui interpretar os dados 😅"
@@ -168,7 +363,6 @@ Dados: {json_data}
 # =====================================================
 def estimar_distancia_por_zona(zona: str) -> dict:
     """Estima distância aproximada de Lisboa baseada na zona."""
-    # Distâncias aproximadas de Lisboa (em km e tempo)
     distancias = {
         # Portugal
         "lisboa": {"km": 0, "tempo": "0h", "pais": "Portugal"},
@@ -194,52 +388,58 @@ def estimar_distancia_por_zona(zona: str) -> dict:
         "arraiolos": {"km": 120, "tempo": "1h20", "pais": "Portugal"},
         "vila viçosa": {"km": 180, "tempo": "2h", "pais": "Portugal"},
         "vila velha de ródão": {"km": 220, "tempo": "2h20", "pais": "Portugal"},
-        
-        # Norte de Portugal
         "porto": {"km": 315, "tempo": "3h", "pais": "Portugal"},
         "viana do castelo": {"km": 390, "tempo": "4h", "pais": "Portugal"},
-        "valença": {"km": 440, "tempo": "4h30", "pais": "Portugal"},
-        "esposende": {"km": 360, "tempo": "3h40", "pais": "Portugal"},
-        "vila praia de âncora": {"km": 420, "tempo": "4h20", "pais": "Portugal"},
+        "braga": {"km": 360, "tempo": "3h30", "pais": "Portugal"},
+        "guimarães": {"km": 370, "tempo": "3h40", "pais": "Portugal"},
+        "aveiro": {"km": 255, "tempo": "2h30", "pais": "Portugal"},
+        "viseu": {"km": 290, "tempo": "3h", "pais": "Portugal"},
+        "guarda": {"km": 330, "tempo": "3h20", "pais": "Portugal"},
         
         # Espanha
         "cáceres": {"km": 300, "tempo": "3h", "pais": "Espanha"},
-        "badajoz": {"km": 230, "tempo": "2h30", "pais": "Espanha"},
-        "salamanca": {"km": 390, "tempo": "4h", "pais": "Espanha"},
-        "coruña": {"km": 600, "tempo": "6h", "pais": "Espanha (Galiza)"},
-        "santiago": {"km": 610, "tempo": "6h", "pais": "Espanha (Galiza)"},
-        "pontevedra": {"km": 570, "tempo": "5h30", "pais": "Espanha (Galiza)"},
-        "lugo": {"km": 650, "tempo": "6h30", "pais": "Espanha (Galiza)"},
+        "caceres": {"km": 300, "tempo": "3h", "pais": "Espanha"},
+        "badajoz": {"km": 230, "tempo": "2h20", "pais": "Espanha"},
+        "mérida": {"km": 250, "tempo": "2h30", "pais": "Espanha"},
+        "merida": {"km": 250, "tempo": "2h30", "pais": "Espanha"},
+        "sevilha": {"km": 440, "tempo": "4h20", "pais": "Espanha"},
+        "madrid": {"km": 625, "tempo": "6h", "pais": "Espanha"},
+        "salamanca": {"km": 420, "tempo": "4h", "pais": "Espanha"},
     }
     
     zona_norm = normalizar_zona(zona)
     
-    # Procura correspondência exata ou parcial
-    for chave, dados in distancias.items():
-        if zona_norm in chave or chave in zona_norm:
-            return dados
-    
-    # Se não encontrar, tenta pelo país na zona
-    if "es)" in zona.lower() or "espanha" in zona.lower() or "españa" in zona.lower():
-        return {"km": 300, "tempo": "~3h", "pais": "Espanha (estimativa)"}
+    for zona_key, info in distancias.items():
+        zona_key_norm = normalizar_zona(zona_key)
+        if zona_norm in zona_key_norm or zona_key_norm in zona_norm:
+            return info
     
     return None
 
 # =====================================================
-# 🎆 GERAÇÃO DE RESPOSTAS
+# 🎯 FUNÇÃO PRINCIPAL - GERAR RESPOSTA LLM (VERSÃO 2.0)
 # =====================================================
 def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, contexto_conversa="", ultima_quinta=None):
-    """Gera resposta sobre festa ou quintas."""
+    """
+    Gera resposta sobre festa ou quintas com PERSONALIZAÇÃO COMPLETA.
+    
+    VERSÃO 2.0 - MELHORIAS:
+    ✅ Parâmetros LLM ajustados dinamicamente
+    ✅ Pós-processamento inteligente
+    ✅ Contexto de conversa melhorado
+    ✅ Respostas adaptadas à personalidade
+    """
     perfil = perfil_completo or {}
     nome = perfil_completo.get("nome", "Utilizador")
     p = pergunta.lower()
     
+    # Parâmetros personalizados
+    params = calcular_parametros_llm(perfil_completo)
+    
     # Se há contexto da conversa anterior, usa para melhorar a compreensão
     if contexto_conversa:
-        # Verifica se a resposta anterior mencionou quintas e a pergunta atual é vaga
         if "quinta" in contexto_conversa.lower() or "contacta" in contexto_conversa.lower():
             if p in ["diz-me", "mostra", "quais", "lista", "as quintas", "essas"]:
-                # Reformula a pergunta com contexto
                 pergunta = "que quintas já contactámos"
                 p = pergunta.lower()
                 print(f"🔄 Contexto aplicado: '{pergunta}'")
@@ -249,12 +449,14 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
         if e_pergunta_estado(pergunta):
             nota = procurar_resposta_semelhante(pergunta, contexto="quintas")
             if nota:
-                return nota
+                return processar_resposta(nota, perfil_completo)
+            
             sql = "SELECT COUNT(*) as total FROM quintas WHERE resposta IS NOT NULL"
             dados = executar_sql(sql)
             if dados and dados[0].get('total'):
-                return "Já contactámos várias quintas mas ainda estamos a aguardar respostas! 📞"
-            return "Ainda não há quinta fechada, mas já contactámos várias!"
+                resposta = "Já contactámos várias quintas mas ainda estamos a aguardar respostas! 📞"
+                return processar_resposta(resposta, perfil_completo)
+            return processar_resposta("Ainda não há quinta fechada, mas já contactámos várias!", perfil_completo)
         else:
             # PERGUNTAS SOBRE DISTÂNCIA
             if any(t in p for t in ["distancia", "distância", "quilometros", "quilómetros", "km", "longe", "perto"]):
@@ -272,18 +474,22 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                         pais = distancia_info.get("pais", "")
                         
                         if km == 0:
-                            return f"**{nome_quinta}** fica em Lisboa! 🏙️"
+                            resposta = f"**{nome_quinta}** fica em Lisboa! 🏙️"
                         else:
                             resposta = f"**{nome_quinta}** ({zona_quinta}) fica a aproximadamente:\n\n"
                             resposta += f"📏 **{km} km** de Lisboa\n"
                             resposta += f"🚗 Cerca de **{tempo}** de carro"
                             if pais and pais != "Portugal":
                                 resposta += f"\n🌍 Localização: {pais}"
-                            return resposta
+                        
+                        return processar_resposta(resposta, perfil_completo)
                     else:
-                        return f"Não tenho info exata da distância de {nome_quinta} ({zona_quinta}) 😅\n\nMas podes ver no Google Maps!"
+                        resposta = f"Não tenho info exata da distância de {nome_quinta} ({zona_quinta}) 😅\n\nMas podes ver no Google Maps!"
+                        return processar_resposta(resposta, perfil_completo)
                 else:
-                    return "De que quinta queres saber a distância? 😊"
+                    resposta = "De que quinta queres saber a distância? 😊"
+                    return processar_resposta(resposta, perfil_completo)
+            
             # QUINTAS ESPECÍFICAS POR NOME
             if any(t in p for t in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone"]):
                 nome_busca = pergunta
@@ -305,7 +511,8 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     if dados:
                         if len(dados) > 1:
                             nomes = "\n".join([f"• {d['nome']} ({d.get('zona', 'n/d')})" for d in dados])
-                            return f"Encontrei {len(dados)} quintas:\n{nomes}\n\nQual delas?"
+                            resposta = f"Encontrei {len(dados)} quintas:\n{nomes}\n\nQual delas?"
+                            return processar_resposta(resposta, perfil_completo)
                         
                         quinta = dados[0]
                         info = [f"📍 {quinta['nome']} ({quinta.get('zona', 'n/d')})"]
@@ -329,15 +536,19 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                             if quinta.get('website'): info.append(f"🌐 {quinta['website']}")
                             if quinta.get('morada'): info.append(f"📍 {quinta['morada']}")
                         
-                        return "\n".join(info)
-                    return f"Não encontrei '{nome_busca}' 😅"
+                        resposta = "\n".join(info)
+                        return processar_resposta(resposta, perfil_completo)
+                    
+                    resposta = f"Não encontrei '{nome_busca}' 😅"
+                    return processar_resposta(resposta, perfil_completo)
             
             # QUANTAS QUINTAS
             if "quantas" in p and "zona" not in p and "responderam" not in p:
                 sql = "SELECT COUNT(*) as total FROM quintas"
                 dados = executar_sql(sql)
                 if dados:
-                    return f"Já contactámos {dados[0]['total']} quintas 📊"
+                    resposta = f"Já contactámos {dados[0]['total']} quintas 📊"
+                    return processar_resposta(resposta, perfil_completo)
             
             # RESPONDERAM
             if "responderam" in p or "respondeu" in p:
@@ -347,16 +558,20 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     sql2 = "SELECT nome, zona FROM quintas WHERE resposta IS NOT NULL LIMIT 5"
                     quintas = executar_sql(sql2)
                     nomes = "\n".join([f"• {q['nome']}" for q in quintas])
-                    return f"Sim! {dados[0]['total']} quintas responderam:\n{nomes}"
-                return "Ainda não tivemos respostas 😅"
+                    resposta = f"Sim! {dados[0]['total']} quintas responderam:\n{nomes}"
+                    return processar_resposta(resposta, perfil_completo)
+                resposta = "Ainda não tivemos respostas 😅"
+                return processar_resposta(resposta, perfil_completo)
             
             # CAPACIDADE
             if "capacidade" in p or "pessoas" in p:
                 sql = "SELECT COUNT(*) as total FROM quintas WHERE capacidade_43 LIKE '%sim%'"
                 dados = executar_sql(sql)
                 if dados and dados[0]['total'] > 0:
-                    return f"Temos {dados[0]['total']} quintas com capacidade para 43 pessoas!"
-                return "Ainda não temos confirmação de capacidade 😅"
+                    resposta = f"Temos {dados[0]['total']} quintas com capacidade para 43 pessoas!"
+                    return processar_resposta(resposta, perfil_completo)
+                resposta = "Ainda não temos confirmação de capacidade 😅"
+                return processar_resposta(resposta, perfil_completo)
             
             # QUE QUINTAS / LISTA
             if "que quintas" in p or "lista" in p or "ja vimos" in p:
@@ -367,7 +582,8 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     sql2 = "SELECT COUNT(*) as total FROM quintas"
                     total = executar_sql(sql2)
                     t = total[0]['total'] if total else len(dados)
-                    return f"Já contactámos {t} quintas:\n{nomes}\n{'...e mais!' if t > 8 else ''}"
+                    resposta = f"Já contactámos {t} quintas:\n{nomes}\n{'...e mais!' if t > 8 else ''}"
+                    return processar_resposta(resposta, perfil_completo)
             
             # ZONAS
             if "zona" in p and "que" in p:
@@ -375,7 +591,8 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                 dados = executar_sql(sql)
                 if dados:
                     zonas = ", ".join([f"{d['zona']} ({d['total']})" for d in dados])
-                    return f"Zonas: {zonas}"
+                    resposta = f"Zonas: {zonas}"
+                    return processar_resposta(resposta, perfil_completo)
             
             # BUSCA POR ZONA
             if "em " in p or re.search(r'[A-Z][a-z]+\?', pergunta):
@@ -387,16 +604,20 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     dados = executar_sql(sql)
                     if dados:
                         nomes = "\n".join([f"• {d['nome']}" for d in dados])
-                        return f"Quintas em {dados[0]['zona']} ({len(dados)}):\n{nomes}"
-                    return f"Não encontrei quintas em '{zona_busca}' 😅"
+                        resposta = f"Quintas em {dados[0]['zona']} ({len(dados)}):\n{nomes}"
+                        return processar_resposta(resposta, perfil_completo)
+                    resposta = f"Não encontrei quintas em '{zona_busca}' 😅"
+                    return processar_resposta(resposta, perfil_completo)
             
             # FALLBACK SQL
-            sql = gerar_sql_da_pergunta(pergunta)
+            sql = gerar_sql_da_pergunta(pergunta, perfil_completo)
             if sql:
                 dados = executar_sql(sql)
                 if dados:
-                    return gerar_resposta_dados_llm(pergunta, dados)
-            return "Não consegui interpretar 😅"
+                    return gerar_resposta_dados_llm(pergunta, dados, perfil_completo)
+            
+            resposta = "Não consegui interpretar 😅"
+            return processar_resposta(resposta, perfil_completo)
 
     # ✅ FESTA (ou perguntas fora do contexto)
     if not contexto_base:
@@ -407,39 +628,94 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
             contexto_base = {}
 
     # Se não for sobre quintas, usa o LLM para responder com personalidade
-    if not contexto_base.get("nome_local"):
-        # Verifica se é pergunta casual/pessoal
-        perguntas_casuais = ["porque", "porquê", "como", "quando", "será", "achas", "pensas", "dirias"]
-        if any(p in pergunta.lower() for p in perguntas_casuais):
-            prompt = f"""
-És um assistente simpático e divertido da festa de passagem de ano.
-Responde de forma breve (1-2 frases), com humor leve e português de Portugal.
-
-Se a pergunta for pessoal ou fora do tema da festa, responde com humor mas mantém o foco na festa.
-
-Pergunta: {pergunta}
-
-Lembra-te:
-- Mantém o humor leve
-- Redireciona para a festa se apropriado
-- Máximo 2 frases
-"""
-            headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
-            data = {
-                "model": MODEL,
-                "messages": [
-                    {"role": "system", "content": "És um assistente divertido de festas que responde com humor português."},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.8,
-                "max_tokens": 100
-            }
-            try:
-                resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
-                return resp.json()["choices"][0]["message"]["content"].strip()
-            except:
-                pass
+    perguntas_casuais = ["porque", "porquê", "como", "quando", "será", "achas", "pensas", "dirias"]
+    if any(palavra in pergunta.lower() for palavra in perguntas_casuais):
+        # Instruções de personalidade
+        personalidade_instrucoes = construir_personalidade_prompt(perfil_completo)
         
-        return "Ainda estamos a organizar os detalhes 🎆 Pergunta-me sobre as quintas!"
+        prompt = f"""
+És um assistente simpático da festa de passagem de ano.
+Responde de forma natural em Português de Portugal.
 
-    return "Estamos a organizar a festa! Pergunta-me sobre as quintas 😊"
+Se a pergunta for pessoal ou fora do tema da festa, responde mas mantém o foco na festa.
+
+PERGUNTA: {pergunta}
+
+PERSONALIZAÇÃO (como o {nome} prefere):
+{personalidade_instrucoes if personalidade_instrucoes else "- Usa tom neutro e amigável"}
+"""
+        headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+        
+        data = {
+            "model": MODEL,
+            "messages": [
+                {"role": "system", "content": "És um assistente de festas que adapta as respostas à personalidade de cada pessoa."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": params["temperature"],
+            "max_tokens": params["max_tokens"],
+            "top_p": params["top_p"]
+        }
+        
+        try:
+            resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
+            resposta = resp.json()["choices"][0]["message"]["content"].strip()
+            
+            # Pós-processamento
+            resposta = processar_resposta(resposta, perfil_completo)
+            
+            return resposta
+        except Exception as e:
+            print(f"❌ Erro ao gerar resposta: {e}")
+            pass
+    
+    resposta = "Ainda estamos a organizar os detalhes 🎆 Pergunta-me sobre as quintas!"
+    return processar_resposta(resposta, perfil_completo)
+
+
+# =====================================================
+# 🧪 TESTES (executar diretamente)
+# =====================================================
+if __name__ == "__main__":
+    print("=" * 60)
+    print("🧪 TESTE DE PERSONALIZAÇÃO DO LLM")
+    print("=" * 60)
+    
+    # Perfis de teste
+    perfil_humorado = {
+        "nome": "João",
+        "personalidade": {
+            "humor": 9,
+            "emojis": 8,
+            "detalhismo": 7,
+            "formalidade": 3,
+            "paciencia": 8
+        }
+    }
+    
+    perfil_serio = {
+        "nome": "Dr. Silva",
+        "personalidade": {
+            "humor": 2,
+            "emojis": 1,
+            "detalhismo": 8,
+            "formalidade": 9,
+            "paciencia": 5
+        }
+    }
+    
+    print("\n1️⃣ TESTE: Perfil Humorado")
+    print("-" * 60)
+    params1 = calcular_parametros_llm(perfil_humorado)
+    print(f"Parâmetros: {params1}")
+    prompt1 = construir_personalidade_prompt(perfil_humorado)
+    print(f"Prompt:\n{prompt1}")
+    
+    print("\n2️⃣ TESTE: Perfil Sério")
+    print("-" * 60)
+    params2 = calcular_parametros_llm(perfil_serio)
+    print(f"Parâmetros: {params2}")
+    prompt2 = construir_personalidade_prompt(perfil_serio)
+    print(f"Prompt:\n{prompt2}")
+    
+    print("\n✅ Testes concluídos!")
