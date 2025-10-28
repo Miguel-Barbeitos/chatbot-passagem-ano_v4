@@ -61,12 +61,25 @@ def carregar_json(path, default=None):
         return default or []
 
 # =====================================================
-# 📂 DADOS BASE
+# 📂 DADOS BASE - NOVO SISTEMA
 # =====================================================
-profiles_path = os.path.join(os.path.dirname(__file__), "data", "profiles.json")
-profiles = carregar_json(profiles_path, default=[])
-if not profiles:
-    st.error("⚠️ Faltam perfis em 'profiles.json'.")
+# Busca todos os perfis do Qdrant
+try:
+    from modules.perfis_manager import listar_todos_perfis
+    perfis_lista = listar_todos_perfis()
+    
+    if not perfis_lista:
+        st.error("⚠️ Nenhum perfil encontrado no Qdrant!")
+        st.info("💡 Corre: python modules/perfis_manager.py")
+        st.stop()
+    
+    # Cria lista de nomes para o selectbox
+    nomes = sorted([p["nome"] for p in perfis_lista])
+    print(f"✅ {len(nomes)} perfis carregados do Qdrant")
+    
+except Exception as e:
+    st.error(f"⚠️ Erro ao carregar perfis do Qdrant: {e}")
+    st.info("💡 Certifica-te que correste: python modules/perfis_manager.py")
     st.stop()
 
 # =====================================================
@@ -474,7 +487,7 @@ if prompt:
 
     with st.spinner("💭 A pensar..."):
         time.sleep(0.3)
-        resposta = gerar_resposta(prompt, perfil)
+        resposta = gerar_resposta(prompt, perfil_completo)  # ← Usa perfil_completo
 
     with st.chat_message("assistant"):
         st.markdown(f"**Assistente:** {resposta}")
