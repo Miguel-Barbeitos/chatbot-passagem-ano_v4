@@ -481,6 +481,18 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
 
+    # ✅ PRIORITÁRIO: Perguntas sobre ter quinta reservada/definida
+    # DEVE vir ANTES das queries genéricas para não ser capturado por elas
+    # Deteta: "ja ha quintas?", "ja temos quinta?", "temos quinta reservada?"
+    if any(p in pergunta_l for p in ["quinta", "quintas", "local"]):
+        # Verifica se está a perguntar sobre TER/EXISTIR
+        if any(p in pergunta_l for p in ["ja ha", "já ha", "ha quintas", "há quintas", "ja temos", "já temos", "temos alguma", "temos quinta", "temos quintas", "quinta reservada", "quintas reservadas", "alguma reservada"]):
+            return (
+                "Sim! 🏡\n\n"
+                "Temos o **Monte da Galega** reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉\n\n"
+                "Já contactámos 35 quintas. Queres saber mais sobre elas?"
+            )
+
     # ✅ 5 — Perguntas sobre ZONAS, listas de quintas, ou queries SQL
     if any(p in pergunta_l for p in [
         "que quintas", "quais quintas", "quantas quintas", "quantas vimos", 
@@ -561,17 +573,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         if any(t in pergunta_l for t in triggers):
             import random
             return random.choice(respostas)
-    
-    # ✅ NOVO: Perguntas sobre ter quinta reservada/definida
-    # Deteta: "ja ha quintas?", "ja temos quinta?", "temos quinta reservada?"
-    if any(p in pergunta_l for p in ["quinta", "quintas", "local"]):
-        # Verifica se está a perguntar sobre TER/EXISTIR
-        if any(p in pergunta_l for p in ["ja ha", "já ha", "ha quintas", "há quintas", "ja temos", "já temos", "temos alguma", "temos quinta", "temos quintas", "quinta reservada", "quintas reservadas", "alguma reservada"]):
-            return (
-                "Sim! 🏡\n\n"
-                "Temos o **Monte da Galega** reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉\n\n"
-                "Já contactámos 35 quintas. Queres saber mais sobre elas?"
-            )
     
     # ✅ CORRIGIDO: Perguntas sobre o local DA FESTA (mais específico)
     # Só responde se for realmente sobre o local final da festa, não sobre quintas em geral
