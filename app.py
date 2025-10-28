@@ -562,9 +562,11 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             import random
             return random.choice(respostas)
     
-    # ✅ NOVO: Perguntas sobre ter quinta reservada/definida ("ja temos quinta?")
-    if any(p in pergunta_l for p in ["ja temos", "já temos", "temos alguma", "temos quinta", "ha quinta", "há quinta", "ha quintas", "há quintas", "ja ha", "já há"]):
-        if any(p in pergunta_l for p in ["quinta", "quintas", "local"]):
+    # ✅ NOVO: Perguntas sobre ter quinta reservada/definida
+    # Deteta: "ja ha quintas?", "ja temos quinta?", "temos quinta reservada?"
+    if any(p in pergunta_l for p in ["quinta", "quintas", "local"]):
+        # Verifica se está a perguntar sobre TER/EXISTIR
+        if any(p in pergunta_l for p in ["ja ha", "já ha", "ha quintas", "há quintas", "ja temos", "já temos", "temos alguma", "temos quinta", "temos quintas", "quinta reservada", "quintas reservadas", "alguma reservada"]):
             return (
                 "Sim! 🏡\n\n"
                 "Temos o **Monte da Galega** reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉\n\n"
