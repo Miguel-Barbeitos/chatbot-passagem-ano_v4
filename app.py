@@ -173,24 +173,65 @@ with st.sidebar:
 personalidade = perfil_completo.get("personalidade", {})
 humor = personalidade.get("humor", 5)
 emojis = personalidade.get("emojis", 5)
+formalidade = personalidade.get("formalidade", 5)
+detalhismo = personalidade.get("detalhismo", 5)
 
 hora = datetime.now().hour
 saud = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
 
-# Mensagem personalizada baseada na personalidade
-if humor > 7:
-    msg_saudacao = f"{saud}, {nome}! 👋 Pronto para organizar a festa do século? 🎉"
-elif humor < 3:
-    msg_saudacao = f"{saud}, {nome}. Estou aqui para ajudar com a organização da festa."
-else:
-    msg_saudacao = f"{saud}, {nome}! 👋 Bem-vindo! Sou o teu assistente da festa 🎉"
+# Escolhe saudação baseada em humor + formalidade
+saudacoes = {
+    "humor_alto_informal": [
+        f"{saud}, {nome}! 👋 Pronto para organizar a festa do século? 🎉🎆",
+        f"Olá {nome}! 🎉 Vamos tornar esta passagem de ano épica? 🚀",
+        f"E aí {nome}! 😄 Bora lá organizar a melhor festa de sempre? 🎊"
+    ],
+    "humor_alto_formal": [
+        f"{saud}, {nome}! 👋 Espero poder ajudar na organização desta festa especial 🎉",
+        f"{saud}! Que bom ter-te aqui, {nome}. Vamos trabalhar juntos nesta festa? 🎆"
+    ],
+    "humor_medio_informal": [
+        f"{saud}, {nome}! 👋 Bem-vindo! Sou o teu assistente da festa 🎉",
+        f"Olá {nome}! Estou aqui para ajudar com a organização 😊",
+        f"Hey {nome}! 👋 Vamos organizar esta festa juntos?"
+    ],
+    "humor_medio_formal": [
+        f"{saud}, {nome}. Bem-vindo ao assistente da festa 🎉",
+        f"{saud}! Estou disponível para ajudar, {nome}."
+    ],
+    "humor_baixo_informal": [
+        f"{saud}, {nome}. Estou aqui para ajudar.",
+        f"Olá {nome}. Como posso ajudar com a festa?"
+    ],
+    "humor_baixo_formal": [
+        f"{saud}, {nome}. Estou aqui para ajudar com a organização da festa.",
+        f"{saud}. Sou o assistente da organização da festa, {nome}."
+    ]
+}
 
-# Adiciona emojis conforme preferência
+# Seleciona categoria de saudação
+if humor >= 7:
+    categoria = "humor_alto_formal" if formalidade >= 6 else "humor_alto_informal"
+elif humor >= 4:
+    categoria = "humor_medio_formal" if formalidade >= 6 else "humor_medio_informal"
+else:
+    categoria = "humor_baixo_formal" if formalidade >= 6 else "humor_baixo_informal"
+
+msg_saudacao = random.choice(saudacoes[categoria])
+
+# Adiciona contexto extra se detalhismo alto
+if detalhismo >= 7:
+    msg_saudacao += "\n\nPodes perguntar-me sobre quintas, confirmações, detalhes da festa ou o que precisares!"
+
+# Remove emojis se preferência baixa
 if emojis < 3:
-    msg_saudacao = msg_saudacao.replace("👋", "").replace("🎉", "").replace("🎆", "")
+    import re
+    msg_saudacao = re.sub(r'[😀-🙏🌀-🗿🚀-🛿👋🎉🎆🎊]', '', msg_saudacao).strip()
+elif emojis < 5:
+    # Mantém poucos emojis
+    msg_saudacao = msg_saudacao.replace("🎆", "").replace("🎊", "").replace("🚀", "")
 
 st.success(msg_saudacao)
-
 
 
 # =====================================================
@@ -229,10 +270,11 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     "nome": quinta_match.group(1).strip(),
                     "zona": quinta_match.group(2).strip()
                 }
-                st.session_state.ultima_quinta_mencionada = quinta_quinta_mencionada["nome"]
+                # ✅ Guarda também no session_state
+                st.session_state.ultima_quinta_mencionada = ultima_quinta_mencionada["nome"]
                 print(f"🏠 Última quinta: {ultima_quinta_mencionada}")
     
-    # ✅ NOVO: Detetar e guardar quinta mencionada na pergunta atual
+    # ✅ NOVO: Detetar e guardar quinta mencionada na pergunta ATUAL
     import re
     quinta_na_pergunta = re.search(
         r'(C\.R\.|Casa|Monte|Herdade|Quinta)\s+([A-Z][^\?]+?)(?:\s+é|\s+fica|\s+tem|\?|$)', 
@@ -242,7 +284,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     if quinta_na_pergunta:
         nome_detectado = quinta_na_pergunta.group(0).strip().rstrip('?').strip()
         # Remove palavras após "é", "fica", etc
-        nome_detectado = re.sub(r'\s+(é|fica|tem|onde|como|quando|tem).*$', '', nome_detectado, flags=re.IGNORECASE).strip()
+        nome_detectado = re.sub(r'\s+(é|fica|tem|onde|como|quando).*$', '', nome_detectado, flags=re.IGNORECASE).strip()
         st.session_state.ultima_quinta_mencionada = nome_detectado
         print(f"🔍 Quinta detectada na pergunta: {nome_detectado}")
     
@@ -304,7 +346,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         "primeira": 0, "1a": 0, "1ª": 0,
         "segunda": 1, "2a": 1, "2ª": 1,
         "terceira": 2, "3a": 2, "3ª": 2,
-        "quarta": 3, "4a": 3, "4ª": 4,
+        "quarta": 3, "4a": 3, "4ª": 3,
         "quinta": 4, "5a": 4, "5ª": 4,
         "sexta": 5, "6a": 5, "6ª": 5,
         "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
@@ -418,8 +460,10 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             pergunta = "que quintas já contactámos"
             pergunta_l = normalizar(pergunta)
 
-    # ✅ 5 — Perguntas ESPECÍFICAS sobre quintas (por nome) ou informações detalhadas
+    # ✅ 4 — Perguntas ESPECÍFICAS sobre quintas (por nome) ou informações detalhadas
     # Deteta nomes de quintas na pergunta (palavras começadas com maiúscula ou termos específicos)
+    import re
+    # Procura por nomes próprios ou padrões tipo "C.R. Nome" ou "Quinta X"
     tem_nome_quinta = (
         re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or  # "Casa Lagoa", "Monte Verde"
         re.search(r'C\.R\.|quinta|casa|monte|herdade', pergunta_l) or
@@ -430,14 +474,14 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     if any(p in pergunta_l for p in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]) and tem_nome_quinta:
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil_completo=perfil_completo,
+            perfil_completo=perfil_completo,  # ← CORRIGIDO
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior
         )
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
 
-    # ✅ 6 — Perguntas sobre ZONAS, listas de quintas, ou queries SQL
+    # ✅ 5 — Perguntas sobre ZONAS, listas de quintas, ou queries SQL
     if any(p in pergunta_l for p in [
         "que quintas", "quais quintas", "quantas quintas", "quantas vimos", 
         "quantas contactamos", "lista", "opcoes", "opções", "nomes", 
@@ -449,7 +493,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     ]):
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil_completo=perfil_completo,
+            perfil_completo=perfil_completo,  # ← CORRIGIDO
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior,
             ultima_quinta=ultima_quinta_mencionada
@@ -457,7 +501,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
     
-    # ✅ 7 — Perguntas diretas sobre "já vimos quintas" / "outras quintas" (fallback)
+    # ✅ 6 — Perguntas diretas sobre "já vimos quintas" / "outras quintas" (fallback)
     if any(p in pergunta_l for p in ["outras quintas", "vimos outras"]):
         return (
             "Sim, já contactámos várias quintas! 🏡\n\n"
@@ -518,37 +562,25 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             import random
             return random.choice(respostas)
     
-    # ✅ 9 — Perguntas sobre PORQUÊ ainda não há quinta
-    if any(p in pergunta_l for p in ["porque ainda nao", "porquê ainda não", "porque nao temos", "porquê não temos", "porque nao ha", "porquê não há"]) and any(p in pergunta_l for p in ["quinta", "local", "sitio", "sítio"]):
-        return (
-            "Estamos a avaliar várias opções! 🤔\n\n"
-            "Já contactámos 35 quintas e temos o Monte da Galega reservado como backup. "
-            "Queremos garantir que escolhemos o melhor local para a festa! "
-            "Queres saber mais sobre as quintas que já vimos?"
-        )
-    
-    # ✅ 10 — Perguntas sobre LOCALIZAÇÃO de quinta específica
-    if re.search(r'(C\.R\.|Casa|Monte|Herdade|Quinta [A-Z]|[A-Z][a-z]+\s+[A-Z])', pergunta):
-        if any(p in pergunta_l for p in ["onde", "onde fica", "onde e", "onde é", "localizacao", "localização", "morada", "sitio", "sítio"]):
-            # Passa para o LLM que tem acesso à base de dados
-            resposta_llm = gerar_resposta_llm(
-                pergunta=pergunta,
-                perfil_completo=perfil_completo,
-                contexto_base=contexto_base,
-                contexto_conversa=contexto_anterior
+    # ✅ NOVO: Perguntas sobre ter quinta reservada/definida ("ja temos quinta?")
+    if any(p in pergunta_l for p in ["ja temos", "já temos", "temos alguma", "temos quinta", "ha quinta", "há quinta", "ha quintas", "há quintas", "ja ha", "já há"]):
+        if any(p in pergunta_l for p in ["quinta", "quintas", "local"]):
+            return (
+                "Sim! 🏡\n\n"
+                "Temos o **Monte da Galega** reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉\n\n"
+                "Já contactámos 35 quintas. Queres saber mais sobre elas?"
             )
-            guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
-            return resposta_llm
     
-    # ✅ 11 — Perguntas sobre o local DA FESTA (não quintas específicas)
-    if any(p in pergunta_l for p in ["sitio da festa", "local da festa", "onde vai ser a festa", "onde sera a festa", "onde é a festa", "ja ha quinta definida", "quinta reservada para a festa", "fechado o local", "decidido o local", "local ja decidido"]):
+    # ✅ CORRIGIDO: Perguntas sobre o local DA FESTA (mais específico)
+    # Só responde se for realmente sobre o local final da festa, não sobre quintas em geral
+    if any(p in pergunta_l for p in ["sitio da festa", "local da festa", "onde vai ser", "onde sera", "local final"]):
         return (
             "Ainda estamos a ver o local final 🏡\n\n"
             "Já temos o **Monte da Galega** reservado como plano B, mas estamos a contactar outras quintas.\n"
             "Pergunta-me sobre as quintas que já vimos! 😊"
         )
 
-    # ✅ 12 — Perguntas sobre características do local (futuro)
+    # ✅ 4 — Perguntas sobre características do local (futuro)
     if "piscina" in pergunta_l:
         return "Ainda não temos quinta fechada, mas já perguntámos quais têm piscina 🏊 Queres saber quais são?"
 
@@ -561,14 +593,14 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     if any(p in pergunta_l for p in ["animais", "cao", "cão", "gato"]):
         return "Ainda não fechámos o local, mas posso dizer-te quais quintas aceitam animais 🐶 Queres saber?"
 
-    # ✅ 13 — Perguntas sobre o que já foi feito
+    # ✅ 5 — Perguntas sobre o que já foi feito
     if any(p in pergunta_l for p in ["fizeram", "fizeste", "andaram a fazer", "trabalho", "progresso"]):
         return (
             "Já contactámos várias quintas e temos o **Monte da Galega** reservado como backup 🏡 "
             "Pergunta-me sobre quintas específicas, zonas, preços ou capacidades! 😊"
         )
 
-    # ✅ 14 — Perguntas genéricas (LLM trata do resto)
+    # ✅ 6 — Perguntas genéricas (LLM trata do resto)
     resposta_llm = gerar_resposta_llm(
         pergunta=pergunta,
         perfil_completo=perfil_completo,
