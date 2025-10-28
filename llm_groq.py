@@ -228,7 +228,7 @@ def estimar_distancia_por_zona(zona: str) -> dict:
 # =====================================================
 # 🎆 GERAÇÃO DE RESPOSTAS
 # =====================================================
-def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None, contexto_conversa="", ultima_quinta=None):
+def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, contexto_conversa="", ultima_quinta=None):
     """Gera resposta sobre festa ou quintas."""
     perfil = perfil_completo or {}
     nome = perfil_completo.get("nome", "Utilizador")
