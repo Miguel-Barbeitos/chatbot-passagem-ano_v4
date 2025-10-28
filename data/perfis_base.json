@@ -1,0 +1,387 @@
+[
+  {
+    "nome": "Jorge",
+    "tipo": "adulto",
+    "familia_id": "familia_jorge",
+    "relacoes": {
+      "conjuge": "Isabel",
+      "filhos": ["Catarina", "Diogo", "Inês"]
+    },
+    "pode_confirmar_por": ["Isabel", "Catarina", "Diogo", "Inês"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Isabel",
+    "tipo": "adulto",
+    "familia_id": "familia_jorge",
+    "relacoes": {
+      "conjuge": "Jorge",
+      "filhos": ["Catarina", "Diogo", "Inês"]
+    },
+    "pode_confirmar_por": ["Jorge", "Catarina", "Diogo", "Inês"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Catarina",
+    "tipo": "filho",
+    "familia_id": "familia_jorge",
+    "relacoes": {
+      "pais": ["Jorge", "Isabel"],
+      "irmaos": ["Diogo", "Inês"]
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Diogo",
+    "tipo": "filho",
+    "familia_id": "familia_jorge",
+    "relacoes": {
+      "pais": ["Jorge", "Isabel"],
+      "irmaos": ["Catarina", "Inês"]
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Inês",
+    "tipo": "filho",
+    "familia_id": "familia_jorge",
+    "relacoes": {
+      "pais": ["Jorge", "Isabel"],
+      "irmaos": ["Catarina", "Diogo"]
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Portugal",
+    "tipo": "adulto",
+    "familia_id": "familia_portugal",
+    "relacoes": {
+      "conjuge": "Nanda",
+      "filhos": []
+    },
+    "pode_confirmar_por": ["Nanda"],
+    "personalidade": {"humor": 7, "formalidade": 6, "detalhismo": 8, "emojis": 5, "paciencia": 8}
+  },
+  {
+    "nome": "Nanda",
+    "tipo": "adulto",
+    "familia_id": "familia_portugal",
+    "relacoes": {
+      "conjuge": "Portugal",
+      "filhos": []
+    },
+    "pode_confirmar_por": ["Portugal"],
+    "personalidade": {"humor": 7, "formalidade": 6, "detalhismo": 8, "emojis": 5, "paciencia": 8}
+  },
+  {
+    "nome": "Arenga",
+    "tipo": "adulto",
+    "familia_id": "familia_arenga",
+    "relacoes": {
+      "conjuge": "Ana",
+      "filhos": ["Marta"]
+    },
+    "pode_confirmar_por": ["Ana", "Marta"],
+    "personalidade": {"humor": 7, "formalidade": 5, "detalhismo": 7, "emojis": 5, "paciencia": 7}
+  },
+  {
+    "nome": "Ana",
+    "tipo": "adulto",
+    "familia_id": "familia_arenga",
+    "relacoes": {
+      "conjuge": "Arenga",
+      "filhos": ["Marta"]
+    },
+    "pode_confirmar_por": ["Arenga", "Marta"],
+    "personalidade": {"humor": 9, "formalidade": 5, "detalhismo": 9, "emojis": 7, "paciencia": 3}
+  },
+  {
+    "nome": "Marta",
+    "tipo": "filho",
+    "familia_id": "familia_arenga",
+    "relacoes": {
+      "pais": ["Arenga", "Ana"],
+      "irmaos": []
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Tony",
+    "tipo": "adulto",
+    "familia_id": "familia_tony",
+    "relacoes": {
+      "conjuge": "Carla",
+      "filhos": ["Francisco", "Inês"]
+    },
+    "pode_confirmar_por": ["Carla", "Francisco", "Inês"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Carla",
+    "tipo": "adulto",
+    "familia_id": "familia_tony",
+    "relacoes": {
+      "conjuge": "Tony",
+      "filhos": ["Francisco", "Inês"]
+    },
+    "pode_confirmar_por": ["Tony", "Francisco", "Inês"],
+    "personalidade": {"humor": 8, "formalidade": 6, "detalhismo": 6, "emojis": 4, "paciencia": 5}
+  },
+  {
+    "nome": "Francisco",
+    "tipo": "filho",
+    "familia_id": "familia_tony",
+    "relacoes": {
+      "pais": ["Tony", "Carla"],
+      "irmaos": ["Inês"]
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Ana",
+    "tipo": "adulto",
+    "familia_id": "familia_ana_gustavo",
+    "relacoes": {
+      "conjuge": "Gustavo",
+      "filhos": []
+    },
+    "pode_confirmar_por": ["Gustavo"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Gustavo",
+    "tipo": "adulto",
+    "familia_id": "familia_ana_gustavo",
+    "relacoes": {
+      "conjuge": "Ana",
+      "filhos": []
+    },
+    "pode_confirmar_por": ["Ana"],
+    "personalidade": {"humor": 10, "formalidade": 3, "detalhismo": 5, "emojis": 7, "paciencia": 2}
+  },
+  {
+    "nome": "Joana",
+    "tipo": "adulto",
+    "familia_id": "familia_joana",
+    "relacoes": {
+      "conjuge": null,
+      "filhos": ["Leonor"]
+    },
+    "pode_confirmar_por": ["Leonor"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Leonor",
+    "tipo": "filho",
+    "familia_id": "familia_joana",
+    "relacoes": {
+      "pais": ["Joana"],
+      "irmaos": []
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Barbeitos",
+    "tipo": "adulto",
+    "familia_id": "familia_barbeitos",
+    "relacoes": {
+      "conjuge": null,
+      "filhos": []
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 8, "formalidade": 3, "detalhismo": 3, "emojis": 2, "paciencia": 3}
+  },
+  {
+    "nome": "Raquel",
+    "tipo": "adulto",
+    "familia_id": "familia_raquel",
+    "relacoes": {
+      "conjuge": null,
+      "filhos": ["Susana"]
+    },
+    "pode_confirmar_por": ["Susana"],
+    "personalidade": {"humor": 7, "formalidade": 7, "detalhismo": 7, "emojis": 9, "paciencia": 3}
+  },
+  {
+    "nome": "Susana",
+    "tipo": "filho",
+    "familia_id": "familia_raquel",
+    "relacoes": {
+      "pais": ["Raquel"],
+      "irmaos": []
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Mimoso",
+    "tipo": "adulto",
+    "familia_id": "familia_mimoso",
+    "relacoes": {
+      "conjuge": "Paula",
+      "filhos": ["Mariana"]
+    },
+    "pode_confirmar_por": ["Paula", "Mariana"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Paula",
+    "tipo": "adulto",
+    "familia_id": "familia_mimoso",
+    "relacoes": {
+      "conjuge": "Mimoso",
+      "filhos": ["Mariana"]
+    },
+    "pode_confirmar_por": ["Mimoso", "Mariana"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Mariana",
+    "tipo": "filho",
+    "familia_id": "familia_mimoso",
+    "relacoes": {
+      "pais": ["Mimoso", "Paula"],
+      "irmaos": []
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Carlos Sousa",
+    "tipo": "adulto",
+    "familia_id": "familia_carlos",
+    "relacoes": {
+      "conjuge": "Teresa",
+      "filhos": ["Martin"]
+    },
+    "pode_confirmar_por": ["Teresa", "Martin"],
+    "personalidade": {"humor": 7, "formalidade": 5, "detalhismo": 7, "emojis": 4, "paciencia": 10}
+  },
+  {
+    "nome": "Teresa",
+    "tipo": "adulto",
+    "familia_id": "familia_carlos",
+    "relacoes": {
+      "conjuge": "Carlos Sousa",
+      "filhos": ["Martin"]
+    },
+    "pode_confirmar_por": ["Carlos Sousa", "Martin"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Martin",
+    "tipo": "filho",
+    "familia_id": "familia_carlos",
+    "relacoes": {
+      "pais": ["Carlos Sousa", "Teresa"],
+      "irmaos": []
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Esménio",
+    "tipo": "adulto",
+    "familia_id": "familia_esmenio",
+    "relacoes": {
+      "conjuge": "Ana",
+      "filhos": ["Alice", "Joaquim"]
+    },
+    "pode_confirmar_por": ["Ana", "Alice", "Joaquim"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Abreu",
+    "tipo": "adulto",
+    "familia_id": "familia_abreu",
+    "relacoes": {
+      "conjuge": "Bela",
+      "filhos": ["Marta", "Clarinha"]
+    },
+    "pode_confirmar_por": ["Bela", "Marta", "Clarinha"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Bela",
+    "tipo": "adulto",
+    "familia_id": "familia_abreu",
+    "relacoes": {
+      "conjuge": "Abreu",
+      "filhos": ["Marta", "Clarinha"]
+    },
+    "pode_confirmar_por": ["Abreu", "Marta", "Clarinha"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Tiago",
+    "tipo": "adulto",
+    "familia_id": "familia_tiago",
+    "relacoes": {
+      "conjuge": "Carla",
+      "filhos": []
+    },
+    "pode_confirmar_por": ["Carla"],
+    "personalidade": {"humor": 9, "formalidade": 7, "detalhismo": 6, "emojis": 6, "paciencia": 5}
+  },
+  {
+    "nome": "Mario",
+    "tipo": "adulto",
+    "familia_id": "familia_mario",
+    "relacoes": {
+      "conjuge": "Filipa",
+      "filhos": ["Tiago", "João"]
+    },
+    "pode_confirmar_por": ["Filipa", "Tiago", "João"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Filipa",
+    "tipo": "adulto",
+    "familia_id": "familia_mario",
+    "relacoes": {
+      "conjuge": "Mario",
+      "filhos": ["Tiago", "João"]
+    },
+    "pode_confirmar_por": ["Mario", "Tiago", "João"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "João Paulo",
+    "tipo": "adulto",
+    "familia_id": "familia_joao_paulo",
+    "relacoes": {
+      "conjuge": "Sandra",
+      "filhos": ["Gonçalo", "Filipa"]
+    },
+    "pode_confirmar_por": ["Sandra", "Gonçalo", "Filipa"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  },
+  {
+    "nome": "Sandra",
+    "tipo": "adulto",
+    "familia_id": "familia_joao_paulo",
+    "relacoes": {
+      "conjuge": "João Paulo",
+      "filhos": ["Gonçalo", "Filipa"]
+    },
+    "pode_confirmar_por": ["João Paulo", "Gonçalo", "Filipa"],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 6, "emojis": 5, "paciencia": 4}
+  },
+  {
+    "nome": "Gonçalo",
+    "tipo": "filho",
+    "familia_id": "familia_joao_paulo",
+    "relacoes": {
+      "pais": ["João Paulo", "Sandra"],
+      "irmaos": ["Filipa"]
+    },
+    "pode_confirmar_por": [],
+    "personalidade": {"humor": 5, "formalidade": 5, "detalhismo": 5, "emojis": 5, "paciencia": 5}
+  }
+]

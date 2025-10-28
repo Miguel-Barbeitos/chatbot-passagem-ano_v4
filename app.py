@@ -10,11 +10,19 @@ from datetime import datetime
 # Importações internas
 from learning_qdrant import (
     guardar_mensagem,
-    guardar_confirmacao,
-    get_confirmacoes,
     get_contexto_base,
 )
-from llm_groq import gerar_resposta_llm 
+from llm_groq import gerar_resposta_llm
+
+# Novos imports
+from modules.confirmacoes import (
+    confirmar_pessoa,
+    get_confirmados,
+    get_estatisticas,
+    detectar_intencao_confirmacao,
+    confirmar_familia_completa
+)
+from modules.perfis_manager import buscar_perfil, listar_familia 
 
 # =====================================================
 # ⚙️ CONFIGURAÇÃO
@@ -86,44 +94,64 @@ perfil = next(p for p in profiles if p["nome"] == nome)
 # =====================================================
 contexto = get_contexto_base(raw=True)
 
-# Inicializa cache de confirmados se não existir
-if "confirmados_cache" not in st.session_state:
-    st.session_state.confirmados_cache = []
-
-# Tenta ler do Qdrant
+# Lê confirmados do novo sistema
 try:
-    confirmados_qdrant = get_confirmacoes()
-    # Merge com cache
-    confirmados = list(set(confirmados_qdrant + st.session_state.confirmados_cache))
+    confirmados = get_confirmados()
+    stats = get_estatisticas()
 except Exception as e:
     print(f"⚠️ Erro ao ler confirmações: {e}")
-    confirmados = st.session_state.confirmados_cache
+    confirmados = []
+    stats = {"total_confirmados": 0, "familias_completas": 0}
 
 with st.sidebar:
     st.markdown("### 🧍‍♂️ Confirmados")
     if confirmados:
-        for nome_confirmado in sorted(confirmados):
+        st.markdown(f"**Total: {stats['total_confirmados']}** | Famílias: {stats['familias_completas']}")
+        for nome_confirmado in confirmados:
             st.markdown(f"- ✅ **{nome_confirmado}**")
     else:
         st.markdown("_Ainda ninguém confirmou 😅_")
 
 
 # =====================================================
-# 👋 SAUDAÇÃO
+# 👋 SAUDAÇÃO PERSONALIZADA
 # =====================================================
+# Busca perfil do utilizador
+perfil_completo = buscar_perfil(nome)
+if not perfil_completo:
+    st.error(f"⚠️ Perfil de '{nome}' não encontrado no sistema!")
+    st.stop()
+
+# Personalidade
+personalidade = perfil_completo.get("personalidade", {})
+humor = personalidade.get("humor", 5)
+emojis = personalidade.get("emojis", 5)
+
 hora = datetime.now().hour
 saud = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
-st.success(f"{saud}, {nome}! 👋 Bem-vindo! E sou o teu assistente virtual da festa 🎉")
+
+# Mensagem personalizada baseada na personalidade
+if humor > 7:
+    msg_saudacao = f"{saud}, {nome}! 👋 Pronto para organizar a festa do século? 🎉"
+elif humor < 3:
+    msg_saudacao = f"{saud}, {nome}. Estou aqui para ajudar com a organização da festa."
+else:
+    msg_saudacao = f"{saud}, {nome}! 👋 Bem-vindo! Sou o teu assistente da festa 🎉"
+
+# Adiciona emojis conforme preferência
+if emojis < 3:
+    msg_saudacao = msg_saudacao.replace("👋", "").replace("🎉", "").replace("🎆", "")
+
+st.success(msg_saudacao)
 
 
 
 # =====================================================
 # 🧠 MOTOR DE RESPOSTA
 # =====================================================
-def gerar_resposta(pergunta: str, perfil: dict):
+def gerar_resposta(pergunta: str, perfil_completo: dict):
     pergunta_l = normalizar(pergunta)
     contexto_base = get_contexto_base(raw=True)
-    confirmados = get_confirmacoes()
     
     # ✅ Pega contexto da última resposta do assistente (se existir)
     contexto_anterior = ""
@@ -214,54 +242,71 @@ def gerar_resposta(pergunta: str, perfil: dict):
             "Estou disponível para responder a qualquer questão que tenhas!"
         )
 
-    # ✅ 2 — Confirmação de presença
-    if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar", "eu vou"]):
-        print(f"✅ Confirmação detetada para: {perfil['nome']}")
+    # ✅ 2 — Confirmação de presença INTELIGENTE
+    if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar", "eu vou", "nos vamos", "nós vamos", "familia vai", "família vai"]):
+        print(f"✅ Confirmação detetada para: {perfil_completo['nome']}")
         
-        # Usa session_state como cache imediato
-        if "confirmados_cache" not in st.session_state:
-            st.session_state.confirmados_cache = get_confirmacoes()
+        # Deteta intenção
+        intencao = detectar_intencao_confirmacao(pergunta)
         
-        if perfil['nome'] not in st.session_state.confirmados_cache:
-            st.session_state.confirmados_cache.append(perfil['nome'])
-        
-        try:
-            sucesso = guardar_confirmacao(perfil["nome"])
+        if intencao["tipo"] == "familia":
+            # Confirmar família completa
+            familia_id = perfil_completo.get("familia_id")
+            resultado = confirmar_familia_completa(familia_id, perfil_completo["nome"])
             
-            if sucesso:
-                return f"Boa, {perfil['nome']} 🎉 Já estás na lista!"
+            if resultado["sucesso"]:
+                nomes = ", ".join(resultado["confirmados"])
+                return f"🎉 Família confirmada!\n\n✅ {nomes}\n\nVejo-vos lá! 🎆"
             else:
-                return f"Confirmação registada, {perfil['nome']}! 🎉 (Pode demorar alguns segundos a aparecer)"
-        except Exception as e:
-            print(f"❌ Erro ao confirmar: {e}")
-            return f"Ups, erro ao registar! 😅 Mas ficas na lista local."
+                return f"⚠️ {resultado['mensagem']}"
+        
+        else:
+            # Confirmar individual
+            resultado = confirmar_pessoa(perfil_completo["nome"])
+            
+            if resultado["sucesso"]:
+                msg = f"🎉 {resultado['mensagem']}!"
+                
+                # Sugere família se houver
+                if resultado["familia_sugerida"]:
+                    sugestoes = ", ".join(resultado["familia_sugerida"][:3])
+                    msg += f"\n\n💡 Queres confirmar também: {sugestoes}?"
+                
+                return msg
+            else:
+                return f"⚠️ {resultado['mensagem']}"
 
     # ✅ 3 — Perguntas sobre confirmados
     if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao", "quantos vao", "quantos vão"]):
         try:
-            # Tenta Qdrant primeiro
-            confirmados_qdrant = get_confirmacoes()
+            confirmados_atual = get_confirmados()
+            stats = get_estatisticas()
             
-            # Merge com cache local
-            if "confirmados_cache" in st.session_state:
-                confirmados_todos = list(set(confirmados_qdrant + st.session_state.confirmados_cache))
-            else:
-                confirmados_todos = confirmados_qdrant
-            
-            print(f"📋 Confirmados (Qdrant: {len(confirmados_qdrant)}, Total: {len(confirmados_todos)})")
-            
-            if confirmados_todos and len(confirmados_todos) > 0:
-                lista = "\n".join([f"• ✅ **{nome}**" for nome in sorted(confirmados_todos)])
-                return f"**Confirmados até agora ({len(confirmados_todos)}):**\n\n{lista}"
+            if confirmados_atual and len(confirmados_atual) > 0:
+                # Agrupa por família
+                familias = {}
+                for conf in confirmados_atual:
+                    p = buscar_perfil(conf)
+                    if p:
+                        fam_id = p.get("familia_id", "Outros")
+                        if fam_id not in familias:
+                            familias[fam_id] = []
+                        familias[fam_id].append(conf)
+                
+                msg = f"**Confirmados ({stats['total_confirmados']}):**\n\n"
+                
+                for fam_id, membros in familias.items():
+                    if len(membros) > 1:
+                        msg += f"👨‍👩‍👧‍👦 {', '.join(membros)}\n"
+                    else:
+                        msg += f"👤 {membros[0]}\n"
+                
+                return msg
             else:
                 return "Ainda ninguém confirmou 😅 Sê o primeiro! Diz 'eu vou'"
         except Exception as e:
-            print(f"❌ Erro ao obter confirmados: {e}")
-            # Fallback para cache local
-            if "confirmados_cache" in st.session_state and st.session_state.confirmados_cache:
-                lista = "\n".join([f"• ✅ **{nome}**" for nome in st.session_state.confirmados_cache])
-                return f"**Confirmados (cache local):**\n\n{lista}"
-            return "Vê a lista de confirmados ao lado 👈"
+            print(f"❌ Erro: {e}")
+            return "Vê a lista ao lado 👈"
 
     # ✅ 4 — CONTEXTO: Se mencionou "quintas" antes e agora usa pronomes/referências
     mencoes_contextuais = ["as quintas", "essas quintas", "diz-me", "mostra", "lista", "quais sao", "quais são"]

@@ -1,0 +1,18 @@
+{
+  "confirmados": [
+    "Barbeitos",
+    "Jorge",
+    "Isabel"
+  ],
+  "total": 3,
+  "ultima_atualizacao": "2025-10-28T13:32:28.575658",
+  "por_familia": {
+    "familia_barbeitos": [
+      "Barbeitos"
+    ],
+    "familia_jorge": [
+      "Jorge",
+      "Isabel"
+    ]
+  }
+}
