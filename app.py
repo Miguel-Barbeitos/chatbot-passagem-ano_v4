@@ -576,7 +576,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     )
 
     guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil_completo)
-    return resposta_llm
+    return resposta_ll
 
 # =====================================================
 # 💬 INTERFACE STREAMLIT (CHAT)
