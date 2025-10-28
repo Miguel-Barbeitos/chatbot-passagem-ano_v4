@@ -231,7 +231,7 @@ def estimar_distancia_por_zona(zona: str) -> dict:
 def gerar_resposta_llm(pergunta, perfil=None, contexto_base=None, contexto_conversa="", ultima_quinta=None):
     """Gera resposta sobre festa ou quintas."""
     perfil = perfil_completo or {}
-    nome = perfil.get("nome", "Utilizador")
+    nome = perfil_completo.get("nome", "Utilizador")
     p = pergunta.lower()
     
     # Se há contexto da conversa anterior, usa para melhorar a compreensão
