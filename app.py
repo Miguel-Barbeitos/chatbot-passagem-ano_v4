@@ -284,7 +284,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     # ✅ 1 — Saudação
     if any(p in pergunta_l for p in ["ola", "olá", "bom dia", "boa tarde", "boa noite", "oi", "hey"]) and len(pergunta_l.split()) <= 3:
         return (
-            f"Olá, {perfil['nome']}! 👋\n\n"
+            f"Olá, {perfil_completo['nome']}! 👋\n\n"
             "Estamos a organizar os detalhes da festa de passagem de ano 🎆\n"
             "Estou disponível para responder a qualquer questão que tenhas!"
         )
