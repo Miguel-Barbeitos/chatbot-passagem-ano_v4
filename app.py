@@ -148,16 +148,25 @@ def gerar_resposta(pergunta: str, perfil: dict):
             pergunta_l = normalizar(pergunta)
             print(f"🔄 Reformulado com contexto: '{pergunta}'")
     
+    # ✅ CONTEXTO: Se perguntou "de que quinta" e agora responde com nome
+    if contexto_anterior and "de que quinta" in contexto_anterior.lower():
+        # A resposta é provavelmente o nome de uma quinta
+        if len(pergunta.split()) <= 5 and not any(p in pergunta_l for p in ["quantas", "quais", "onde", "como"]):
+            # Assume que é nome de quinta e pergunta distância
+            pergunta = f"qual a distância de {pergunta} até Lisboa"
+            pergunta_l = normalizar(pergunta)
+            print(f"🔄 Contexto de continuação: '{pergunta}'")
+    
     # ✅ CONTEXTO: Referências a posições (primeira, segunda, 3ª, etc.)
     referencias_posicao = {
-        "primeira": 0, "1a": 0, "1ª": 0, "1": 0,
-        "segunda": 1, "2a": 1, "2ª": 1, "2": 1,
-        "terceira": 2, "3a": 2, "3ª": 2, "3": 2,
-        "quarta": 3, "4a": 3, "4ª": 3, "4": 3,
-        "quinta": 4, "5a": 4, "5ª": 4, "5": 4,
-        "sexta": 5, "6a": 5, "6ª": 5, "6": 5,
-        "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "7": 6,
-        "oitava": 7, "8a": 7, "8ª": 7 , "8": 7
+        "primeira": 0, "1a": 0, "1ª": 0,
+        "segunda": 1, "2a": 1, "2ª": 1,
+        "terceira": 2, "3a": 2, "3ª": 2,
+        "quarta": 3, "4a": 3, "4ª": 3,
+        "quinta": 4, "5a": 4, "5ª": 4,
+        "sexta": 5, "6a": 5, "6ª": 5,
+        "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
+        "oitava": 7, "8a": 7, "8ª": 7
     }
     
     # Verifica se há referência a posição + se há lista anterior
@@ -194,13 +203,36 @@ def gerar_resposta(pergunta: str, perfil: dict):
         )
 
     # ✅ 2 — Confirmação de presença
-    if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar"]):
-        guardar_confirmacao(perfil["nome"])
-        return f"Boa, {perfil['nome']} 🎉 Já estás na lista! Vê a lista ao lado 👈"
+    if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar", "eu vou"]):
+        print(f"✅ Confirmação detetada para: {perfil['nome']}")
+        try:
+            guardar_confirmacao(perfil["nome"])
+            # Atualiza a lista na sidebar imediatamente
+            confirmados_atualizados = get_confirmacoes()
+            print(f"📋 Confirmados após guardar: {confirmados_atualizados}")
+            
+            if perfil['nome'] in confirmados_atualizados:
+                return f"Boa, {perfil['nome']} 🎉 Já estás na lista! Vê a lista ao lado 👈"
+            else:
+                return f"Confirmação registada, {perfil['nome']}! 🎉 (A lista atualiza em breve)"
+        except Exception as e:
+            print(f"❌ Erro ao confirmar: {e}")
+            return f"Ups, erro ao registar! 😅 Tenta novamente."
 
     # ✅ 3 — Perguntas sobre confirmados
-    if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao"]):
-        return "Vê a lista de confirmados ao lado 👈"
+    if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao", "quantos vao", "quantos vão"]):
+        try:
+            confirmados_atual = get_confirmacoes()
+            print(f"📋 Confirmados pedidos: {confirmados_atual}")
+            
+            if confirmados_atual and len(confirmados_atual) > 0:
+                lista = "\n".join([f"• ✅ **{nome}**" for nome in confirmados_atual])
+                return f"**Confirmados até agora ({len(confirmados_atual)}):**\n\n{lista}\n\n(Também podes ver ao lado 👈)"
+            else:
+                return "Ainda ninguém confirmou 😅 Sê o primeiro! Diz 'eu vou'"
+        except Exception as e:
+            print(f"❌ Erro ao obter confirmados: {e}")
+            return "Vê a lista de confirmados ao lado 👈"
 
     # ✅ 4 — CONTEXTO: Se mencionou "quintas" antes e agora usa pronomes/referências
     mencoes_contextuais = ["as quintas", "essas quintas", "diz-me", "mostra", "lista", "quais sao", "quais são"]
