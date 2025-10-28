@@ -494,7 +494,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     # ✅ 6 — Perguntas genéricas (LLM trata do resto)
     resposta_llm = gerar_resposta_llm(
         pergunta=pergunta,
-        perfil_completo=perfil_completo,
+        perfil=perfil_completo,
         contexto_base=contexto_base,
     )
 
