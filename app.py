@@ -377,11 +377,11 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     if any(p in pergunta_l for p in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]) and tem_nome_quinta:
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil=perfil,
+            perfil=perfil_completo,  # ← CORRIGIDO
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior
         )
-        guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
+        guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
 
     # ✅ 5 — Perguntas sobre ZONAS, listas de quintas, ou queries SQL
@@ -392,16 +392,16 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         "responderam", "resposta", "numero de pessoas", "número de pessoas",
         "capacidade", "pessoas", "tem capacidade", "quantas tem",
         "ja vimos", "vimos", "contactamos",
-        "distancia", "distância", "quilometros", "quilómetros", "km", "longe"  # ← ADICIONADO
+        "distancia", "distância", "quilometros", "quilómetros", "km", "longe"
     ]):
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil=perfil,
+            perfil=perfil_completo,  # ← CORRIGIDO
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior,
-            ultima_quinta=ultima_quinta_mencionada  # ← PASSA A ÚLTIMA QUINTA
+            ultima_quinta=ultima_quinta_mencionada
         )
-        guardar_mensagem(perfil["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil)
+        guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
     
     # ✅ 6 — Perguntas diretas sobre "já vimos quintas" / "outras quintas" (fallback)
