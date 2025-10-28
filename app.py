@@ -377,7 +377,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     if any(p in pergunta_l for p in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]) and tem_nome_quinta:
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil=perfil_completo,  # ← CORRIGIDO
+            perfil_completo=perfil_completo,  # ← CORRIGIDO
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior
         )
@@ -396,7 +396,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     ]):
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil=perfil_completo,  # ← CORRIGIDO
+            perfil_completo=perfil_completo,  # ← CORRIGIDO
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior,
             ultima_quinta=ultima_quinta_mencionada
