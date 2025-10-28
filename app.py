@@ -498,7 +498,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         contexto_base=contexto_base,
     )
 
-    guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil)
+    guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil_completo)
     return resposta_llm
 
 # =====================================================
