@@ -85,13 +85,25 @@ perfil = next(p for p in profiles if p["nome"] == nome)
 # 🎉 SIDEBAR — INFO DO EVENTO
 # =====================================================
 contexto = get_contexto_base(raw=True)
-confirmados = get_confirmacoes()
+
+# Inicializa cache de confirmados se não existir
+if "confirmados_cache" not in st.session_state:
+    st.session_state.confirmados_cache = []
+
+# Tenta ler do Qdrant
+try:
+    confirmados_qdrant = get_confirmacoes()
+    # Merge com cache
+    confirmados = list(set(confirmados_qdrant + st.session_state.confirmados_cache))
+except Exception as e:
+    print(f"⚠️ Erro ao ler confirmações: {e}")
+    confirmados = st.session_state.confirmados_cache
 
 with st.sidebar:
     st.markdown("### 🧍‍♂️ Confirmados")
     if confirmados:
-        for nome in confirmados:
-            st.markdown(f"- ✅ **{nome}**")
+        for nome_confirmado in sorted(confirmados):
+            st.markdown(f"- ✅ **{nome_confirmado}**")
     else:
         st.markdown("_Ainda ninguém confirmou 😅_")
 
@@ -205,33 +217,50 @@ def gerar_resposta(pergunta: str, perfil: dict):
     # ✅ 2 — Confirmação de presença
     if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar", "eu vou"]):
         print(f"✅ Confirmação detetada para: {perfil['nome']}")
+        
+        # Usa session_state como cache imediato
+        if "confirmados_cache" not in st.session_state:
+            st.session_state.confirmados_cache = get_confirmacoes()
+        
+        if perfil['nome'] not in st.session_state.confirmados_cache:
+            st.session_state.confirmados_cache.append(perfil['nome'])
+        
         try:
-            guardar_confirmacao(perfil["nome"])
-            # Atualiza a lista na sidebar imediatamente
-            confirmados_atualizados = get_confirmacoes()
-            print(f"📋 Confirmados após guardar: {confirmados_atualizados}")
+            sucesso = guardar_confirmacao(perfil["nome"])
             
-            if perfil['nome'] in confirmados_atualizados:
-                return f"Boa, {perfil['nome']} 🎉 Já estás na lista! Vê a lista ao lado 👈"
+            if sucesso:
+                return f"Boa, {perfil['nome']} 🎉 Já estás na lista!"
             else:
-                return f"Confirmação registada, {perfil['nome']}! 🎉 (A lista atualiza em breve)"
+                return f"Confirmação registada, {perfil['nome']}! 🎉 (Pode demorar alguns segundos a aparecer)"
         except Exception as e:
             print(f"❌ Erro ao confirmar: {e}")
-            return f"Ups, erro ao registar! 😅 Tenta novamente."
+            return f"Ups, erro ao registar! 😅 Mas ficas na lista local."
 
     # ✅ 3 — Perguntas sobre confirmados
     if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao", "quantos vao", "quantos vão"]):
         try:
-            confirmados_atual = get_confirmacoes()
-            print(f"📋 Confirmados pedidos: {confirmados_atual}")
+            # Tenta Qdrant primeiro
+            confirmados_qdrant = get_confirmacoes()
             
-            if confirmados_atual and len(confirmados_atual) > 0:
-                lista = "\n".join([f"• ✅ **{nome}**" for nome in confirmados_atual])
-                return f"**Confirmados até agora ({len(confirmados_atual)}):**\n\n{lista}\n\n(Também podes ver ao lado 👈)"
+            # Merge com cache local
+            if "confirmados_cache" in st.session_state:
+                confirmados_todos = list(set(confirmados_qdrant + st.session_state.confirmados_cache))
+            else:
+                confirmados_todos = confirmados_qdrant
+            
+            print(f"📋 Confirmados (Qdrant: {len(confirmados_qdrant)}, Total: {len(confirmados_todos)})")
+            
+            if confirmados_todos and len(confirmados_todos) > 0:
+                lista = "\n".join([f"• ✅ **{nome}**" for nome in sorted(confirmados_todos)])
+                return f"**Confirmados até agora ({len(confirmados_todos)}):**\n\n{lista}"
             else:
                 return "Ainda ninguém confirmou 😅 Sê o primeiro! Diz 'eu vou'"
         except Exception as e:
             print(f"❌ Erro ao obter confirmados: {e}")
+            # Fallback para cache local
+            if "confirmados_cache" in st.session_state and st.session_state.confirmados_cache:
+                lista = "\n".join([f"• ✅ **{nome}**" for nome in st.session_state.confirmados_cache])
+                return f"**Confirmados (cache local):**\n\n{lista}"
             return "Vê a lista de confirmados ao lado 👈"
 
     # ✅ 4 — CONTEXTO: Se mencionou "quintas" antes e agora usa pronomes/referências

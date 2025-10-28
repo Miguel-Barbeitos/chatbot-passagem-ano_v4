@@ -49,6 +49,32 @@ def inicializar_qdrant():
 
 client = inicializar_qdrant()
 
+# =====================================================
+# 🔍 VERIFICAR E CRIAR COLEÇÃO SE NÃO EXISTIR
+# =====================================================
+def verificar_colecao():
+    """Verifica se a coleção existe e cria se necessário"""
+    try:
+        collections = client.get_collections()
+        collection_names = [c.name for c in collections.collections]
+        
+        if COLLECTION_NAME not in collection_names:
+            print(f"⚠️ Coleção '{COLLECTION_NAME}' não existe. A criar...")
+            client.create_collection(
+                collection_name=COLLECTION_NAME,
+                vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE)
+            )
+            print(f"✅ Coleção '{COLLECTION_NAME}' criada com sucesso!")
+        else:
+            print(f"✅ Coleção '{COLLECTION_NAME}' já existe.")
+        return True
+    except Exception as e:
+        print(f"❌ Erro ao verificar/criar coleção: {e}")
+        return False
+
+# Verifica/cria a coleção ao iniciar
+verificar_colecao()
+
 # 🔍 Deteta se está a usar Qdrant local ou Cloud
 if hasattr(client, "_location") and client._location:
     print(f"💾 Qdrant local ativo em: {os.path.abspath(QDRANT_PATH)}")
@@ -166,6 +192,8 @@ def guardar_confirmacao(nome: str):
     Guarda a confirmação de presença no Qdrant sem duplicar.
     """
     try:
+        print(f"🔄 Tentando guardar confirmação para: {nome}")
+        
         # Verificar se já existe confirmação
         existentes, _ = client.scroll(
             collection_name=COLLECTION_NAME,
@@ -184,7 +212,7 @@ def guardar_confirmacao(nome: str):
 
         if existentes:
             print(f"ℹ️ {nome} já estava confirmado.")
-            return
+            return True
 
         # Inserir nova confirmação
         vector = np.zeros(768).tolist()
@@ -194,26 +222,44 @@ def guardar_confirmacao(nome: str):
             "contexto": "confirmacoes",
         }
 
+        point_id = random.randint(0, 1_000_000_000)
+        print(f"💾 Guardando confirmação com ID: {point_id}")
+        
         client.upsert(
             collection_name=COLLECTION_NAME,
             points=[
                 models.PointStruct(
-                    id=random.randint(0, 1_000_000_000),
+                    id=point_id,
                     vector=vector,
                     payload=payload,
                 )
             ],
         )
 
-        print(f"✅ {nome} registado como confirmado no Qdrant.")
+        print(f"✅ {nome} registado como confirmado no Qdrant (ID: {point_id})")
+        
+        # Verifica imediatamente se foi guardado
+        verificacao = get_confirmacoes()
+        if nome in verificacao:
+            print(f"✓ Verificação: {nome} está na lista de confirmados!")
+            return True
+        else:
+            print(f"⚠️ Aviso: {nome} NÃO aparece na lista após guardar!")
+            return False
+            
     except Exception as e:
         print(f"⚠️ Erro ao guardar confirmação: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def get_confirmacoes():
     """
     Lê as confirmações atuais diretamente do Qdrant.
     """
     try:
+        print(f"🔍 A ler confirmações da coleção '{COLLECTION_NAME}'...")
+        
         pontos, _ = client.scroll(
             collection_name=COLLECTION_NAME,
             scroll_filter=models.Filter(
@@ -226,16 +272,26 @@ def get_confirmacoes():
             limit=200,
         )
 
+        print(f"📦 Total de pontos retornados: {len(pontos)}")
+        
         confirmados = []
         for p in pontos:
+            if not p.payload:
+                print(f"⚠️ Ponto sem payload: {p.id}")
+                continue
+            
             nome = p.payload.get("user")
+            print(f"  → Ponto ID {p.id}: user='{nome}', contexto='{p.payload.get('contexto')}'")
+            
             if nome and nome not in confirmados:
                 confirmados.append(nome)
 
-        print(f"📋 Confirmados no Qdrant: {confirmados}")
+        print(f"📋 Confirmados finais no Qdrant: {confirmados}")
         return sorted(confirmados)
     except Exception as e:
         print(f"⚠️ Erro ao obter confirmações: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def limpar_duplicados_antigos():
