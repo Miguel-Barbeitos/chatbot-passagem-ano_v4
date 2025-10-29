@@ -1060,14 +1060,15 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     if any(p in pergunta_l for p in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]) and tem_nome_quinta:
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
-            perfil_completo=perfil_completo,  # ← CORRIGIDO
+            perfil_completo=perfil_completo,
             contexto_base=contexto_base,
             contexto_conversa=contexto_anterior
         )
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
 
-   if prompt := st.chat_input("Escreve a tua mensagem..."):
+# Input do utilizador (no final do ficheiro, FORA de qualquer função)
+if prompt := st.chat_input("Escreve a tua mensagem..."):
     # Adiciona mensagem do user
     with st.chat_message("user"):
         st.markdown(prompt)
