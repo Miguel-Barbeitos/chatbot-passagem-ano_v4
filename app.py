@@ -237,7 +237,583 @@ st.success(msg_saudacao)
 # =====================================================
 # 🧠 MOTOR DE RESPOSTA
 # =====================================================
+
+# ================================================================
+# 🔧 FUNÇÕES AUXILIARES - Detecção prioritária de perguntas
+# ================================================================
+
+def verificar_pergunta_quinta_reservada(pergunta: str) -> tuple[bool, str]:
+    """Verifica se pergunta é sobre ter quinta reservada"""
+    import re
+    
+    padrao = r'\b(ja\s+ha|temos|existe)\s+(quinta|sitio|sítio|local|lugar)'
+    if re.search(padrao, pergunta.lower(), re.IGNORECASE):
+        resposta = """🏡 **Sim!** 
+
+Temos o **Monte da Galega** pré-reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉
+
+Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
+        return True, resposta
+    
+    return False, ""
+
+
+def verificar_pergunta_quem_vai(pergunta: str) -> tuple[bool, str]:
+    """Verifica se pergunta é 'quem vai?'"""
+    import re
+    from modules.confirmacoes import get_confirmados
+    
+    if re.search(r'^(quem\s+vai|quem\s+confirmou|lista.*confirmad)', pergunta.lower(), re.IGNORECASE):
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        total = len(confirmados)
+        
+        if total == 0:
+            resposta = "Ainda ninguém confirmou. 😔\n\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
+        else:
+            resposta = f"**Confirmados ({total}):**\n\n"
+            
+            por_familia = confirmados_data.get('por_familia', {})
+            
+            if por_familia:
+                for fam_id, membros in por_familia.items():
+                    resposta += f"• {', '.join(membros)}\n"
+            else:
+                for nome in confirmados:
+                    resposta += f"• {nome}\n"
+            
+            resposta += f"\n🎉 Total: **{total} pessoas**"
+        
+        return True, resposta
+    
+    return False, ""
+
+
+def verificar_pergunta_pessoa_vai(pergunta: str) -> tuple[bool, str]:
+    """Verifica se pergunta é 'X vai?'"""
+    import re
+    import unicodedata
+    from modules.confirmacoes import get_confirmados
+    
+    match = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+?)\s+vai\??\s*$', pergunta.lower(), re.IGNORECASE)
+    
+    if match:
+        nome_busca = match.group(1).strip()
+        
+        # Ignora palavras comuns
+        if nome_busca.lower() not in ['eu', 'tu', 'ele', 'ela', 'voce', 'você']:
+            confirmados_data = get_confirmados()
+            confirmados = confirmados_data.get('confirmados', [])
+            
+            # Normaliza para comparação
+            def norm(s):
+                s = unicodedata.normalize('NFKD', s)
+                s = ''.join(c for c in s if not unicodedata.combining(c))
+                return s.lower().strip()
+            
+            nome_norm = norm(nome_busca)
+            
+            # Procura confirmado
+            nome_encontrado = None
+            for confirmado in confirmados:
+                if norm(confirmado) == nome_norm:
+                    nome_encontrado = confirmado
+                    break
+            
+            if nome_encontrado:
+                resposta = f"✅ **Sim!** {nome_encontrado} já confirmou presença! 🎉"
+            else:
+                resposta = f"❌ **Ainda não.** {nome_busca.title()} ainda não confirmou.\n\nAjuda a lembrar! 😊"
+            
+            return True, resposta
+    
+    return False, ""
+
+
+def verificar_pergunta_info_quinta(pergunta: str) -> tuple[bool, str]:
+    """Verifica se pergunta é sobre info específica de quinta por posição"""
+    import re
+    
+    match = re.search(
+        r'(website|site|morada|endereco|endereço|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|quarta?|quinta?|sexta?|setima?|sétima?|oitava?|nona?|decima?|décima?|\d+a?)',
+        pergunta.lower(),
+        re.IGNORECASE
+    )
+    
+    if match:
+        tipo_info = match.group(1).lower()
+        posicao = match.group(2).lower().rstrip('aª')
+        
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0,
+            "segunda": 1, "segundo": 1, "2": 1,
+            "terceira": 2, "terceiro": 2, "3": 2,
+            "quarta": 3, "quarto": 3, "4": 3,
+            "quinta": 4, "quinto": 4, "5": 4,
+            "sexta": 5, "sexto": 5, "6": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6,
+            "oitava": 7, "oitavo": 7, "8": 7,
+            "nona": 8, "nono": 8, "9": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9,
+        }
+        
+        indice = mapa_pos.get(posicao)
+        
+        if indice is not None:
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                zona = quinta.get('zona', 'N/A')
+                
+                campo_map = {
+                    'website': 'website', 'site': 'website',
+                    'morada': 'morada', 'endereco': 'morada', 'endereço': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone', 'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, '')
+                
+                if valor and valor.strip():
+                    icones = {
+                        'website': '🌐',
+                        'morada': '📍',
+                        'email': '📧',
+                        'telefone': '📞'
+                    }
+                    
+                    resposta = f"**{nome_quinta}** ({zona})\n\n{icones.get(campo, '')} {valor}"
+                else:
+                    resposta = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                
+                return True, resposta
+    
+    return False, ""
+
+
+
 def gerar_resposta(pergunta: str, perfil_completo: dict):
+    """Gera resposta com detecção prioritária"""
+    
+    # ================================================================
+    # 🎯 VERIFICAÇÕES PRIORITÁRIAS (antes de tudo)
+    # ================================================================
+    
+    # 1. Já há quinta?
+    detectado, resposta = verificar_pergunta_quinta_reservada(pergunta)
+    if detectado:
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+        return resposta
+    
+    # 2. Quem vai?
+    detectado, resposta = verificar_pergunta_quem_vai(pergunta)
+    if detectado:
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+        return resposta
+    
+    # 3. X vai?
+    detectado, resposta = verificar_pergunta_pessoa_vai(pergunta)
+    if detectado:
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+        return resposta
+    
+    # 4. Website/info da primeira
+    detectado, resposta = verificar_pergunta_info_quinta(pergunta)
+    if detectado:
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+        return resposta
+    
+    # ================================================================
+    # Continua com fluxo normal...
+    # ================================================================
+    
+    
+    
+    # ================================================================
+    # 🔧 FIXES DEFINITIVOS - Prioridade sobre detecção normal
+    # ================================================================
+    
+    import re
+    import unicodedata
+    from modules.confirmacoes import get_confirmados
+    
+    def normalizar_texto(texto):
+        """Remove acentos e normaliza"""
+        texto = unicodedata.normalize('NFKD', texto)
+        texto = ''.join(c for c in texto if not unicodedata.combining(c))
+        return texto.lower().strip()
+    
+    # ----------------------------------------------------------------
+    # FIX 1: "Já há quinta/sítio?" → Monte da Galega
+    # ----------------------------------------------------------------
+    if re.search(r'\b(ja\s+ha|temos|existe)\s+(quinta|sitio|sítio|local|lugar)', pergunta_l, re.IGNORECASE):
+        resposta_texto = f"""🏡 **Sim!** 
+        
+Temos o **Monte da Galega** pré-reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉
+
+Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+    
+    # ----------------------------------------------------------------
+    # FIX 2: "Quem vai?" → Lista completa de confirmados
+    # ----------------------------------------------------------------
+    if re.search(r'^(quem\s+vai|quem\s+confirmou|lista.*confirmad)', pergunta_l, re.IGNORECASE):
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        total = len(confirmados)
+        
+        if total == 0:
+            resposta_texto = "Ainda ninguém confirmou. 😔\n\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
+        else:
+            resposta_texto = f"**Confirmados ({total}):**\n\n"
+            
+            # Agrupa por família se possível
+            por_familia = confirmados_data.get('por_familia', {})
+            
+            if por_familia:
+                for fam_id, membros in por_familia.items():
+                    resposta_texto += f"• {', '.join(membros)}\n"
+            else:
+                for nome in confirmados:
+                    resposta_texto += f"• {nome}\n"
+            
+            resposta_texto += f"\n🎉 Total: **{total} pessoas**"
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+    
+    # ----------------------------------------------------------------
+    # FIX 3: "X vai?" ou "O X vai?" → Verificar confirmações
+    # ----------------------------------------------------------------
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+?)\s+vai\??\s*$', pergunta_l, re.IGNORECASE)
+    
+    if match_vai:
+        nome_busca = match_vai.group(1).strip()
+        
+        # Ignora palavras comuns
+        if nome_busca.lower() not in ['eu', 'tu', 'ele', 'ela', 'voce', 'você']:
+            print(f"🔍 Verificando se '{nome_busca}' vai...")
+            
+            confirmados_data = get_confirmados()
+            confirmados = confirmados_data.get('confirmados', [])
+            
+            nome_norm = normalizar_texto(nome_busca)
+            
+            # Verifica se está confirmado
+            nome_encontrado = None
+            for confirmado in confirmados:
+                if normalizar_texto(confirmado) == nome_norm:
+                    nome_encontrado = confirmado
+                    break
+            
+            if nome_encontrado:
+                resposta_texto = f"✅ **Sim!** {nome_encontrado} já confirmou presença! 🎉"
+                
+                # Verifica família
+                from modules.perfis_manager import PerfilsManager
+                pm = PerfilsManager()
+                perfil = pm.buscar_perfil(nome_encontrado)
+                
+                if perfil and perfil.get('familia_id'):
+                    familia = pm.listar_familia(perfil['familia_id'])
+                    familia_confirmada = [
+                        p['nome'] for p in familia 
+                        if p['nome'] in confirmados
+                    ]
+                    familia_pendente = [
+                        p['nome'] for p in familia 
+                        if p['nome'] not in confirmados and p['nome'] != nome_encontrado
+                    ]
+                    
+                    if familia_confirmada:
+                        resposta_texto += f"\n\n👨‍👩‍👧‍👦 Da família também vão: {', '.join(familia_confirmada)}"
+                    
+                    if familia_pendente:
+                        resposta_texto += f"\n\n⏳ Ainda faltam confirmar: {', '.join(familia_pendente)}"
+            else:
+                resposta_texto = f"❌ **Ainda não.** {nome_busca.title()} ainda não confirmou.\n\nAjuda a lembrar! 😊"
+            
+            st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+            return resposta_texto
+    
+    # ----------------------------------------------------------------
+    # FIX 4: "Website/info da primeira" → Resposta direta
+    # ----------------------------------------------------------------
+    match_info = re.search(
+        r'(website|site|morada|endereco|endereço|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower().rstrip('aª')
+        
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0,
+            "segunda": 1, "segundo": 1, "2": 1,
+            "terceira": 2, "terceiro": 2, "3": 2,
+            "quarta": 3, "quarto": 3, "4": 3,
+            "quinta": 4, "quinto": 4, "5": 4,
+            "sexta": 5, "sexto": 5, "6": 5,
+            "setima": 6, "sétima": 6, "7": 6,
+            "oitava": 7, "oitavo": 7, "8": 7,
+            "nona": 8, "nono": 8, "9": 8,
+            "decima": 9, "décima": 9, "10": 9,
+        }
+        
+        indice = mapa_pos.get(posicao)
+        
+        if indice is not None:
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                zona = quinta.get('zona', 'N/A')
+                
+                campo_map = {
+                    'website': 'website', 'site': 'website',
+                    'morada': 'morada', 'endereco': 'morada', 'endereço': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone', 'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, '')
+                
+                if valor and valor.strip():
+                    icones = {
+                        'website': '🌐',
+                        'morada': '📍',
+                        'email': '📧',
+                        'telefone': '📞'
+                    }
+                    
+                    resposta_texto = f"**{nome_quinta}** ({zona})\n\n{icones.get(campo, '')} {valor}"
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+    
+    # ================================================================
+    # Continua com o fluxo normal...
+    # ================================================================
+    
+
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
     pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
@@ -278,7 +854,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -318,7 +1100,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -358,7 +1346,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -401,7 +1595,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -441,7 +1841,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -481,7 +2087,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -521,7 +2333,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -620,7 +2638,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         if ultima_quinta_mencionada:
             # Reformula para incluir o nome da quinta
             pergunta = f"qual a distância da {ultima_quinta_mencionada['nome']} até Lisboa"
-            pergunta_l = normalizar(pergunta)
+            
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -660,7 +2884,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -700,7 +3130,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -740,7 +3376,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -783,7 +3625,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -823,7 +3871,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -863,7 +4117,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -903,7 +4363,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -920,7 +4586,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         if len(pergunta.split()) <= 5 and not any(p in pergunta_l for p in ["quantas", "quais", "onde", "como"]):
             # Assume que é nome de quinta e pergunta distância
             pergunta = f"qual a distância de {pergunta} até Lisboa"
-            pergunta_l = normalizar(pergunta)
+            
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -960,7 +4832,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -1000,7 +5078,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1040,7 +5324,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -1083,7 +5573,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1123,7 +5819,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -1163,7 +6065,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1203,7 +6311,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -1247,7 +6561,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"informação sobre {quinta_referida}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1287,7 +6807,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -1327,7 +7053,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1367,7 +7299,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -1410,7 +7548,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1450,7 +7794,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -1490,7 +8040,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1530,7 +8286,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -1622,7 +8584,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         if any(ref in pergunta_l for ref in mencoes_contextuais) or (len(pergunta_l.split()) <= 3 and any(p in pergunta_l for p in ["quais", "quintas", "diz", "mostra"])):
             # Redireciona para query de quintas
             pergunta = "que quintas já contactámos"
-            pergunta_l = normalizar(pergunta)
+            
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1662,7 +8830,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -1702,7 +9076,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1742,7 +9322,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
@@ -1785,7 +9571,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1825,7 +9817,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
 
@@ -1865,7 +10063,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
                         
                         pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
+                        
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
     # =====================================================
     # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
     # =====================================================
@@ -1905,7 +10309,213 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     else:
                         pergunta = f"website da {quinta_nome}"
                     
-                    pergunta_l = normalizar(pergunta)
+                    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+    
+    # =====================================================
+    # 🔧 FIX: "Website/morada/email/telefone da primeira/segunda/etc"
+    # =====================================================
+    import re
+    
+    # Padrão: (website|morada|email|telefone) da (primeira|1|segunda|2|etc)
+    match_info = re.search(
+        r'(website|site|morada|endereco|email|telefone|contacto)\s+da?\s+(primeira?|segunda?|terceira?|\d+a?|1a?|2a?|3a?|4a?|5a?|6a?|7a?|8a?|9a?|10a?)',
+        pergunta_l,
+        re.IGNORECASE
+    )
+    
+    if match_info:
+        tipo_info = match_info.group(1).lower()
+        posicao = match_info.group(2).lower()
+        
+        # Mapeia posição para índice
+        mapa_pos = {
+            "primeira": 0, "primeiro": 0, "1": 0, "1a": 0,
+            "segunda": 1, "segundo": 1, "2": 1, "2a": 1,
+            "terceira": 2, "terceiro": 2, "3": 2, "3a": 2,
+            "quarta": 3, "quarto": 3, "4": 3, "4a": 3,
+            "quinta": 4, "quinto": 4, "5": 4, "5a": 4,
+            "sexta": 5, "sexto": 5, "6": 5, "6a": 5,
+            "setima": 6, "sétima": 6, "setimo": 6, "7": 6, "7a": 6,
+            "oitava": 7, "oitavo": 7, "8": 7, "8a": 7,
+            "nona": 8, "nono": 8, "9": 8, "9a": 8,
+            "decima": 9, "décima": 9, "decimo": 9, "10": 9, "10a": 9,
+        }
+        
+        indice = mapa_pos.get(posicao.rstrip('aª'))
+        
+        if indice is not None:
+            print(f"🎯 Detectado: {tipo_info} da posição {indice+1}")
+            
+            # Busca TODAS as quintas
+            from modules.quintas_qdrant import listar_quintas
+            todas_quintas = listar_quintas()
+            
+            if indice < len(todas_quintas):
+                quinta = todas_quintas[indice]
+                nome_quinta = quinta.get('nome', 'N/A')
+                
+                # Mapeia tipo de info para campo
+                campo_map = {
+                    'website': 'website',
+                    'site': 'website',
+                    'morada': 'morada',
+                    'endereco': 'morada',
+                    'email': 'email',
+                    'telefone': 'telefone',
+                    'contacto': 'telefone',
+                }
+                
+                campo = campo_map.get(tipo_info, 'website')
+                valor = quinta.get(campo, 'N/A')
+                
+                print(f"✅ {nome_quinta} - {campo}: {valor}")
+                
+                # Resposta direta
+                if valor and valor != 'N/A':
+                    resposta_texto = f"**{nome_quinta}** ({quinta.get('zona', 'N/A')})\n\n"
+                    
+                    if campo == 'website':
+                        resposta_texto += f"🌐 {valor}"
+                    elif campo == 'morada':
+                        resposta_texto += f"📍 {valor}"
+                    elif campo == 'email':
+                        resposta_texto += f"📧 {valor}"
+                    elif campo == 'telefone':
+                        resposta_texto += f"📞 {valor}"
+                    
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+                else:
+                    resposta_texto = f"A **{nome_quinta}** não tem {campo} registado. 😕"
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                    return resposta_texto
+            else:
+                resposta_texto = f"Só tenho {len(todas_quintas)} quintas. Pede uma entre 1 e {len(todas_quintas)}!"
+                st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+                return resposta_texto
+
+
+    # =====================================================
+    # 🔧 FIX: "X vai?" ou "O X vai?" → Verificar confirmações
+    # =====================================================
+    import re
+    
+    # Padrão: (o|a)? NOME vai?
+    match_vai = re.search(r'\b(?:o|a)?\s*([\w\sáéíóúâêôãõç]+)\s+vai\??', pergunta_l, re.IGNORECASE)
+    
+    if match_vai and not any(palavra in pergunta_l for palavra in ['quando', 'como', 'onde', 'quantos', 'quem']):
+        nome_busca = match_vai.group(1).strip()
+        
+        print(f"🔍 Verificando se '{nome_busca}' vai...")
+        
+        from modules.confirmacoes import get_confirmados
+        confirmados_data = get_confirmados()
+        confirmados = confirmados_data.get('confirmados', [])
+        
+        # Normaliza nomes para comparação
+        import unicodedata
+        def norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            return s.lower().strip()
+        
+        nome_norm = norm(nome_busca)
+        confirmado = any(norm(c) == nome_norm for c in confirmados)
+        
+        if confirmado:
+            # Busca nome exato
+            nome_exato = next((c for c in confirmados if norm(c) == nome_norm), nome_busca)
+            resposta_texto = f"✅ Sim! **{nome_exato}** já confirmou presença! 🎉"
+        else:
+            resposta_texto = f"❌ Ainda não. **{nome_busca.title()}** ainda não confirmou."
+        
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta_texto})
+        return resposta_texto
+
+    pergunta_l = normalizar(pergunta)
                     break
 
                         print(f"🔄 Reformulado: '{pergunta}'")
