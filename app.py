@@ -1067,6 +1067,9 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
 
+
+if "mensagens" not in st.session_state:
+    st.session_state.mensagens = []
 # Input do utilizador (no final do ficheiro, FORA de qualquer função)
 if prompt := st.chat_input("Escreve a tua mensagem..."):
     # Adiciona mensagem do user
