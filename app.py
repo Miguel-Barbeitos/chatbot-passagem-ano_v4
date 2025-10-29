@@ -1069,14 +1069,18 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
 
 
         if prompt := st.chat_input("Escreve a tua mensagem..."):
-         with st.chat_message("user"):
-          st.markdown(prompt)
+    # Adiciona mensagem do user
+    with st.chat_message("user"):
+        st.markdown(prompt)
     
-          # Processa resposta
-          resposta = gerar_resposta(prompt, perfil_completo)
+    st.session_state.mensagens.append({"role": "user", "content": prompt})
     
-          with st.chat_message("assistant"):
-          st.markdown(resposta)
+    # Gera resposta
+    resposta = gerar_resposta(prompt, perfil_completo)
+    
+    # Mostra resposta
+    with st.chat_message("assistant"):
+        st.markdown(resposta)
 
 
 
