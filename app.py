@@ -239,6 +239,45 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
     # DETECÇÃO DE PERGUNTAS ESPECÍFICAS (antes do LLM)
     # ====================================================================
     
+    # 0. Saudações básicas
+    if pergunta_l in ["ola", "olá", "oi", "hey", "boas", "boa tarde", "bom dia", "boa noite"]:
+        return f"Olá! 👋 Como posso ajudar com a festa da passagem de ano?\n\nPergunta-me sobre:\n• Quintas disponíveis\n• Datas e orçamento\n• Quem já confirmou\n• Ou o que quiseres saber!"
+    
+    # 0.1 Respostas de continuação (sim, não, ok, etc.)
+    if pergunta_l in ["sim", "yes", "ok", "claro", "quero", "gostaria", "pode ser"]:
+        # Verifica última pergunta
+        if "historico" in st.session_state and st.session_state.historico:
+            ultima_msg = st.session_state.historico[-1].get("content", "")
+            
+            # Se última pergunta foi sobre ver quintas
+            if "queres saber mais" in ultima_msg.lower() or "ver a lista" in ultima_msg.lower():
+                try:
+                    from modules.quintas_qdrant import listar_quintas
+                    quintas = listar_quintas()
+                    
+                    if quintas:
+                        resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
+                        
+                        for i, quinta in enumerate(quintas[:10], 1):
+                            nome = quinta.get('nome', 'N/A')
+                            zona = quinta.get('zona', 'N/A')
+                            resposta += f"{i}. **{nome}** ({zona})\n"
+                        
+                        if len(quintas) > 10:
+                            resposta += f"\n...e mais {len(quintas) - 10} quintas!"
+                        
+                        resposta += "\n\n💡 Pergunta sobre uma específica (ex: 'website da primeira')"
+                        
+                        st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:10]]
+                        
+                        return resposta
+                except Exception as e:
+                    print(f"Erro: {e}")
+                    pass
+        
+        # Fallback genérico para "sim"
+        return "Ótimo! 😊 Sobre o que queres saber especificamente?\n\n• Lista de quintas?\n• Datas e preços?\n• Confirmações?"
+    
     # 1. Perguntas sobre quinta reservada
     if any(palavra in pergunta_l for palavra in ["ja temos", "temos alguma", "ha alguma", "quinta reservada", "local reservado"]):
         return """🏡 **Sim!** 
