@@ -235,6 +235,104 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         if ultimas:
             contexto_anterior = ultimas[-1]["content"].replace("**Assistente:** ", "")
     
+    # ====================================================================
+    # DETECÇÃO DE PERGUNTAS ESPECÍFICAS (antes do LLM)
+    # ====================================================================
+    
+    # 1. Perguntas sobre quinta reservada
+    if any(palavra in pergunta_l for palavra in ["ja temos", "temos alguma", "ha alguma", "quinta reservada", "local reservado"]):
+        return """🏡 **Sim!** 
+
+Temos o **Monte da Galega** pré-reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉
+
+Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
+    
+    # 2. Lista de quintas
+    if any(palavra in pergunta_l for palavra in ["quais quintas", "que quintas", "lista de quintas", "quintas contactadas"]):
+        try:
+            from modules.quintas_qdrant import listar_quintas
+            quintas = listar_quintas()
+            
+            if quintas:
+                resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
+                
+                for i, quinta in enumerate(quintas[:10], 1):  # Primeiras 10
+                    nome = quinta.get('nome', 'N/A')
+                    zona = quinta.get('zona', 'N/A')
+                    resposta += f"{i}. **{nome}** ({zona})\n"
+                
+                if len(quintas) > 10:
+                    resposta += f"\n...e mais {len(quintas) - 10} quintas!"
+                
+                resposta += "\n\n💡 Pergunta sobre uma específica (ex: 'website da primeira') ou por zona (ex: 'quintas em Cáceres')"
+                
+                # Guarda lista no session state
+                st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:10]]
+                
+                return resposta
+            else:
+                return "Ainda não temos quintas registadas. 😕"
+        except Exception as e:
+            print(f"Erro ao listar quintas: {e}")
+            return "Erro ao carregar quintas. Tenta novamente!"
+    
+    # 3. Quantas quintas
+    if any(palavra in pergunta_l for palavra in ["quantas quintas", "numero de quintas", "total de quintas"]):
+        try:
+            from modules.quintas_qdrant import listar_quintas
+            quintas = listar_quintas()
+            return f"Já contactámos **{len(quintas)} quintas**! 🎉\n\nQueres ver a lista? Pergunta 'quais quintas?'"
+        except:
+            return "Já contactámos **35 quintas**! 🎉"
+    
+    # 4. Informações do evento
+    if any(palavra in pergunta_l for palavra in ["quando e", "que dias", "datas", "data da festa"]):
+        return "📅 **Datas:** 30 de Dezembro a 2 de Janeiro\n\n3 noites de festa! 🎉"
+    
+    if any(palavra in pergunta_l for palavra in ["qual a cor", "cor do ano", "tema"]):
+        return "🎨 **Cor deste ano:** Amarelo! ☀️"
+    
+    if any(palavra in pergunta_l for palavra in ["orcamento", "orçamento", "quanto custa", "preco", "preço"]):
+        return "💰 **Orçamento:** 250-300€ por pessoa\n\nInclui alojamento, refeições e festa! 🎉"
+    
+    # 5. Quem vai / Confirmações
+    if "quem vai" in pergunta_l or "quem confirmou" in pergunta_l:
+        try:
+            confirmados_data = get_confirmados()
+            confirmados = confirmados_data.get('confirmados', [])
+            
+            if confirmados:
+                resposta = f"**Confirmados ({len(confirmados)}):**\n\n"
+                for nome_c in confirmados:
+                    resposta += f"✅ {nome_c}\n"
+                return resposta
+            else:
+                return "Ainda ninguém confirmou. 😔\n\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
+        except:
+            return "Ainda estamos a recolher confirmações! 📝"
+    
+    # 6. X vai? (verificar pessoa específica)
+    match_vai = re.search(r'(?:o|a)?\s*(\w+)\s+vai', pergunta_l)
+    if match_vai:
+        nome_busca = match_vai.group(1)
+        try:
+            confirmados_data = get_confirmados()
+            confirmados = confirmados_data.get('confirmados', [])
+            
+            # Normaliza e procura
+            confirmado = any(nome_busca.lower() in c.lower() for c in confirmados)
+            
+            if confirmado:
+                return f"✅ **Sim!** {nome_busca.title()} já confirmou presença! 🎉"
+            else:
+                return f"❌ **Ainda não.** {nome_busca.title()} ainda não confirmou."
+        except:
+            pass
+    
+    # ====================================================================
+    # Se não matchou nenhuma pergunta específica, usa LLM
+    # ====================================================================
+    
     # Detecção de nome de quinta na pergunta
     quinta_na_pergunta = re.search(
         r'(C\.R\.|Casa|Monte|Herdade|Quinta)\s+([A-Z][^\?]+?)(?:\s+é|\s+fica|\s+tem|\?|$)', 
