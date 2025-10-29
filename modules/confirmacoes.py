@@ -5,6 +5,7 @@ Sistema de Confirmacoes usando JSON
 import os
 import sys
 import json
+import unicodedata
 from datetime import datetime
 
 # Adiciona o diretorio raiz ao path
@@ -52,7 +53,8 @@ def guardar_confirmacoes(dados):
 
 def normalizar_nome(nome):
     """Normaliza nome para comparação (remove acentos, minúsculas)"""
-    import unicodedata
+    if not isinstance(nome, str):
+        return ""
     nome = unicodedata.normalize('NFKD', nome)
     nome = ''.join(c for c in nome if not unicodedata.combining(c))
     return nome.lower().strip()
@@ -60,15 +62,14 @@ def normalizar_nome(nome):
 def confirmar_pessoa(nome, confirmado_por=None):
     """Confirma uma pessoa"""
     try:
-        # Normaliza o nome para busca
-        nome_normalizado = normalizar_nome(nome)
-        
-        # Busca o perfil (tenta várias formas)
+        # Busca o perfil diretamente
         perfil = pm.buscar_perfil(nome)
         
-        # Se não encontrou, tenta buscar todos e comparar normalizado
+        # Se não encontrou, tenta busca normalizada
         if not perfil:
-            print(f"⚠️ Tentando busca alternativa para '{nome}'...")
+            print(f"⚠️ Perfil '{nome}' não encontrado, tentando busca normalizada...")
+            nome_normalizado = normalizar_nome(nome)
+            
             todos_perfis = pm.listar_todos_perfis()
             for p in todos_perfis:
                 if normalizar_nome(p.get("nome", "")) == nome_normalizado:
@@ -82,6 +83,64 @@ def confirmar_pessoa(nome, confirmado_por=None):
                 "mensagem": f"'{nome}' nao esta na lista de convidados",
                 "familia_sugerida": []
             }
+        
+        # Le confirmacoes atuais
+        dados = ler_confirmacoes()
+        
+        # Usa o nome do perfil encontrado (não o nome da query)
+        nome_real = perfil["nome"]
+        
+        # Ja confirmado?
+        if nome_real in dados["confirmados"]:
+            return {
+                "sucesso": True,
+                "mensagem": f"{nome_real} ja esta confirmado!",
+                "familia_sugerida": []
+            }
+        
+        # Adiciona confirmacao
+        dados["confirmados"].append(nome_real)
+        dados["total"] = len(dados["confirmados"])
+        
+        # Organiza por familia
+        familia_id = perfil["familia_id"]
+        if familia_id not in dados["por_familia"]:
+            dados["por_familia"][familia_id] = []
+        if nome_real not in dados["por_familia"][familia_id]:
+            dados["por_familia"][familia_id].append(nome_real)
+        
+        # Guarda
+        guardar_confirmacoes(dados)
+        
+        # Atualiza perfil no Qdrant
+        pm.atualizar_perfil(nome_real, {
+            "confirmado": True,
+            "confirmado_por": confirmado_por or nome_real,
+            "data_confirmacao": datetime.now().isoformat()
+        })
+        
+        # Sugere familia
+        familia = pm.listar_familia(familia_id)
+        familia_nao_confirmada = [
+            p["nome"] for p in familia 
+            if p["nome"] != nome_real and p["nome"] not in dados["confirmados"]
+        ]
+        
+        return {
+            "sucesso": True,
+            "mensagem": f"Boa! {nome_real} confirmado",
+            "familia_sugerida": familia_nao_confirmada
+        }
+        
+    except Exception as e:
+        print(f"Erro ao confirmar: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "sucesso": False,
+            "mensagem": "Erro ao confirmar",
+            "familia_sugerida": []
+        }
 
 def confirmar_familia_completa(familia_id, confirmado_por):
     """Confirma toda a familia de uma vez"""
