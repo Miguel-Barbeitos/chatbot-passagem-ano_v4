@@ -305,7 +305,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             return "Erro ao carregar quintas! 😕"
     
     if "datas e precos" in pergunta_l or "datas e preco" in pergunta_l or pergunta_l in ["datas", "precos", "preço", "orcamento", "orçamento"]:
-        return "📅 **Datas:** 30 de Dezembro a 2 de Janeiro\n\n💰 **Orçamento:** 250-300€ por pessoa\n\n3 noites de festa incluindo alojamento e refeições! 🎉"
+        return "📅 **Datas:** 30 de Dezembro de 2025 a 4 de Janeiro de 2026\n\n💰 **Orçamento:** 250-300€ por pessoa\n\n5 noites de festa incluindo alojamento e refeições! 🎉"
     
     # 1. Perguntas sobre quinta reservada
     if any(palavra in pergunta_l for palavra in ["ja temos", "temos alguma", "ha alguma", "quinta reservada", "local reservado"]):
@@ -353,9 +353,23 @@ Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
         except:
             return "Já contactámos **35 quintas**! 🎉"
     
+    # 3.5 Quantas pessoas confirmaram / Total confirmados
+    if any(palavra in pergunta_l for palavra in ["quantas pessoas", "quantos confirmaram", "total de confirmados", "numero de confirmados"]):
+        try:
+            confirmados_data = get_confirmados()
+            confirmados = confirmados_data.get('confirmados', [])
+            total = len(confirmados)
+            
+            if total > 0:
+                return f"**{total} pessoas** já confirmaram! 🎉\n\nQueres ver quem são? Pergunta 'quem vai?'"
+            else:
+                return "Ainda **ninguém** confirmou. 😔\n\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
+        except:
+            return "Ainda estamos a recolher confirmações! 📝"
+    
     # 4. Informações do evento
     if any(palavra in pergunta_l for palavra in ["quando e", "que dias", "datas", "data da festa"]):
-        return "📅 **Datas:** 30 de Dezembro a 2 de Janeiro\n\n3 noites de festa! 🎉"
+        return "📅 **Datas:** 30 de Dezembro de 2025 a 4 de Janeiro de 2026\n\n5 noites de festa! 🎉"
     
     if any(palavra in pergunta_l for palavra in ["qual a cor", "cor do ano", "tema"]):
         return "🎨 **Cor deste ano:** Amarelo! ☀️"
@@ -364,20 +378,34 @@ Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
         return "💰 **Orçamento:** 250-300€ por pessoa\n\nInclui alojamento, refeições e festa! 🎉"
     
     # 5. Quem vai / Confirmações
-    if "quem vai" in pergunta_l or "quem confirmou" in pergunta_l or pergunta_l in ["confirmacoes", "confirmações", "lista de confirmados"]:
+    if any(palavra in pergunta_l for palavra in ["quem vai", "quem confirmou", "lista de confirmados", "ver confirmados"]) or pergunta_l in ["confirmacoes", "confirmações"]:
         try:
             confirmados_data = get_confirmados()
-            confirmados = confirmados_data.get('confirmados', [])
             
-            if confirmados:
+            print(f"🔍 Debug confirmações: {confirmados_data}")  # Debug
+            
+            # Tenta diferentes estruturas de dados
+            if isinstance(confirmados_data, dict):
+                confirmados = confirmados_data.get('confirmados', [])
+            elif isinstance(confirmados_data, list):
+                confirmados = confirmados_data
+            else:
+                confirmados = []
+            
+            print(f"✅ Confirmados processados: {confirmados}")  # Debug
+            
+            if confirmados and len(confirmados) > 0:
                 resposta = f"**Confirmados ({len(confirmados)}):**\n\n"
                 for nome_c in confirmados:
                     resposta += f"✅ {nome_c}\n"
                 return resposta
             else:
                 return "Ainda ninguém confirmou. 😔\n\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
-        except:
-            return "Ainda estamos a recolher confirmações! 📝"
+        except Exception as e:
+            print(f"❌ Erro ao buscar confirmações: {e}")
+            import traceback
+            traceback.print_exc()
+            return "Erro ao carregar confirmações. Tenta novamente! 😕"
     
     # 6. X vai? (verificar pessoa específica)
     match_vai = re.search(r'(?:o|a)?\s*(\w+)\s+vai', pergunta_l)
