@@ -1075,8 +1075,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
           # Processa resposta
           resposta = gerar_resposta(prompt, perfil_completo)
     
-         with st.chat_message("assistant"):
-         st.markdown(resposta)
+          with st.chat_message("assistant"):
+          st.markdown(resposta)
 
 
 
