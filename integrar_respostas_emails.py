@@ -1,256 +1,120 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-integrar_respostas_emails.py
-=============================
-Processa emails de data/emails_quinta/processados
-e atualiza Qdrant com informação de quais quintas responderam
+modules/quintas_updater.py
+==========================
+Funções auxiliares para atualizar quintas no Qdrant
 """
 
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, FieldCondition, MatchValue
 import os
-import sys
-import json
-import email
-from email import policy
-from email.parser import BytesParser
-from datetime import datetime
 
-# Adiciona path dos módulos
-sys.path.insert(0, os.path.dirname(__file__))
-
-print("="*70)
-print("📧 INTEGRAÇÃO DE RESPOSTAS DE EMAILS")
-print("="*70)
-
-# =====================================================
-# PASSO 1: PROCESSAR EMAILS
-# =====================================================
-print("\n📂 PASSO 1: Processar emails...")
-
-emails_dir = "data/emails_quintas/processados"
-
-if not os.path.exists(emails_dir):
-    print(f"❌ Pasta não encontrada: {emails_dir}")
-    print("⚠️ Certifica-te que estás na raiz do projeto!")
-    sys.exit(1)
-
-# Lista todos os .eml
-eml_files = [f for f in os.listdir(emails_dir) if f.endswith('.eml')]
-print(f"✅ Encontrados {len(eml_files)} emails")
-
-# Mapeia domínios/palavras para nomes de quintas
-# (ajusta conforme os nomes no Qdrant)
-MAPA_QUINTAS = {
-    'caminodelaermita': 'C.R. Camino de la Ermita & Spa',
-    'casasdotoural': 'Casas do Toural',
-    'montedosobreiro': 'Monte do Sobreiro',
-    'solardealqueva': 'Solar de Alqueva',
-    'apulia': 'Centro Escutista de Apúlia',
-    'casalagoa': 'Casa da Lagoa',
-    'casaforja': 'Casa da Forja',
-    'casasromaria': 'Casas de Romaria',
-    'casasmanolo': 'Casas Rurales Manolo',
-    'brovales': 'El Paraíso de Brovales',
-    'monsaraz': 'Estalagem de Monsaraz',
-    'quintaquinhas': 'Quinta das Quinhas',
-    'patiofigueira': 'Pátio da Figueira',
-    'maverick': 'The Maverick',
-}
-
-quintas_responderam = {}
-
-for eml_file in eml_files:
+def _get_qdrant_client():
+    """Cria cliente Qdrant"""
     try:
-        filepath = os.path.join(emails_dir, eml_file)
+        # Tenta Streamlit secrets primeiro
+        import streamlit as st
+        qdrant_url = st.secrets.get("QDRANT_URL")
+        qdrant_key = st.secrets.get("QDRANT_API_KEY")
+        if qdrant_url and qdrant_key:
+            return QdrantClient(url=qdrant_url, api_key=qdrant_key, timeout=10.0)
+    except:
+        pass
+    
+    # Fallback: variáveis de ambiente
+    qdrant_url = os.getenv("QDRANT_URL")
+    qdrant_key = os.getenv("QDRANT_API_KEY")
+    
+    # Se não encontrou, usa valores padrão (para terminal)
+    if not qdrant_url:
+        qdrant_url = "https://53262e06-1c9b-4530-a703-94f9e573b71a.europe-west3-0.gcp.cloud.qdrant.io:6333"
+    if not qdrant_key:
+        qdrant_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.8j0MluKJ7Hzk0B2Fey7FBsbQXvr21rvkNlsKCH1COpo"
+    
+    return QdrantClient(url=qdrant_url, api_key=qdrant_key, timeout=10.0)
+
+def atualizar_quinta_por_email(email_quinta: str, campos: dict):
+    """
+    Atualiza campos de uma quinta no Qdrant usando o email
+    
+    Args:
+        email_quinta: Email da quinta a atualizar
+        campos: Dicionário com campos a atualizar
+    
+    Returns:
+        bool: True se sucesso
+    """
+    try:
+        client = _get_qdrant_client()
+        collection_name = "quintas_info"
         
-        with open(filepath, 'rb') as f:
-            msg = BytesParser(policy=policy.default).parse(f)
+        # Busca TODAS as quintas
+        results = client.scroll(
+            collection_name=collection_name,
+            limit=100
+        )
         
-        assunto = str(msg.get('subject', ''))
-        de = str(msg.get('from', ''))
-        data_email = str(msg.get('date', ''))
+        # Procura a quinta pelo email
+        quinta_encontrada = None
+        point_id = None
         
-        # Ignora não-entregas
-        if 'undeliverable' in assunto.lower():
-            continue
-        
-        # Verifica se é resposta
-        if not any(prefix in assunto for prefix in ['Re:', 'RE:', 're:', 'Fwd:', 'FW:']):
-            continue
-        
-        # Tenta identificar quinta
-        nome_quinta = None
-        email_lower = de.lower() + ' ' + eml_file.lower()
-        
-        for chave, nome in MAPA_QUINTAS.items():
-            if chave in email_lower:
-                nome_quinta = nome
+        for point in results[0]:
+            payload_email = point.payload.get('email', '').lower()
+            
+            # Verifica se o email da quinta contém o domínio do email procurado
+            if email_quinta.lower() in payload_email or payload_email in email_quinta.lower():
+                quinta_encontrada = point.payload
+                point_id = point.id
                 break
         
-        if not nome_quinta:
-            # Tenta extrair do filename
-            nome_arquivo = eml_file.replace('.eml', '').replace('_', ' ')
-            # Procura nome similar no mapa
-            for chave, nome in MAPA_QUINTAS.items():
-                if chave in nome_arquivo.lower():
-                    nome_quinta = nome
-                    break
+        if not quinta_encontrada:
+            print(f"  ⚠️ Quinta com email '{email_quinta}' não encontrada")
+            return False
         
-        if nome_quinta:
-            quintas_responderam[nome_quinta] = {
-                'email': de,
-                'data_resposta': data_email,
-                'assunto': assunto,
-                'arquivo': eml_file
-            }
-            print(f"  ✅ {nome_quinta}")
-        else:
-            print(f"  ⚠️ Quinta não identificada: {eml_file[:50]}")
-    
+        # Atualiza o payload
+        payload_atualizado = quinta_encontrada.copy()
+        payload_atualizado.update(campos)
+        
+        # Faz update no Qdrant
+        client.set_payload(
+            collection_name=collection_name,
+            payload=payload_atualizado,
+            points=[point_id]
+        )
+        
+        return True
+        
     except Exception as e:
-        print(f"  ❌ Erro em {eml_file}: {e}")
+        print(f"❌ Erro ao atualizar quinta com email '{email_quinta}': {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-print(f"\n📊 Total de respostas identificadas: {len(quintas_responderam)}")
-
-# =====================================================
-# PASSO 2: ATUALIZAR QDRANT
-# =====================================================
-print("\n🔄 PASSO 2: Atualizar Qdrant...")
-print("="*70)
-
-atualizadas = 0
-nao_encontradas = []
-
-print("\n🔍 DEBUG - Tentando importar módulos...")
-try:
-    print("  → Importando listar_quintas de modules.quintas_qdrant...")
-    from modules.quintas_qdrant import listar_quintas
-    print("  ✅ listar_quintas importado!")
+def marcar_quintas_responderam(quintas_dict: dict):
+    """
+    Marca múltiplas quintas como 'responderam'
     
-    print("  → Importando atualizar_quinta de modules.quintas_updater...")
-    from modules.quintas_updater import atualizar_quinta
-    print("  ✅ atualizar_quinta importado!")
+    Args:
+        quintas_dict: Dict com {nome_quinta: {email, data, etc}}
     
-    print("\n🔍 DEBUG - Listando quintas do Qdrant...")
-    todas_quintas = listar_quintas()
-    print(f"  ✅ {len(todas_quintas)} quintas encontradas!")
+    Returns:
+        tuple: (sucessos, falhas)
+    """
+    sucessos = 0
+    falhas = []
     
-    print("\n🔍 DEBUG - Quintas a atualizar:")
-    for nome in quintas_responderam.keys():
-        print(f"  • {nome}")
-    
-    print("\n📦 Iniciando atualizações...")
-    print("-"*70)
-    
-    # Atualiza cada quinta
-    for nome_quinta, info in quintas_responderam.items():
-        print(f"\n🔄 Processando: {nome_quinta}")
+    for nome_quinta, info in quintas_dict.items():
+        campos = {
+            'respondeu': True,
+            'email_resposta': info.get('email', ''),
+            'data_resposta': info.get('data_resposta', ''),
+            'status': 'respondeu'
+        }
         
-        # Procura a quinta no Qdrant
-        quinta = next((q for q in todas_quintas if q['nome'] == nome_quinta), None)
-        
-        if quinta:
-            print(f"  ✅ Quinta encontrada no Qdrant")
-            # Atualiza com info de resposta
-            try:
-                campos_atualizar = {
-                    'respondeu': True,
-                    'email_resposta': info['email'],
-                    'data_resposta': info['data_resposta'],
-                    'status': 'respondeu'
-                }
-                print(f"  → Atualizando com campos: {list(campos_atualizar.keys())}")
-                
-                resultado = atualizar_quinta(nome_quinta, campos_atualizar)
-                
-                if resultado:
-                    print(f"  ✅ SUCESSO!")
-                    atualizadas += 1
-                else:
-                    print(f"  ⚠️ Função retornou False")
-                    
-            except Exception as e:
-                print(f"  ❌ ERRO na atualização: {e}")
-                import traceback
-                traceback.print_exc()
+        if atualizar_quinta(nome_quinta, campos):
+            sucessos += 1
         else:
-            nao_encontradas.append(nome_quinta)
-            print(f"  ⚠️ Não encontrada no Qdrant")
-            print(f"     Procurei por: '{nome_quinta}'")
-            print(f"     Primeiras 3 quintas do Qdrant:")
-            for q in todas_quintas[:3]:
-                print(f"       - '{q['nome']}'")
+            falhas.append(nome_quinta)
     
-    print("\n" + "="*70)
-    print(f"✅ RESULTADO: {atualizadas} de {len(quintas_responderam)} atualizadas")
-    
-    if nao_encontradas:
-        print(f"\n⚠️ Não encontradas no Qdrant ({len(nao_encontradas)}):")
-        for nome in nao_encontradas:
-            print(f"  • {nome}")
-        print("\n💡 Dica: Verifica se os nomes no MAPA_QUINTAS correspondem")
-        print("   exatamente aos nomes no Qdrant (incluindo acentos, espaços, etc.)")
-
-except ImportError as e:
-    print(f"\n❌ ERRO DE IMPORT: {e}")
-    print("\n💡 SOLUÇÃO:")
-    print("  1. Verifica: ls -la modules/quintas_updater.py")
-    print("  2. Se não existir, copia o ficheiro modules_quintas_updater.py")
-    print("     para modules/quintas_updater.py")
-    
-    # Guarda JSON para importação manual
-    output_file = "quintas_responderam.json"
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(quintas_responderam, f, indent=2, ensure_ascii=False)
-    print(f"\n✅ JSON guardado: {output_file}")
-    
-    atualizadas = 'N/A (erro de import)'
-
-except Exception as e:
-    print(f"\n❌ ERRO INESPERADO: {e}")
-    print("\n🔍 TRACEBACK COMPLETO:")
-    import traceback
-    traceback.print_exc()
-    
-    atualizadas = 'N/A (erro)'
-
-
-# =====================================================
-# PASSO 3: VERIFICAÇÃO
-# =====================================================
-print("\n🔍 PASSO 3: Verificação...")
-
-try:
-    quintas_atualizadas = listar_quintas()
-    com_resposta = [q for q in quintas_atualizadas if q.get('respondeu')]
-    
-    print(f"✅ Quintas marcadas como 'respondeu' no Qdrant: {len(com_resposta)}")
-    
-    if com_resposta:
-        print("\n📋 Lista:")
-        for q in com_resposta:
-            print(f"  • {q['nome']}")
-    
-except Exception as e:
-    print(f"⚠️ Não foi possível verificar: {e}")
-
-# =====================================================
-# RESUMO
-# =====================================================
-print("\n" + "="*70)
-print("✨ INTEGRAÇÃO CONCLUÍDA!")
-print("="*70)
-print(f"""
-📊 RESUMO:
-  • Emails processados: {len(eml_files)}
-  • Respostas identificadas: {len(quintas_responderam)}
-  • Quintas atualizadas no Qdrant: {atualizadas if 'atualizadas' in locals() else 'N/A'}
-
-🎯 PRÓXIMO PASSO:
-  1. Testa no chatbot: "Quantas quintas responderam?"
-  2. O chatbot deve mostrar as quintas atualizadas!
-  
-💡 Se houver quintas não encontradas, atualiza o MAPA_QUINTAS
-   no início deste script com os nomes corretos do Qdrant.
-""")
-print("="*70)
+    return sucessos, falhas

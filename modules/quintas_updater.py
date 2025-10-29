@@ -34,6 +34,63 @@ def _get_qdrant_client():
     
     return QdrantClient(url=qdrant_url, api_key=qdrant_key, timeout=10.0)
 
+def atualizar_quinta_por_email(email_quinta: str, campos: dict):
+    """
+    Atualiza campos de uma quinta no Qdrant usando o email
+    
+    Args:
+        email_quinta: Email da quinta a atualizar
+        campos: Dicionário com campos a atualizar
+    
+    Returns:
+        bool: True se sucesso
+    """
+    try:
+        client = _get_qdrant_client()
+        collection_name = "quintas_info"
+        
+        # Busca TODAS as quintas
+        results = client.scroll(
+            collection_name=collection_name,
+            limit=100
+        )
+        
+        # Procura a quinta pelo email
+        quinta_encontrada = None
+        point_id = None
+        
+        for point in results[0]:
+            payload_email = point.payload.get('email', '').lower()
+            
+            # Verifica se o email da quinta contém o domínio do email procurado
+            if email_quinta.lower() in payload_email or payload_email in email_quinta.lower():
+                quinta_encontrada = point.payload
+                point_id = point.id
+                break
+        
+        if not quinta_encontrada:
+            print(f"  ⚠️ Quinta com email '{email_quinta}' não encontrada")
+            return False
+        
+        # Atualiza o payload
+        payload_atualizado = quinta_encontrada.copy()
+        payload_atualizado.update(campos)
+        
+        # Faz update no Qdrant
+        client.set_payload(
+            collection_name=collection_name,
+            payload=payload_atualizado,
+            points=[point_id]
+        )
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erro ao atualizar quinta com email '{email_quinta}': {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def atualizar_quinta(nome_quinta: str, campos: dict):
     """
     Atualiza campos de uma quinta no Qdrant
@@ -47,36 +104,35 @@ def atualizar_quinta(nome_quinta: str, campos: dict):
     """
     try:
         client = _get_qdrant_client()
-        collection_name = "quintas"
+        collection_name = "quintas_info"
         
-        # Busca a quinta pelo nome
+        # Busca TODAS as quintas (sem filtro, porque não há índice)
         results = client.scroll(
             collection_name=collection_name,
-            scroll_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="nome",
-                        match=MatchValue(value=nome_quinta)
-                    )
-                ]
-            ),
-            limit=1
+            limit=100  # Pega todas
         )
         
-        if not results[0]:
+        # Procura a quinta pelo nome manualmente
+        quinta_encontrada = None
+        point_id = None
+        
+        for point in results[0]:
+            if point.payload.get('nome') == nome_quinta:
+                quinta_encontrada = point.payload
+                point_id = point.id
+                break
+        
+        if not quinta_encontrada:
             return False
         
-        point = results[0][0]
-        point_id = point.id
-        
         # Atualiza o payload (mantém campos existentes)
-        payload_atual = point.payload
-        payload_atual.update(campos)
+        payload_atualizado = quinta_encontrada.copy()
+        payload_atualizado.update(campos)
         
         # Faz update no Qdrant
         client.set_payload(
             collection_name=collection_name,
-            payload=payload_atual,
+            payload=payload_atualizado,
             points=[point_id]
         )
         
