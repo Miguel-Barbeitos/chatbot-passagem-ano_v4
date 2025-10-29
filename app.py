@@ -240,8 +240,7 @@ st.success(msg_saudacao)
 def gerar_resposta(pergunta: str, perfil_completo: dict):
     pergunta_l = normalizar(pergunta)
     # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
+
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -267,7 +266,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -279,49 +277,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -347,7 +304,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -359,52 +315,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -430,7 +342,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -442,49 +353,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -510,7 +380,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -522,22 +391,12 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
     contexto_base = get_contexto_base(raw=True)
     
-    # ✅ Inicializa session_state para última quinta mencionada
-    if "ultima_quinta_mencionada" not in st.session_state:
-        st.session_state.ultima_quinta_mencionada = None
-    
-    # ✅ Pega contexto da última resposta do assistente (se existir)
-    contexto_anterior = ""
+
+
     lista_quintas_anterior = []
     ultima_quinta_mencionada = None
     
@@ -561,12 +420,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                     "nome": quinta_match.group(1).strip(),
                     "zona": quinta_match.group(2).strip()
                 }
-                # ✅ Guarda também no session_state
-                st.session_state.ultima_quinta_mencionada = ultima_quinta_mencionada["nome"]
-                print(f"🏠 Última quinta: {ultima_quinta_mencionada}")
-    
-    # ✅ NOVO: Detetar e guardar quinta mencionada na pergunta ATUAL
-    import re
+            
+
     quinta_na_pergunta = re.search(
         r'(C\.R\.|Casa|Monte|Herdade|Quinta)\s+([A-Z][^\?]+?)(?:\s+é|\s+fica|\s+tem|\?|$)', 
         pergunta, 
@@ -579,51 +434,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         st.session_state.ultima_quinta_mencionada = nome_detectado
         print(f"🔍 Quinta detectada na pergunta: {nome_detectado}")
     
-    # ✅ NOVO: Pedidos de info sem nome da quinta (usa contexto)
-    if any(p in pergunta_l for p in ["manda-me", "manda me", "envia", "envia-me", "qual e", "qual é", "mostra", "diz-me", "dá-me", "da-me"]):
-        if any(p in pergunta_l for p in ["website", "link", "site", "email", "telefone", "contacto", "morada", "endereco", "endereço"]):
-            # Verifica se NÃO tem nome de quinta na pergunta atual
-            if not re.search(r'(C\.R\.|Casa|Monte|Herdade|Quinta)\s+[A-Z]', pergunta):
-                # Usa contexto da última quinta
-                if st.session_state.get("ultima_quinta_mencionada"):
-                    # Identifica tipo de informação pedida
-                    tipo_info = None
-                    if "website" in pergunta_l or "link" in pergunta_l or "site" in pergunta_l:
-                        tipo_info = "website"
-                    elif "email" in pergunta_l:
-                        tipo_info = "email"
-                    elif "telefone" in pergunta_l or "contacto" in pergunta_l:
-                        tipo_info = "telefone"
-                    elif "morada" in pergunta_l or "endereco" in pergunta_l or "endereço" in pergunta_l:
-                        tipo_info = "morada"
-                    
-                    if tipo_info:
-                        # Reconstrói pergunta com contexto
-                        pergunta_expandida = f"{tipo_info} da {st.session_state.ultima_quinta_mencionada}"
-                        print(f"🔄 Contexto usado! Pergunta expandida: {pergunta_expandida}")
-                        
-                        # Chama LLM com pergunta completa
-                        resposta_llm = gerar_resposta_llm(
-                            pergunta=pergunta_expandida,
-                            perfil_completo=perfil_completo,
-                            contexto_base=contexto_base,
-                            contexto_conversa=contexto_anterior
-                        )
-                        guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
-                        return resposta_llm
-                else:
-                    # Não há quinta no contexto
-                    return "De que quinta queres essa informação? 😊"
-    
-    # ✅ CONTEXTO: Perguntas sobre distância
-    if any(p in pergunta_l for p in ["distancia", "distância", "quilometros", "quilómetros", "km", "longe", "perto", "quanto tempo", "quantos km"]):
-        if ultima_quinta_mencionada:
-            # Reformula para incluir o nome da quinta
-            pergunta = f"qual a distância da {ultima_quinta_mencionada['nome']} até Lisboa"
-            pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
+
+
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -649,7 +461,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -661,49 +472,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -729,7 +499,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -741,52 +510,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -812,7 +537,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -824,49 +548,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -892,7 +575,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -904,26 +586,11 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
             print(f"🔄 Reformulado com contexto: '{pergunta}'")
     
-    # ✅ CONTEXTO: Se perguntou "de que quinta" e agora responde com nome
-    if contexto_anterior and "de que quinta" in contexto_anterior.lower():
-        # A resposta é provavelmente o nome de uma quinta
-        if len(pergunta.split()) <= 5 and not any(p in pergunta_l for p in ["quantas", "quais", "onde", "como"]):
-            # Assume que é nome de quinta e pergunta distância
-            pergunta = f"qual a distância de {pergunta} até Lisboa"
-            pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
+
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -949,7 +616,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -961,49 +627,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1029,7 +654,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1041,52 +665,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1112,7 +692,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1124,49 +703,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1192,7 +730,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1204,53 +741,11 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
             print(f"🔄 Contexto de continuação: '{pergunta}'")
     
-    # ✅ CONTEXTO: Referências a posições (primeira, segunda, 3ª, etc.)
-    referencias_posicao = {
-        "primeira": 0, "1a": 0, "1ª": 0,
-        "segunda": 1, "2a": 1, "2ª": 1,
-        "terceira": 2, "3a": 2, "3ª": 2,
-        "quarta": 3, "4a": 3, "4ª": 3,
-        "quinta": 4, "5a": 4, "5ª": 4,
-        "sexta": 5, "6a": 5, "6ª": 5,
-        "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "oitava": 7, "8a": 7, "8ª": 7
-    }
-    
-    # Verifica se há referência a posição + se há lista anterior
-    if lista_quintas_anterior:
-        for ref, idx in referencias_posicao.items():
-            if ref in pergunta_l and idx < len(lista_quintas_anterior):
-                quinta_referida = lista_quintas_anterior[idx]
-                print(f"🎯 Referência '{ref}' → {quinta_referida}")
-                
-                # Se pede info específica (link, morada, etc)
-                if any(p in pergunta_l for p in ["link", "website", "site", "morada", "endereco", "endereço", "contacto", "email", "telefone"]):
-                    # Reformula a pergunta com o nome da quinta
-                    if "link" in pergunta_l or "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_referida}"
-                    elif "morada" in pergunta_l or "endereco" in pergunta_l:
-                        pergunta = f"morada da {quinta_referida}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_referida}"
-                    elif "telefone" in pergunta_l or "contacto" in pergunta_l:
-                        pergunta = f"telefone da {quinta_referida}"
-                    else:
-                        pergunta = f"informação sobre {quinta_referida}"
-                    
-                    pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
+
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1276,7 +771,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1288,49 +782,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1356,7 +809,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1368,52 +820,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1439,7 +847,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1451,49 +858,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1519,7 +885,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1531,101 +896,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
-
-                    print(f"🔄 Reformulado: '{pergunta}'")
-                    break
-
-    # ✅ 1 — Saudação
-    if any(p in pergunta_l for p in ["ola", "olá", "bom dia", "boa tarde", "boa noite", "oi", "hey"]) and len(pergunta_l.split()) <= 3:
-        return (
-            f"Olá, {perfil_completo['nome']}! 👋\n\n"
-            "Estamos a organizar os detalhes da festa de passagem de ano 🎆\n"
-            "Estou disponível para responder a qualquer questão que tenhas!"
-        )
-
-    # ✅ 2 — Confirmação de presença INTELIGENTE
-    if any(p in pergunta_l for p in ["confirmo", "vou", "lá estarei", "sim vou", "confirmar", "eu vou", "nos vamos", "nós vamos", "familia vai", "família vai"]):
-        print(f"✅ Confirmação detetada para: {perfil_completo['nome']}")
-        
-        # Deteta intenção
-        intencao = detectar_intencao_confirmacao(pergunta)
-        
-        if intencao["tipo"] == "familia":
-            # Confirmar família completa
-            familia_id = perfil_completo.get("familia_id")
-            resultado = confirmar_familia_completa(familia_id, perfil_completo["nome"])
-            
-            if resultado["sucesso"]:
-                nomes = ", ".join(resultado["confirmados"])
-                return f"🎉 Família confirmada!\n\n✅ {nomes}\n\nVejo-vos lá! 🎆"
-            else:
-                return f"⚠️ {resultado['mensagem']}"
-        
-        else:
-            # Confirmar individual
-            resultado = confirmar_pessoa(perfil_completo["nome"])
-            
-            if resultado["sucesso"]:
-                msg = f"🎉 {resultado['mensagem']}!"
-                
-                # Sugere família se houver
-                if resultado["familia_sugerida"]:
-                    sugestoes = ", ".join(resultado["familia_sugerida"][:3])
-                    msg += f"\n\n💡 Queres confirmar também: {sugestoes}?"
-                
-                return msg
-            else:
-                return f"⚠️ {resultado['mensagem']}"
-
-    # ✅ 3 — Perguntas sobre confirmados
-    if any(p in pergunta_l for p in ["quem vai", "quem confirmou", "quantos somos", "quantos sao", "quantos vao", "quantos vão"]):
-        try:
-            confirmados_atual = get_confirmados()
-            stats = get_estatisticas()
-            
-            if confirmados_atual and len(confirmados_atual) > 0:
-                # Agrupa por família
-                familias = {}
-                for conf in confirmados_atual:
-                    p = buscar_perfil(conf)
-                    if p:
-                        fam_id = p.get("familia_id", "Outros")
-                        if fam_id not in familias:
-                            familias[fam_id] = []
-                        familias[fam_id].append(conf)
-                
-                msg = f"**Confirmados ({stats['total_confirmados']}):**\n\n"
-                
-                for fam_id, membros in familias.items():
-                    if len(membros) > 1:
-                        msg += f"👨‍👩‍👧‍👦 {', '.join(membros)}\n"
-                    else:
-                        msg += f"👤 {membros[0]}\n"
-                
-                return msg
-            else:
-                return "Ainda ninguém confirmou 😅 Sê o primeiro! Diz 'eu vou'"
-        except Exception as e:
-            print(f"❌ Erro: {e}")
-            return "Vê a lista ao lado 👈"
-
-    # ✅ 4 — CONTEXTO: Se mencionou "quintas" antes e agora usa pronomes/referências
-    mencoes_contextuais = ["as quintas", "essas quintas", "diz-me", "mostra", "lista", "quais sao", "quais são"]
-    if contexto_anterior and any(palavra in contexto_anterior.lower() for palavra in ["quinta", "contactamos", "vimos"]):
-        if any(ref in pergunta_l for ref in mencoes_contextuais) or (len(pergunta_l.split()) <= 3 and any(p in pergunta_l for p in ["quais", "quintas", "diz", "mostra"])):
-            # Redireciona para query de quintas
-            pergunta = "que quintas já contactámos"
-            pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1651,7 +923,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1663,49 +934,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1731,7 +961,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1743,52 +972,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1814,7 +999,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1826,49 +1010,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
 
 
-    # ✅ CONTEXTO: Números e ordinais (1ª, 2ª, 3ª, etc.)
-    referencias_numero = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9,
-    }
-    
-    # Verifica se última resposta tinha lista de quintas
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        # Verifica se pergunta é sobre número/ordinal
-        for ref, idx in referencias_numero.items():
-            # Patterns: "e da 7", "da 7", "7", "setima", etc.
-            patterns = [
-                f"e da {ref}",
-                f"da {ref}",
-                f"^{ref}$",
-                f"e {ref}",
-            ]
-            
-            if any(re.search(p, pergunta_l) for p in patterns):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
-                    
-                    # Se pede info específica
-                    if any(t in pergunta_l for t in ["website", "site", "link", "morada", "email", "telefone"]):
-                        tipo_info = "website" if "website" in pergunta_l or "site" in pergunta_l or "link" in pergunta_l else                                    "morada" if "morada" in pergunta_l else                                    "email" if "email" in pergunta_l else                                    "telefone" if "telefone" in pergunta_l else "info"
-                        
-                        pergunta = f"{tipo_info} da {quinta_nome}"
-                        pergunta_l = normalizar(pergunta)
-    # =====================================================
-    # 🎯 CONTEXT-AWARE: Números e Ordinais (7ª, segunda, etc.)
-    # =====================================================
     mapa_numeros = {
         "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
         "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
@@ -1894,7 +1037,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
             if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
                 if idx < len(st.session_state.ultima_lista_quintas):
                     quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    print(f"🎯 Contexto: {ref} → {quinta_nome}")
                     
                     if "website" in pergunta_l or "site" in pergunta_l:
                         pergunta = f"website da {quinta_nome}"
@@ -1906,19 +1048,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
                         pergunta = f"website da {quinta_nome}"
                     
                     pergunta_l = normalizar(pergunta)
-                    break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
-
-                        print(f"🔄 Reformulado: '{pergunta}'")
-                        break
 
 
-    # ✅ 4 — Perguntas ESPECÍFICAS sobre quintas (por nome) ou informações detalhadas
-    # Deteta nomes de quintas na pergunta (palavras começadas com maiúscula ou termos específicos)
-    import re
-    # Procura por nomes próprios ou padrões tipo "C.R. Nome" ou "Quinta X"
     tem_nome_quinta = (
         re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or  # "Casa Lagoa", "Monte Verde"
         re.search(r'C\.R\.|quinta|casa|monte|herdade', pergunta_l) or
@@ -1936,162 +1067,4 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
 
-    # ✅ PRIORITÁRIO: Perguntas sobre ter quinta reservada/definida
-    # DEVE vir ANTES das queries genéricas para não ser capturado por elas
-    # Deteta: "ja ha quintas?", "ja temos quinta?", "temos quinta reservada?"
-    if any(p in pergunta_l for p in ["quinta", "quintas", "local"]):
-        # Verifica se está a perguntar sobre TER/EXISTIR
-        if any(p in pergunta_l for p in ["ja ha", "já ha", "ha quintas", "há quintas", "ja temos", "já temos", "temos alguma", "temos quinta", "temos quintas", "quinta reservada", "quintas reservadas", "alguma reservada"]):
-            return (
-                "Sim! 🏡\n\n"
-                "Temos o **Monte da Galega** reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉\n\n"
-                "Já contactámos 35 quintas. Queres saber mais sobre elas?"
-            )
 
-    # ✅ 5 — Perguntas sobre ZONAS, listas de quintas, ou queries SQL
-    if any(p in pergunta_l for p in [
-        "que quintas", "quais quintas", "quantas quintas", "quantas vimos", 
-        "quantas contactamos", "lista", "opcoes", "opções", "nomes", 
-        "em ", "zona", "quais", "mais perto", "proxima", "próxima",
-        "responderam", "resposta", "numero de pessoas", "número de pessoas",
-        "capacidade", "pessoas", "tem capacidade", "quantas tem",
-        "ja vimos", "vimos", "contactamos",
-        "distancia", "distância", "quilometros", "quilómetros", "km", "longe"
-    ]):
-        resposta_llm = gerar_resposta_llm(
-            pergunta=pergunta,
-            perfil_completo=perfil_completo,  # ← CORRIGIDO
-            contexto_base=contexto_base,
-            contexto_conversa=contexto_anterior,
-            ultima_quinta=ultima_quinta_mencionada
-        )
-        guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
-        return resposta_llm
-    
-    # ✅ 6 — Perguntas diretas sobre "já vimos quintas" / "outras quintas" (fallback)
-    if any(p in pergunta_l for p in ["outras quintas", "vimos outras"]):
-        return (
-            "Sim, já contactámos várias quintas! 🏡\n\n"
-            "Pergunta-me:\n"
-            "• 'Quantas quintas já contactámos?'\n"
-            "• 'Que quintas já vimos?'\n"
-            "• 'Quintas em que zonas?'\n"
-            "• Ou qualquer outra coisa específica 😊"
-        )
-    
-    # ✅ 8 — Perguntas pessoais/casuais ao bot (responde com humor)
-    perguntas_pessoais = {
-        # Identidade
-        ("como te chamas", "qual o teu nome", "quem es", "quem és"): [
-            "Sou o assistente oficial da festa! 🤖 Podes chamar-me de 'organizador virtual' 😄",
-            "Não tenho nome oficial, mas aceito sugestões! 😊 Entretanto, trata-me por 'amigo da festa' 🎉"
-        ],
-        # Família
-        ("tens filhos", "tens familia", "tens família", "tens pais"): [
-            "Não tenho filhos, mas tenho 35 quintas para cuidar! 🏡😅",
-            "A minha família são vocês, os convidados da festa! 🎆👨‍👩‍👧‍👦"
-        ],
-        # Idade
-        ("quantos anos", "que idade", "quando nasceste"): [
-            "Nasci há poucos dias, especialmente para esta festa! 🎂🤖",
-            "Sou jovem mas já vi muitas quintas! 😄"
-        ],
-        # Localização
-        ("onde vives", "onde moras", "onde estas", "onde estás"): [
-            "Vivo na nuvem ☁️ Literalmente! Mas o meu coração está com a festa 🎉",
-            "Estou onde quer que precises de mim! 😊 Neste momento, a ajudar-te a organizar a festa!"
-        ],
-        # Estado
-        ("como estas", "como estás", "tudo bem", "como vai"): [
-            "Estou ótimo, obrigado! 😊 A organizar festas como deve ser! E tu?",
-            "Super bem! Ocupado com 35 quintas mas sempre disponível para ti 🎉"
-        ],
-        # Preferências
-        ("gostas de", "qual a tua", "preferes"): [
-            "Gosto de ajudar a organizar festas épicas! 🎆 E tu, já confirmaste presença?",
-            "Adoro quintas com piscina e boa comida! 🏊🍽️ Mas sou um bot sem muito paladar 😅"
-        ],
-        # Humor/Piadas
-        ("conta uma piada", "faz uma piada", "diz uma piada"): [
-            "Porque é que o bot foi à festa? Para processar a diversão! 🤖😄",
-            "Qual é a diferença entre um bot e uma quinta? Um tem memória RAM, o outro tem carneiros! 🐏😅"
-        ],
-        # Namorada/Relacionamentos
-        ("tens namorada", "tens namorado", "estas apaixonado", "estás apaixonado"): [
-            "Estou apaixonado... pela organização perfeita desta festa! 💕🎉",
-            "O meu amor é platónico: amo quintas com boa capacidade e preço justo! 🏡😄"
-        ]
-    }
-    
-    # Verifica se é pergunta pessoal
-    for triggers, respostas in perguntas_pessoais.items():
-        if any(t in pergunta_l for t in triggers):
-            import random
-            return random.choice(respostas)
-    
-    # ✅ CORRIGIDO: Perguntas sobre o local DA FESTA (mais específico)
-    # Só responde se for realmente sobre o local final da festa, não sobre quintas em geral
-    if any(p in pergunta_l for p in ["sitio da festa", "local da festa", "onde vai ser", "onde sera", "local final"]):
-        return (
-            "Ainda estamos a ver o local final 🏡\n\n"
-            "Já temos o **Monte da Galega** reservado como plano B, mas estamos a contactar outras quintas.\n"
-            "Pergunta-me sobre as quintas que já vimos! 😊"
-        )
-
-    # ✅ 4 — Perguntas sobre características do local (futuro)
-    if "piscina" in pergunta_l:
-        return "Ainda não temos quinta fechada, mas já perguntámos quais têm piscina 🏊 Queres saber quais são?"
-
-    if "churrasqueira" in pergunta_l or "grelhados" in pergunta_l:
-        return "Ainda não decidimos o local, mas já sabemos quais quintas têm churrasqueira 🔥 Queres que te diga?"
-
-    if "snooker" in pergunta_l:
-        return "Ainda estamos a decidir o local, mas já vimos quintas com snooker 🎱 Pergunta-me sobre as opções!"
-
-    if any(p in pergunta_l for p in ["animais", "cao", "cão", "gato"]):
-        return "Ainda não fechámos o local, mas posso dizer-te quais quintas aceitam animais 🐶 Queres saber?"
-
-    # ✅ 5 — Perguntas sobre o que já foi feito
-    if any(p in pergunta_l for p in ["fizeram", "fizeste", "andaram a fazer", "trabalho", "progresso"]):
-        return (
-            "Já contactámos várias quintas e temos o **Monte da Galega** reservado como backup 🏡 "
-            "Pergunta-me sobre quintas específicas, zonas, preços ou capacidades! 😊"
-        )
-
-    # ✅ 6 — Perguntas genéricas (LLM trata do resto)
-    resposta_llm = gerar_resposta_llm(
-        pergunta=pergunta,
-        perfil_completo=perfil_completo,
-        contexto_base=contexto_base,
-    )
-
-    guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil_completo)
-    return resposta_llm
-
-# =====================================================
-# 💬 INTERFACE STREAMLIT (CHAT)
-# =====================================================
-if "historico" not in st.session_state:
-    st.session_state.historico = []
-
-# Mostrar histórico
-for msg in st.session_state.historico:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# Input do utilizador
-prompt = st.chat_input("Escreve a tua mensagem…")
-
-if prompt:
-    with st.chat_message("user"):
-        st.markdown(f"**{nome}:** {prompt}")
-
-    with st.spinner("💭 A pensar..."):
-        time.sleep(0.3)
-        resposta = gerar_resposta(prompt, perfil_completo)  # ← Usa perfil_completo
-
-    with st.chat_message("assistant"):
-        st.markdown(f"**Assistente:** {resposta}")
-
-    st.session_state.historico.append({"role": "user", "content": f"**{nome}:** {prompt}"})
-    st.session_state.historico.append({"role": "assistant", "content": f"**Assistente:** {resposta}"})
