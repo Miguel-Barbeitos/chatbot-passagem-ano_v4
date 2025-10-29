@@ -27,7 +27,7 @@ from modules.perfis_manager import buscar_perfil, listar_familia
 # =====================================================
 # ⚙️ CONFIGURAÇÃO
 # =====================================================
-USE_GROQ_ALWAYS = False  # 👈 muda para True se quiseres usar sempre o LLM
+USE_GROQ_ALWAYS = False
 
 # =====================================================
 # 🎨 LAYOUT E VISUAL
@@ -75,7 +75,6 @@ try:
     print(f"📦 Resultado: {len(perfis_lista)} perfis")
     
     if not perfis_lista or len(perfis_lista) == 0:
-        # Fallback: lê do JSON diretamente
         st.warning("⚠️ Qdrant vazio. A ler do JSON como fallback...")
         import json
         json_path = os.path.join(os.path.dirname(__file__), "data", "perfis_base.json")
@@ -90,7 +89,6 @@ try:
     else:
         st.success(f"✅ {len(perfis_lista)} perfis carregados do Qdrant")
     
-    # Cria lista de nomes para o selectbox
     nomes = sorted([p["nome"] for p in perfis_lista])
     
 except Exception as e:
@@ -98,7 +96,6 @@ except Exception as e:
     import traceback
     st.code(traceback.format_exc())
     
-    # Tenta fallback
     try:
         st.warning("Tentando fallback para JSON...")
         import json
@@ -128,11 +125,9 @@ else:
             st.rerun()
     st.stop()
 
-# Busca perfil completo do Qdrant (ou fallback para lista)
 try:
     perfil_completo = buscar_perfil(nome)
     if not perfil_completo:
-        # Fallback: busca na lista carregada
         perfil_completo = next((p for p in perfis_lista if p["nome"] == nome), None)
     
     if not perfil_completo:
@@ -147,7 +142,6 @@ except Exception as e:
 # =====================================================
 contexto = get_contexto_base(raw=True)
 
-# Lê confirmados do novo sistema
 try:
     confirmados = get_confirmados()
     stats = get_estatisticas()
@@ -165,11 +159,9 @@ with st.sidebar:
     else:
         st.markdown("_Ainda ninguém confirmou 😅_")
 
-
 # =====================================================
 # 👋 SAUDAÇÃO PERSONALIZADA
 # =====================================================
-# Personalidade
 personalidade = perfil_completo.get("personalidade", {})
 humor = personalidade.get("humor", 5)
 emojis = personalidade.get("emojis", 5)
@@ -179,7 +171,6 @@ detalhismo = personalidade.get("detalhismo", 5)
 hora = datetime.now().hour
 saud = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
 
-# Escolhe saudação baseada em humor + formalidade
 saudacoes = {
     "humor_alto_informal": [
         f"{saud}, {nome}! 👋 Pronto para organizar a festa do século? 🎉🎆",
@@ -209,7 +200,6 @@ saudacoes = {
     ]
 }
 
-# Seleciona categoria de saudação
 if humor >= 7:
     categoria = "humor_alto_formal" if formalidade >= 6 else "humor_alto_informal"
 elif humor >= 4:
@@ -219,844 +209,53 @@ else:
 
 msg_saudacao = random.choice(saudacoes[categoria])
 
-# Adiciona contexto extra se detalhismo alto
 if detalhismo >= 7:
     msg_saudacao += "\n\nPodes perguntar-me sobre quintas, confirmações, detalhes da festa ou o que precisares!"
 
-# Remove emojis se preferência baixa
 if emojis < 3:
-    import re
     msg_saudacao = re.sub(r'[😀-🙏🌀-🗿🚀-🛿👋🎉🎆🎊]', '', msg_saudacao).strip()
 elif emojis < 5:
-    # Mantém poucos emojis
     msg_saudacao = msg_saudacao.replace("🎆", "").replace("🎊", "").replace("🚀", "")
 
 st.success(msg_saudacao)
-
 
 # =====================================================
 # 🧠 MOTOR DE RESPOSTA
 # =====================================================
 def gerar_resposta(pergunta: str, perfil_completo: dict):
+    """Gera resposta personalizada baseada na pergunta"""
+    
     pergunta_l = normalizar(pergunta)
-    # =====================================================
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
     contexto_base = get_contexto_base(raw=True)
+    contexto_anterior = ""
     
-
-
-    lista_quintas_anterior = []
-    ultima_quinta_mencionada = None
-    
+    # Obtém contexto de mensagens anteriores
     if "historico" in st.session_state and len(st.session_state.historico) > 0:
-        # Pega as últimas mensagens do assistente
         ultimas = [msg for msg in st.session_state.historico[-4:] if msg["role"] == "assistant"]
         if ultimas:
             contexto_anterior = ultimas[-1]["content"].replace("**Assistente:** ", "")
-            
-            # Extrai lista de quintas se existir (formato: • Nome (Zona))
-            
-            quintas_match = re.findall(r'•\s*([^(]+)\s*\(', contexto_anterior)
-            if quintas_match:
-                lista_quintas_anterior = [q.strip() for q in quintas_match]
-                print(f"📋 Lista anterior: {lista_quintas_anterior}")
-            
-            # Extrai última quinta mencionada (formato: 📍 Nome (Zona))
-            quinta_match = re.search(r'📍\s*\*?\*?([^(]+)\*?\*?\s*\(([^)]+)\)', contexto_anterior)
-            if quinta_match:
-                ultima_quinta_mencionada = {
-                    "nome": quinta_match.group(1).strip(),
-                    "zona": quinta_match.group(2).strip()
-                }
-            
-
+    
+    # Detecção de nome de quinta na pergunta
     quinta_na_pergunta = re.search(
         r'(C\.R\.|Casa|Monte|Herdade|Quinta)\s+([A-Z][^\?]+?)(?:\s+é|\s+fica|\s+tem|\?|$)', 
         pergunta, 
         re.IGNORECASE
     )
+    
     if quinta_na_pergunta:
         nome_detectado = quinta_na_pergunta.group(0).strip().rstrip('?').strip()
-        # Remove palavras após "é", "fica", etc
         nome_detectado = re.sub(r'\s+(é|fica|tem|onde|como|quando).*$', '', nome_detectado, flags=re.IGNORECASE).strip()
         st.session_state.ultima_quinta_mencionada = nome_detectado
         print(f"🔍 Quinta detectada na pergunta: {nome_detectado}")
     
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-            print(f"🔄 Reformulado com contexto: '{pergunta}'")
-    
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-            print(f"🔄 Contexto de continuação: '{pergunta}'")
-    
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
-    mapa_numeros = {
-        "1": 0, "primeira": 0, "1a": 0, "1ª": 0, "primeiro": 0,
-        "2": 1, "segunda": 1, "2a": 1, "2ª": 1, "segundo": 1,
-        "3": 2, "terceira": 2, "3a": 2, "3ª": 2, "terceiro": 2,
-        "4": 3, "quarta": 3, "4a": 3, "4ª": 3, "quarto": 3,
-        "5": 4, "quinta": 4, "5a": 4, "5ª": 4, "quinto": 4,
-        "6": 5, "sexta": 5, "6a": 5, "6ª": 5, "sexto": 5,
-        "7": 6, "setima": 6, "sétima": 6, "7a": 6, "7ª": 6, "setimo": 6,
-        "8": 7, "oitava": 7, "8a": 7, "8ª": 7, "oitavo": 7,
-        "9": 8, "nona": 8, "9a": 8, "9ª": 8, "nono": 8,
-        "10": 9, "decima": 9, "décima": 9, "10a": 9, "10ª": 9, "decimo": 9,
-    }
-    
-    if "ultima_lista_quintas" in st.session_state and st.session_state.ultima_lista_quintas:
-        import re
-        for ref, idx in mapa_numeros.items():
-            padroes = [
-                rf'\be\s+da\s+{re.escape(ref)}\b',
-                rf'\bda\s+{re.escape(ref)}\b',
-                rf'^{re.escape(ref)}$',
-            ]
-            
-            if any(re.search(p, pergunta_l, re.IGNORECASE) for p in padroes):
-                if idx < len(st.session_state.ultima_lista_quintas):
-                    quinta_nome = st.session_state.ultima_lista_quintas[idx]
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        pergunta = f"website da {quinta_nome}"
-                    elif "morada" in pergunta_l:
-                        pergunta = f"morada da {quinta_nome}"
-                    elif "email" in pergunta_l:
-                        pergunta = f"email da {quinta_nome}"
-                    else:
-                        pergunta = f"website da {quinta_nome}"
-                    
-                    pergunta_l = normalizar(pergunta)
-
-
+    # Verifica se tem nome de quinta
     tem_nome_quinta = (
-        re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or  # "Casa Lagoa", "Monte Verde"
+        re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or
         re.search(r'C\.R\.|quinta|casa|monte|herdade', pergunta_l) or
         any(len(palavra) > 3 and palavra[0].isupper() for palavra in pergunta.split())
     )
     
-    # Perguntas sobre características específicas de quintas
+    # Perguntas específicas sobre quintas (website, morada, etc.)
     if any(p in pergunta_l for p in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]) and tem_nome_quinta:
         resposta_llm = gerar_resposta_llm(
             pergunta=pergunta,
@@ -1066,24 +265,50 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         )
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
+    
+    # Resposta genérica por LLM
+    resposta_llm = gerar_resposta_llm(
+        pergunta=pergunta,
+        perfil_completo=perfil_completo,
+        contexto_base=contexto_base,
+        contexto_conversa=contexto_anterior
+    )
+    guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil_completo)
+    return resposta_llm
 
+# =====================================================
+# 💬 INTERFACE DE CHAT
+# =====================================================
 
+# Inicializa session state
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
-# Input do utilizador (no final do ficheiro, FORA de qualquer função)
+
+if "historico" not in st.session_state:
+    st.session_state.historico = []
+
+# Mostra histórico de mensagens
+for mensagem in st.session_state.mensagens:
+    with st.chat_message(mensagem["role"]):
+        st.markdown(mensagem["content"])
+
+# Input do utilizador
 if prompt := st.chat_input("Escreve a tua mensagem..."):
-    # Adiciona mensagem do user
+    # Mostra mensagem do user
     with st.chat_message("user"):
         st.markdown(prompt)
     
+    # Guarda no histórico
     st.session_state.mensagens.append({"role": "user", "content": prompt})
+    st.session_state.historico.append({"role": "user", "content": prompt})
     
     # Gera resposta
     resposta = gerar_resposta(prompt, perfil_completo)
     
-    # Mostra resposta
+    # Mostra resposta do assistente
     with st.chat_message("assistant"):
         st.markdown(resposta)
-
-
-
+    
+    # Guarda resposta no histórico
+    st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+    st.session_state.historico.append({"role": "assistant", "content": resposta})
