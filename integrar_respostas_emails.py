@@ -117,16 +117,21 @@ print(f"\n📊 Total de respostas identificadas: {len(quintas_responderam)}")
 # =====================================================
 print("\n🔄 PASSO 2: Atualizar Qdrant...")
 
+atualizadas = 0
+nao_encontradas = []
+
 try:
-    from modules.quintas_qdrant import atualizar_quinta, listar_quintas
+    # Tenta importar
+    print("  🔍 Importando módulos...")
+    from modules.quintas_qdrant import listar_quintas
+    from modules.quintas_updater import atualizar_quinta
+    print("  ✅ Módulos importados!")
     
     # Lista todas as quintas do Qdrant
     todas_quintas = listar_quintas()
     print(f"📦 Quintas no Qdrant: {len(todas_quintas)}")
     
-    atualizadas = 0
-    nao_encontradas = []
-    
+    # Atualiza cada quinta
     for nome_quinta, info in quintas_responderam.items():
         # Procura a quinta no Qdrant
         quinta = next((q for q in todas_quintas if q['nome'] == nome_quinta), None)
@@ -157,19 +162,28 @@ try:
         print("\nDica: Verifica se os nomes no MAPA_QUINTAS correspondem aos nomes no Qdrant")
 
 except ImportError as e:
-    print(f"❌ Erro ao importar módulos: {e}")
-    print("\n💡 Solução alternativa: Guarda JSON para importação manual")
+    print(f"\n❌ ERRO DE IMPORT: {e}")
+    print("\n💡 SOLUÇÃO:")
+    print("  1. Verifica: ls -la modules/quintas_updater.py")
+    print("  2. Se não existir, copia o ficheiro COPIAR_PARA_MODULES_quintas_updater.py")
+    print("     para modules/quintas_updater.py")
     
-    # Guarda JSON
+    # Guarda JSON para importação manual
     output_file = "quintas_responderam.json"
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(quintas_responderam, f, indent=2, ensure_ascii=False)
-    print(f"✅ JSON guardado: {output_file}")
+    print(f"\n✅ JSON guardado: {output_file}")
+    
+    atualizadas = 'N/A (erro de import)'
 
 except Exception as e:
-    print(f"❌ Erro ao atualizar Qdrant: {e}")
+    print(f"\n❌ ERRO: {e}")
     import traceback
+    print("\n🔍 TRACEBACK:")
     traceback.print_exc()
+    
+    atualizadas = 'N/A (erro)'
+
 
 # =====================================================
 # PASSO 3: VERIFICAÇÃO
