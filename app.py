@@ -1067,8 +1067,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
 
-
-        if prompt := st.chat_input("Escreve a tua mensagem..."):
+   if prompt := st.chat_input("Escreve a tua mensagem..."):
     # Adiciona mensagem do user
     with st.chat_message("user"):
         st.markdown(prompt)
