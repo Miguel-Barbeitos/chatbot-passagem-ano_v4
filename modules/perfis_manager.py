@@ -281,15 +281,42 @@ def atualizar_perfil(nome: str, atualizacoes: dict):
         return False
 
 def listar_todos_perfis():
-    """Lista todos os perfis"""
+    """Lista todos os perfis únicos (agrupa por nome)"""
     try:
-        resultados, _ = client.scroll(
-            collection_name=COLLECTION_PERFIS,
-            limit=100
-        )
-        return [r.payload for r in resultados]
+        # Scroll TODOS os pontos (pode haver múltiplos pontos por perfil)
+        offset = None
+        todos_pontos = []
+        
+        while True:
+            resultados, offset = client.scroll(
+                collection_name=COLLECTION_PERFIS,
+                limit=100,
+                offset=offset
+            )
+            
+            if not resultados:
+                break
+            
+            todos_pontos.extend(resultados)
+            
+            if offset is None:
+                break
+        
+        # Agrupa por perfil único (usa 'nome' como chave)
+        perfis_unicos = {}
+        for ponto in todos_pontos:
+            nome = ponto.payload.get('nome')
+            if nome and nome not in perfis_unicos:
+                perfis_unicos[nome] = ponto.payload
+        
+        print(f"📦 Qdrant: {len(todos_pontos)} pontos → {len(perfis_unicos)} perfis únicos")
+        
+        return list(perfis_unicos.values())
+    
     except Exception as e:
         print(f"❌ Erro ao listar perfis: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 if __name__ == "__main__":

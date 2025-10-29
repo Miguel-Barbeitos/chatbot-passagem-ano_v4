@@ -1,0 +1,362 @@
+Received: from DBBPR04MB7804.eurprd04.prod.outlook.com (2603:10a6:10:1e0::13)
+ by DB8PR04MB6747.eurprd04.prod.outlook.com with HTTPS; Sat, 11 Oct 2025
+ 11:57:55 +0000
+Received: from CWLP123CA0186.GBRP123.PROD.OUTLOOK.COM (2603:10a6:400:19b::15)
+ by DBBPR04MB7804.eurprd04.prod.outlook.com (2603:10a6:10:1e0::13) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9203.11; Sat, 11 Oct
+ 2025 11:57:53 +0000
+Received: from AM1PEPF000252DB.eurprd07.prod.outlook.com
+ (2603:10a6:400:19b:cafe::d1) by CWLP123CA0186.outlook.office365.com
+ (2603:10a6:400:19b::15) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9203.11 via Frontend Transport; Sat,
+ 11 Oct 2025 11:57:52 +0000
+Authentication-Results: spf=pass (sender IP is 35.89.44.35)
+ smtp.mailfrom=the-maverick.com; dkim=none (message not signed)
+ header.d=none;dmarc=pass action=none
+ header.from=the-maverick.com;compauth=pass reason=100
+Received-SPF: Pass (protection.outlook.com: domain of the-maverick.com
+ designates 35.89.44.35 as permitted sender) receiver=protection.outlook.com;
+ client-ip=35.89.44.35; helo=omta36.uswest2.a.cloudfilter.net; pr=C
+Received: from omta36.uswest2.a.cloudfilter.net (35.89.44.35) by
+ AM1PEPF000252DB.mail.protection.outlook.com (10.167.16.53) with Microsoft
+ SMTP Server (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.20.9228.7 via Frontend Transport; Sat, 11 Oct 2025 11:57:51 +0000
+Received: from eig-obgw-5002b.ext.cloudfilter.net ([10.0.29.226])
+	by cmsmtp with ESMTPS
+	id 7L9hvsKvDjzfw7YEQvl0Qg; Sat, 11 Oct 2025 11:57:50 +0000
+Received: from box2499.bluehost.com ([50.87.169.177])
+	by cmsmtp with ESMTPS
+	id 7YBUvS6SIHyqZ7YBVvY6mD; Sat, 11 Oct 2025 11:54:49 +0000
+X-Authority-Analysis: v=2.4 cv=G4EcE8k5 c=1 sm=1 tr=0 ts=68ea4589
+ a=bJGpOex/X8HTplBHv/YG9Q==:117 a=bJGpOex/X8HTplBHv/YG9Q==:17
+ a=x6icFKpwvdMA:10 a=5KLPUuaC_9wA:10 a=r77TgQKjGQsHNAKrUKIA:9
+ a=p_A4ULXnBExbp7OiulYA:9 a=3ZKOabzyN94A:10 a=QEXdDO2ut3YA:10 a=xDDbdEuEAAAA:8
+ a=kuy7xjFbAAAA:8 a=UqCG9HQmAAAA:8 a=jUnS4sTjjJi6qznJfnkA:9
+ a=YDZzX9VXI-0xcBYp:21 a=frz4AuCg-hUA:10 a=_W_S_7VecoQA:10 a=lqcHg5cX4UMA:10
+ a=1TXvHNXkzh3H3i6mhlUA:9 a=KQqxNPgzF0kA:10 a=VEiTNn8F7TgA:10
+ a=uNchp5s8toKg0CYhfpwq:22 a=z44KJKDZmEt0i42_lIon:22 a=Dbs-EtR0y6QgNSrai7lz:22
+ a=NWVoK91CQySWRX1oVYDe:22 a=akQNnlEPo0dw9OMZ98gL:22 a=87_r8lEoFzHu-Jx8iVFl:22
+Received: from 87-196-80-88.net.novis.pt ([87.196.80.88]:52472 helo=[172.20.10.12])
+	by box2499.bluehost.com with esmtpsa  (TLS1.2) tls TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+	(Exim 4.98.1)
+	(envelope-from <info@the-maverick.com>)
+	id 1v7YBU-00000001LKw-13TM
+	for Miguel.Barbeitos@deco.proteste.pt;
+	Sat, 11 Oct 2025 05:54:48 -0600
+Content-Type: multipart/alternative;
+	boundary="------------9I1wqZzzdtyknRQE1OhJwAIk"
+Message-ID: <5ed96c09-cf11-421a-aaaa-467543404659@the-maverick.com>
+Date: Sat, 11 Oct 2025 12:54:46 +0100
+User-Agent: Mozilla Thunderbird
+Subject: =?UTF-8?Q?Re=3A_Pedido_de_Or=C3=A7amento_=E2=80=93_Alojamento_para_?=
+ =?UTF-8?Q?Fam=C3=ADlias_=2836_adultos_+_7_crian=C3=A7as?=
+To: Miguel Barbeitos <Miguel.Barbeitos@deco.proteste.pt>
+References: <DB8PR04MB6747B18582EEA2B558BD8FD1ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+From: The Maverick <info@the-maverick.com>
+Content-Language: en-US
+In-Reply-To: <DB8PR04MB6747B18582EEA2B558BD8FD1ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+X-AntiAbuse: This header was added to track abuse, please include it with any abuse report
+X-AntiAbuse: Primary Hostname - box2499.bluehost.com
+X-AntiAbuse: Original Domain - deco.proteste.pt
+X-AntiAbuse: Originator/Caller UID/GID - [47 12] / [47 12]
+X-AntiAbuse: Sender Address Domain - the-maverick.com
+X-BWhitelist: no
+X-Source-IP: 87.196.80.88
+X-Source-L: No
+X-Exim-ID: 1v7YBU-00000001LKw-13TM
+X-Source:
+X-Source-Args:
+X-Source-Dir:
+X-Source-Sender: 87-196-80-88.net.novis.pt ([172.20.10.12]) [87.196.80.88]:52472
+X-Source-Auth: info@the-maverick.com
+X-Email-Count: 1
+X-Org: HG=bhshared;ORG=bluehost;
+X-Source-Cap: eXlsb2pwbXk7eXlsb2pwbXk7Ym94MjQ5OS5ibHVlaG9zdC5jb20=
+X-Local-Domain: yes
+X-CMAE-Envelope: MS4xfAZKcMLVDCBBzIA+xq0s2cHJG5M9xYGOvNuYbUIPFv4Qb4YcKZoHQt3k5LZhAd8H84XAv5Y3kjS2NXrpVv9Mpn8bQY2sNyK2NwqK10NzxF4XMAutTSwO
+ xQDf6eiT5UVaCUlEQ6cDozoiMPOeQM8rl4LnilPgaQndRN8NEOuMpfS8yQBKt99ZluJ4Qhoih9SBTZANtPsbclKl2SKKIvsc+aC3MMngUgS7yX+NxEA2MInD
+Return-Path: info@the-maverick.com
+X-MS-Exchange-Organization-ExpirationStartTime: 11 Oct 2025 11:57:52.1929
+ (UTC)
+X-MS-Exchange-Organization-ExpirationStartTimeReason: OriginalSubmit
+X-MS-Exchange-Organization-ExpirationInterval: 1:00:00:00.0000000
+X-MS-Exchange-Organization-ExpirationIntervalReason: OriginalSubmit
+X-MS-Exchange-Organization-Network-Message-Id: 1b2cc487-eb46-4003-916a-08de08bd681f
+X-EOPAttributedMessage: 0
+X-EOPTenantAttributedMessage: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4:0
+X-MS-Exchange-Organization-MessageDirectionality: Incoming
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: AM1PEPF000252DB:EE_|DBBPR04MB7804:EE_|DB8PR04MB6747:EE_
+X-MS-Exchange-Organization-AuthSource: AM1PEPF000252DB.eurprd07.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Office365-Filtering-Correlation-Id: 1b2cc487-eb46-4003-916a-08de08bd681f
+X-MS-Exchange-AtpMessageProperties: SA|SL
+X-MS-Exchange-Organization-BypassClutter: True
+X-MS-Exchange-Organization-SCL: 1
+X-Microsoft-Antispam: BCL:0;ARA:13230040|69100299015|31092699021|39142699007|31052699007|4076899003|4053099003|8096899003;
+X-Forefront-Antispam-Report: CIP:35.89.44.35;CTRY:US;LANG:pt;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:omta36.uswest2.a.cloudfilter.net;PTR:omta36.uswest2.a.cloudfilter.net;CAT:NONE;SFS:(13230040)(69100299015)(31092699021)(39142699007)(31052699007)(4076899003)(4053099003)(8096899003);DIR:INB;
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 11 Oct 2025 11:57:51.5265
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: 1b2cc487-eb46-4003-916a-08de08bd681f
+X-MS-Exchange-CrossTenant-Id: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4
+X-MS-Exchange-CrossTenant-AuthSource: AM1PEPF000252DB.eurprd07.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DBBPR04MB7804
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:04.2604873
+X-MS-Exchange-Processed-By-BccFoldering: 15.20.9182.007
+X-Microsoft-Antispam-Mailbox-Delivery:
+	ucf:0;jmr:0;auth:0;dest:I;ENG:(910005)(944506478)(944626604)(920097)(930097)(140003);
+X-Microsoft-Antispam-Message-Info:
+	=?utf-8?B?ajVMRWVjcGFaWUFReEhBd3pjRGE4RHdoYXRPSm5YSXdVQTBWYTlFYTBnTXZl?=
+ =?utf-8?B?MlBUVzgzUjhjSlRPTlBneFUySXJ5NlZuZVhTRnpyVTNnYjZFUytpdlVuRDBB?=
+ =?utf-8?B?Q3pEblJBWktqMWhBRUE5WG5PeU9hVHhNTlphWi9GYmVXWDFEeVhvMnhEMmVr?=
+ =?utf-8?B?R2Noa01tOVBSSlQ0d0o4NGs0Yks5STBISVhXNjQ0WElWMUovMk9pUFV4WFJF?=
+ =?utf-8?B?L2Q4UmVHdUFINUVMeWYzTU5UNy9QUGVOMW5KYWcybkpYdFF1dFRTZXJqMm5r?=
+ =?utf-8?B?M2gyQ1JKL3FIMTVKZFdSejd2MTZwM0s3MHM4NXMwdzA5enFnYnozcE9zbDBm?=
+ =?utf-8?B?elVXT2pkOUdaRGIvb3J1MDlCRWkrUVplYVVtNUE2VGRNN01vdTZIWlFyOHEw?=
+ =?utf-8?B?Tk5sclFGWU44bjRoS3dKYWpvY0JwcHpZYWl0R3ZrOFFhai8zOEN4SHBUWGdm?=
+ =?utf-8?B?QjJTWXFEMm1nTFJDWGx5UkhheVloS2hyZzltYWpqQ2RVTDNtQzgxOGtIUjhB?=
+ =?utf-8?B?NzZLRXJZWjRqMDc0eHRVSVp5UXQrRm5hOXc0MGlrRzlEQXFPbjlpbEszTFR2?=
+ =?utf-8?B?VFFidFVrbWEvQ05XWDJHc1c2UHV0QW1iVHRMRUUrakc1RjE2L0RKNVNjMFRw?=
+ =?utf-8?B?SHhjOTBrbzdWUFVVSVBEaHQ2cVZRdFBSNlUvK29zSnZnWE5xLytFYkF6bkVM?=
+ =?utf-8?B?SG5HMmREdHErd1pIQUd5NC9oL2VKUkxFYlVYaVByQ1BEc2lZd29aOWZtSnFK?=
+ =?utf-8?B?NkVMTGpZSkEzUzJyOVN6WHhqN0p1WElZaTd5N0pqRTIzbGtiTFVEd2llZkk1?=
+ =?utf-8?B?MzY3RGl2dnhmWnFvamtvTnBtTmdjNENTRE96QjJGRUxCYitwQ1R0Zm9ycU1i?=
+ =?utf-8?B?UXcwZEZTTDBlWkNBa0VNNHZ4Q3A0bzVnK1hGNm80WVU0RGt5UnhRM2ZnTkQ3?=
+ =?utf-8?B?VEl4REZSdVpsbmxwK1ZkbXY0RmprNllqQVZUbjZxc3k3eHlvbERCaUNGa1NJ?=
+ =?utf-8?B?NnBXbjgrZkVHQ0RsTVJYMzRjRU5nT3daMmlNUC91OVZCejY0Tng3ckRSNGYz?=
+ =?utf-8?B?cWtXUUJmRHFOWUV4REhXcGdYejFVeUs2eTNTME5VZ1JxN2MrbXExdzZmTURG?=
+ =?utf-8?B?RUVucTFkZ3oyT3U2Zm1BSkdhN0JLWENYUlovcndmYmt0V1VVNWRNQ3puSHdx?=
+ =?utf-8?B?WlVjSndiaFBhWUNlajd3eW9IeHVzSGxJdWh1SkRjeUw5WjVxV0ErcUlLU3RH?=
+ =?utf-8?B?Z09Va2ZGZjhySjRGem9QVHpRVzFqZWtoM1l3VGpZbG5ldUwyUEJYZGFNK0JJ?=
+ =?utf-8?B?ZGpFOUY4UWFFeHVIY3VGSEdXNlczSDRndG9PR1VMQUl6RllFbDFpdEd0MjNM?=
+ =?utf-8?B?dWNJVHhNYjd5Y2d3R3FzQ2tZNWVKVXEzUFdvSWJHVENlc2FoM1l1SGlNMW1B?=
+ =?utf-8?B?Yk9vLzR4U3ZKZHMwY3kzYzVPL1R4UWVnSkoxR3pKSGZsY3BuUnlGVWhHRHhl?=
+ =?utf-8?B?dEtHWlluMmpYVmxpSjJQdEkvNlR4aUhHajNiQlhNVE54Q3g2NENWZVhac0Ja?=
+ =?utf-8?B?eHV2ZEY3NkRSSUZzSVlBdktibWVOaGFtMTRvd3ZneXpWTEM2VzRQWW1ZUk1r?=
+ =?utf-8?B?bUFlWGxrSmVBNmVTaEhuSXlEeFRWYXV4czM3ZjM3Q29lcXlpdE1TZGpQOWpN?=
+ =?utf-8?B?M2RQVDdFZUljNWQyT1hURVBJeTBQTzRMYWlyc1JUUzR5OXoyZVNIZzJSTUVk?=
+ =?utf-8?B?R251dm4xVTBJM1RXNmQvaW9xbWR2Q3Zpblo4SnZ1cStuU1R2RUdlU2ZMaCtB?=
+ =?utf-8?B?Zks3ZVBtdEZuUkVmYkNJY29aSlVqWDQzOFpWd3pkNWZ5Z0hqbjYyaHg1aVJh?=
+ =?utf-8?B?TXJJMmxKT2g3V21sdG13RXZNOXhqRDh6NCtEbFR5NWE1WlhmdVhiWnhXK0l0?=
+ =?utf-8?B?anJvRWxYM2xTVWVWWWs0MjhBYXRYUGpOVndqSFpPZnhveVBxc3R5ck9qRGNK?=
+ =?utf-8?B?ZG9oTWx0U1VuUE8wQUJsSzdJbmN2QjVsR0VwNmllVktRRmRkaFMyaDhWVzVZ?=
+ =?utf-8?B?Q0liaXV5OHFNU0ova21BUGc2cmxobW5WU3JWUncvZHdBNlZ4ZDBuSGNZcTEw?=
+ =?utf-8?B?U081cVVoUkFvRml1Mnd6UmtmdjJ0ODFNK0JvcndtS1YrZThrdUpKN0hJRXJn?=
+ =?utf-8?B?bVhUVWRoKzN5VWFyVFlXVUhoTS9aZFc0MC9LZWtSVkt5L2NxY1U2QTJXY05x?=
+ =?utf-8?B?a0d0cHA4WnhHdDZOZ3VUdEphMGROc0E5VEJoSUZGZ0lXQXBZUmpQMDBNamhF?=
+ =?utf-8?B?eDE4VENNdUNHOW1yRm1Kekg3eHFxeHpVaDROWTZ2OFNIOFFWY1FMckxUaWVS?=
+ =?utf-8?B?SVZDWTF6UEY5bkJNVlprc3B6UFovbWVyMVpLUHZHdGVUWTJPSUtQeGdWb296?=
+ =?utf-8?B?WVhJbXU3VVJ6UGNCUDRONVZ3REpZbTBaSkZtdExYYnhmRDJGdzFVKzlIQU1k?=
+ =?utf-8?B?UFd2NFN0Q0NUQWxhV3E3RmlDQkNrSk9uZVJIeVJ6cFhpUHAzUmZSTWVWcURO?=
+ =?utf-8?B?WWE3Y3BzTlRhM0xuQWk3UG01S0UwYklibXU2M3dwTXZPL1hIL0FaRmdsVU1I?=
+ =?utf-8?B?SW45VE5GMlFRcm1VY29QSVloS2tiYVBvZGtFemtoRW5OVzlwTERBdmlKVW1M?=
+ =?utf-8?B?bTJiVDFRYTU4OUY0bkRYMFJUbnk1UzBCbUE9PQ==?=
+MIME-Version: 1.0
+
+--------------9I1wqZzzdtyknRQE1OhJwAIk
+Content-Type: text/plain; charset="UTF-8"; format=flowed
+Content-Transfer-Encoding: 8bit
+
+Dear Miguel,
+
+
+Thank you very much for your booking enquiry.
+
+For the requested dates, we only have 2 houses with maximum capacity for 
+20 persons available. The other villas are already booked, sorry.
+
+
+Best wishes,
+
+Julia
+
+
+On 11.10.25 12:49, Miguel Barbeitos wrote:
+> Somos um grupo de famílias (36 adultos e 7 crianças) e estamos a 
+> planear uma estadia de 5 noites, entre 30 de dezembro de 2024 e 4 de 
+> janeiro de 2025.
+> Gostaríamos de saber se o vosso alojamento tem disponibilidade para 
+> nos receber nesse período, preferencialmente em regime de 
+> exclusividade ou com total privacidade.
+> Agradecíamos que nos informassem sobre:
+> – Disponibilidade e capacidade máxima;
+> – Condições e preços para reserva em exclusividade ou ocupação total;
+> – Tarifas por noite e eventuais condições especiais para grupos 
+> familiares;
+> – Serviços incluídos (pequeno-almoço, utilização de cozinha, piscina, 
+> zonas comuns, etc.).
+> Caso necessitem de mais informações, teremos todo o gosto em fornecer.
+> Agradecemos desde já a vossa atenção e aguardamos o vosso retorno.
+> Com os melhores cumprimentos,
+>
+>  Miguel
+> 966144848
+>
+> ------------------------------------------------------------------------------------------------------------- 
+>
+> *CONFIDENTIALITY NOTICE*
+> This message contains confidential information and is intended only 
+> for the use of the recipient.
+> If you are not the intended recipient, please notify us immediately 
+> and delete this e-mail from your system.
+> We ask you not to disclose or distribute the content of this e-mail to 
+> any other person.
+>
+--------------9I1wqZzzdtyknRQE1OhJwAIk
+Content-Type: multipart/related;
+	boundary="------------lAJhvypia5Y23o3CSHk2odBd"
+
+--------------lAJhvypia5Y23o3CSHk2odBd
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: 8bit
+
+<!DOCTYPE html><html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  </head>
+  <body>
+    <p><font face="Helvetica, Arial, sans-serif">Dear Miguel,</font></p>
+    <p><br>
+    </p>
+    <p><font face="Helvetica, Arial, sans-serif">Thank you very much for
+        your booking enquiry.&nbsp;<br>
+      </font></p>
+    <p><font face="Helvetica, Arial, sans-serif">For the requested
+        dates, we only have 2 houses with maximum capacity for 20
+        persons available. The other villas are already booked, sorry.&nbsp;</font></p>
+    <p><font face="Helvetica, Arial, sans-serif"><br>
+      </font></p>
+    <p><font face="Helvetica, Arial, sans-serif">Best wishes,</font></p>
+    <p><font face="Helvetica, Arial, sans-serif">Julia</font></p>
+    <div class="moz-signature"><br>
+      <img src="cid:part1.k2wAE460.YiKXvsly@the-maverick.com" border="0"></div>
+    <div class="moz-cite-prefix">On 11.10.25 12:49, Miguel Barbeitos
+      wrote:<br>
+    </div>
+    <blockquote type="cite" cite="mid:DB8PR04MB6747B18582EEA2B558BD8FD1ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com">
+      
+      <style type="text/css" style="display:none;">P {margin-top:0;margin-bottom:0;}</style>
+      <div style="margin-top: 1em; margin-bottom: 1em; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 11pt; color: rgb(0, 0, 0);" class="elementToProof">
+        Somos um grupo de famílias (36 adultos e 7 crianças) e estamos a
+        planear uma estadia de 5 noites, entre 30 de dezembro de 2024 e
+        4 de janeiro de 2025.</div>
+      <div style="margin-top: 1em; margin-bottom: 1em; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 11pt; color: rgb(0, 0, 0);" class="elementToProof">
+        Gostaríamos de saber se o vosso alojamento tem disponibilidade
+        para nos receber nesse período, preferencialmente em regime de
+        exclusividade ou com total privacidade.</div>
+      <div style="margin-top: 1em; margin-bottom: 1em; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 11pt; color: rgb(0, 0, 0);" class="elementToProof">
+        Agradecíamos que nos informassem sobre:<br>
+        – Disponibilidade e capacidade máxima;<br>
+        – Condições e preços para reserva em exclusividade ou ocupação
+        total;<br>
+        – Tarifas por noite e eventuais condições especiais para grupos
+        familiares;<br>
+        – Serviços incluídos (pequeno-almoço, utilização de cozinha,
+        piscina, zonas comuns, etc.).</div>
+      <div style="margin-top: 1em; margin-bottom: 1em; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 11pt; color: rgb(0, 0, 0);" class="elementToProof">
+        Caso necessitem de mais informações, teremos todo o gosto em
+        fornecer.</div>
+      <div style="margin-top: 1em; margin-bottom: 1em; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 11pt; color: rgb(0, 0, 0);" class="elementToProof">
+        Agradecemos desde já a vossa atenção e aguardamos o vosso
+        retorno.</div>
+      <div style="margin-top: 1em; margin-bottom: 1em; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 11pt; color: rgb(0, 0, 0);" class="elementToProof">
+        Com os melhores cumprimentos,<br>
+        <br>
+        &nbsp;Miguel&nbsp;<br>
+        966144848</div>
+      <img src="https://ecdocumentstoragepro.blob.core.windows.net/mail-images-pt-pt/DECOPROteste-Banner.jpg" style="width: 25% !important" moz-do-not-send="true">
+      <span lang="EN">
+        <p dir="ltr" align="left">-------------------------------------------------------------------------------------------------------------
+          <br>
+          <b><font color="#8497b0" size="2" face="Calibri">CONFIDENTIALITY
+              NOTICE</font></b>
+          <br>
+          This message contains confidential information and is intended
+          only for the use of the recipient.
+          <br>
+          If you are not the intended recipient, please notify us
+          immediately and delete this e-mail from your system.
+          <br>
+          We ask you not to disclose or distribute the content of this
+          e-mail to any other person.
+        </p>
+      </span>
+    </blockquote>
+  </body>
+</html>
+--------------lAJhvypia5Y23o3CSHk2odBd
+Content-Type: image/jpeg; name="email_footer2017.jpg"
+Content-Disposition: inline; filename="email_footer2017.jpg"
+Content-ID: <part1.k2wAE460.YiKXvsly@the-maverick.com>
+Content-Transfer-Encoding: base64
+
+/9j/4AAQSkZJRgABAgAAZABkAAD/7AARRHVja3kAAQAEAAAAPAAA/+4AJkFkb2JlAGTAAAAAAQMA
+FQQDBgoNAAAEDAAAB7YAAAq5AAAOJP/bAIQABgQEBAUEBgUFBgkGBQYJCwgGBggLDAoKCwoKDBAM
+DAwMDAwQDA4PEA8ODBMTFBQTExwbGxscHx8fHx8fHx8fHwEHBwcNDA0YEBAYGhURFRofHx8fHx8f
+Hx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8f/8IAEQgAMgCWAwERAAIR
+AQMRAf/EANoAAAIDAQEBAAAAAAAAAAAAAAAFBAYHAwIBAQEAAgMBAAAAAAAAAAAAAAAAAgQBAwUG
+EAABBAEDBAAFBQAAAAAAAAAEAQIDBQAREwYQQBIUIDBgIUEyMzQVFhEAAQIEAgUHCQQLAQAAAAAA
+AQIDABESBCExQVFhMhMQcYGRoSIFseFCUnKCwjMUIDAjNPDB0WKS0uJTgyRERRIAAgIDAAAAAAAA
+AAAAAAAAABFAIRBgcBMBAAICAQIFAwUBAQAAAAAAAREhADFBUWEQQHGBkfChsSAwYMHR4fH/2gAM
+AwEAAhEDEQAAAdUIUdyjXaGbJu52YjouB0AAAAAAACk1uzDxtWwsXaxx0+2jQyxGlHYAACkF3FxN
+OgFLr9io1+r3lDSbfnUc6+Mks3YZgAhGxRjQTNi6jQCiCfEtKxKTLXm5npGNYK8exEOSeeysDUaG
+kgZMQBsX0zkiEU8nEbi0tBXxYNTiTTYj4cD6cz6cD4eDweCQczoJyEAzIRcgAAAAAAAAEguG5VBw
+Wg//2gAIAQEAAQUCwk0YbIbuGUmSziWfLnlJYdhx27JskZJHInzLQ0eWSH1njFMXdqj4yGXVNUtF
+AI9PjvGzYgKSGZk0XwichdPeYdYCgxRSNkj6T1MkUzXyaMJVuAQDxwcql26aaZzwjiNK+rjWKu63
+NtHWDDS7w4VARDyDOaPVYgyxpXdCriylNAtrV7nDjPXObS6CSQ7NMgq68isiRW1xlvvxWlnLToff
+7lo+ex49x6az/tKm3JVWXd3v8tK8LbhhUksXS0jpR7Odrhaf/SluErC/aE5irpj+RBr7dvJGDen3
+KE2NdaiwZxCF85MU4YNiNOHaYBcjhGV5sTaquuaSMJz2XN5xOzHHfn3xYvurJM2n6IydMUZyyOFc
+6WQLdc6va7ErIUfAIsCTANnWATYQtgwknshCPRa96hTDaBlVfn86x/XH+z+H4/8An5//2gAIAQIA
+AQUCxVzyzy7Fy9Fxq9h49NcTstPon//aAAgBAwABBQLGRq7HDqiJCunYQxqmO11YuTRePYNm1TTP
+HJHKq9hrnkv0T//aAAgBAgIGPwLgv//aAAgBAwIGPwIocJw1m9b/AP/aAAgBAQEGPwKBxlSnkM4D
+IQQk+mf2Q1+IW2p5+tz6hyOW9uhpSESxUFEz05EQ9x0JSW5SKJgY85MVNqC060mf3pZUBQ2ZFzNU
+9NIwh1uSpp+WXJDEZjmlohXdmG8FDLpzPXHDSgo4YG0dcXV6tib0iqupe8emUXTgwcuXOEg7JYw5
+c3BPC4skgZ9EIdbM0LE0n7TlhQOCJpQrTUnOfIHblVKCaRhPHohLid1YCk8x5XroEKSKlpTpn5oo
+TrntxEoQr028OdOowFMppDnexh0f3ClPbP8AVDLKdxiZV7SzFnZpyQkur9pfmi2Qcw2nyfYDqkcR
+SjShE5duMNuyp4iQqnOUxDl4qX081LQdJK9nTyWluM3Fkgc2HxQ5bMzP0sm1mWE9Q6uVVv4eGQEK
+Lc3ld5ak71ImMoU+v6Zm1acouHpS6tcVqaQpXrFI5GGvXWT1Dzw0v07lwn3UYDti1q3rk9lVMW9l
+Zqofewq1DKL9D9yVm1aXzVRbNtvE3t0+UJWc5CLhH1h/1QVOGeHd1YRaXKz+MHKT+9PCHrW6fK02
+yMU+jhhHid284XGLeZbbPOZeSLe4W8S285g3okCJiXTFrp4KQuXOr+mLptQyUHC5pJXnPq5X7kXK
+k3bc1hiRlxZTHe58YsLfhlTjqzdPN7E449EW1LjSX3SviLO6iW6nPTthDhUhTkpO8MzSFdsWtsjE
+kYDaoyjw/wAPa0NhCekwz3KmrRLYCMshFnfqt1IabyE51UnRlF/xULU5dzCKQNM88RFa/lWgNHtO
+R4gz4i0txt0kUo9qrWmLa08PaU1b2jgddDnqjQMVTM48QW6hanX1KCKQDpOeIi6sktuLurjEUgES
+T0z7ItWru2ccetSVIUmUpkz9YQq4SlX0zSK1BWdKBlhPMwq2Uhan7lwSKQJdOPLOSZ+zGaf4fPEv
+w5aqPPEgpA9w/wA0B08IuDJZbx66oS8rhF1G4st4jmNUVOJYWrWpqfxQ2FJYIaM2xwt07O9FYatq
+z6XAxx96CGAy0DmENU+RUTfQw6da2avKqCGAy0DmENU+RUJeVbslaiSXUsiY2lVUJU3bNpUpCV1N
+sgGS9GCtkVLsmanD3CWU94zA17YbLLSGvqQckBO6NMjDS7a2QguEo4qG0ppxkJmemf37H5be/wCj
+P3NsXH5H093d/wAnxRa/Iz+E/K/TKP8Ayunmhr8loz+dkN3k/9oACAEBAwE/IcIUvjKY7E5O5eHC
+wm+j3w+tOh2jK5efCOI5nCTo6w1m0BBLezWXkxIgk2SdP3bGpQemA68y4RSQT1gUEKElTibWghB3
+CI+zFTUkTVo4dMtkP9EMdZ1GKhpFuF/sLknogspQIFZF0btH9SXFC5qzsiGGK8GKGoKwXUumWftC
+QwSU9nxIK9tFylaszvjOdFVO4fbEnJ5tn+dXp6YyK3Nr49s/90XBqUl8Mr5gj2wUvvCsnxjSEj+g
+oyDNrtmEIO2KnPbuSianec7yIgGoahXhZj1KJwc1XVIiJOY28Sm5AHUiQq1hihC9ayDKTWC9gCD8
+p4d/hyGnXs7PuHH7YW5nU+d5MoIOYoYbiXOMeJmGhKNOMyJYhHN9LxJ5uGxQ9S9YIvtqSSgG9YJ6
+4BmSBDBqck1wCiUJXSGHTmjAYlDWmarHvN0e+DDu8L//AB+Jy2FmqhCN5GPvR8rWOk59IwAIqYgm
+tIBhyyHtiAiZQR/LPxXKd+MKDRzdwr9sEVGk2J93tcdEBSVllGjktLCIizZi3icKlOj1Jf2MbmJo
+YquaEjTlF+sBJsHRc5Ge6YOKS7jWLMWWAk37msCiLJiy5eKSKypWFhZSEOGnDheqSBtIalWDwehD
+1yTuKWT+cQzbESprpnWNk2RORYd0MBs83p9LMj91FU3eyZqEou49VYTYiyOoKmKCpFIk7Xa8VJ8x
+RerBhElokA9UxWW5ii94MqYMZu3BN7nNX3RfYoM9GBqQImuS7b+kvGQfyHWTdZTWCvswxADSpCfv
+WXHf98FfE5D7x6f3uvqz+j6/x2z5X63vp2jw/9oACAECAwE/IcAwm428iDWER4JfIMLyfASK8jGQ
+/hP/2gAIAQMDAT8hzRMtK+mTFS/j/vkQIbeOPfIS13jKPXGUzM+QMNWjEbcZycP5ztBXkVu8DIFj
++E//2gAMAwEAAhEDEQAAEIeoBJJJJJJNaBIJJIJBIPCIBJAJJJBtIAABAJJJIIBABIJIJIAJIAJJ
+BIJJJJJJJBJJ/9oACAEBAwE/EMBiRR5Wgfk1kTPTaIoDCDfxyU5kBwRJMHpBnmIoRBGRsTUYGUVo
+BCYRMaxkMF8MgVHQ5zcAhsSKSqT90/8AaNE4oki0XZqQfGhayGZkkiYhZx0IKETgO4UG3Ehis6i5
+mCCnoTJIC8OaoeguDiMjOawEQhzQPrgnKLBKREqLvOChOScn6o6aOJpEpQQBxfgjUQ2iCBaeKqpI
+MN2BHgfGLv2IWlAwufYyGFEkqmBrhzI48IyAiLwS9aMRsKRUpktoFBlwQg4KDb8snNJoXTicLEDI
+uVdojhz7taCH+/0DzboCUoAdXTJf5HCGrRygxIiBTDC4GUS7g8CETU4E85kMmECJFtMQ146Dvqn0
+43kpSnYK/jC2AtVAacjiklHUXGQ4AABAaMQJ0itEDnS+fpugdi8ctceFBCTqQQnGRWC0EAWLO2JA
+rBTTGlQfZYGJMIJj1IpQYmBYx+XcDCS3KgITjLoRjRkI2PvkYR/8TSNORxg0gKOLm4BhXjI42asQ
+EV7zeHMM2oRBmOqJxwkZFCyKjrQOfFShviJRjpl7W9mHNVwnEDc67onjHeaRQth+CaBHBhWhwAYO
+TllFC3MUR+OJXD3zj+vJycYP6RVELUxlflxrpQlIjHg55wduADIMbFh8gTZ0iuLlgEVSWCkJ7ORs
+Wil0T5Tf3zZqJylXctDnUqAmBpkA7MVqF0MDL0gukMh0pZBRk4+lnHqWIKALxTjXXXgX9oL+EwWk
+pldOsxyX3mmSW5cMZpTl4RExWc5imHF9g5Vo9EZVse+HOLRzEJLHbIozApLRLRk7giKZMIWE1iie
+KMxNMjJm7wfYGJRAB1jrg9fh3RBUMHgiA0QIIvrhW3LEtMcYSs8zlWbrxCRLQyhrJzJKqtGwRNYh
+JbJ8meeP2dDthdyELDakTMkYiGIqk7or4n+/3vrrUx+jej4f4x/t+Lf4/t/t4qSH/9oACAECAwE/
+EM2rhwRgQuD6+3kVJcfVZMj84L9MMxER5B04FowhDyYKXK/IgNYoyh/Cf//aAAgBAwMBPxDEGyMR
+oI4f7/zAPCP6HX8O8+RLswzwhxKH2gxcraSaYh3bOmPnCDccf80R6bySRK9md68guxSR4j/uvfJ/
+0UyYfqH06j8+vrj0cvF2f78iVCUO+RougX+E/wD/2Q==
+
+--------------lAJhvypia5Y23o3CSHk2odBd--
+
+--------------9I1wqZzzdtyknRQE1OhJwAIk--

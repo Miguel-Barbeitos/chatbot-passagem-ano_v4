@@ -1,0 +1,310 @@
+Received: from DB9PR04MB9775.eurprd04.prod.outlook.com (2603:10a6:10:4ce::14)
+ by DB8PR04MB6747.eurprd04.prod.outlook.com with HTTPS; Sat, 11 Oct 2025
+ 13:50:27 +0000
+Received: from CWLP265CA0399.GBRP265.PROD.OUTLOOK.COM (2603:10a6:400:1d6::21)
+ by DB9PR04MB9775.eurprd04.prod.outlook.com (2603:10a6:10:4ce::14) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9203.10; Sat, 11 Oct
+ 2025 13:50:23 +0000
+Received: from AM4PEPF00027A5F.eurprd04.prod.outlook.com
+ (2603:10a6:400:1d6:cafe::6a) by CWLP265CA0399.outlook.office365.com
+ (2603:10a6:400:1d6::21) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9203.11 via Frontend Transport; Sat,
+ 11 Oct 2025 13:50:18 +0000
+Authentication-Results: spf=softfail (sender IP is 2001:4860:4864:20::35)
+ smtp.mailfrom=montedosobreiro.com; dkim=pass (signature was verified)
+ header.d=montedosobreiro-com.20230601.gappssmtp.com;dmarc=fail action=none
+ header.from=montedosobreiro.com;compauth=pass reason=106
+Received-SPF: SoftFail (protection.outlook.com: domain of transitioning
+ montedosobreiro.com discourages use of 2001:4860:4864:20::35 as permitted
+ sender)
+Received: from mail-oa1-x35.google.com (2001:4860:4864:20::35) by
+ AM4PEPF00027A5F.mail.protection.outlook.com (2603:10a6:20f:fff4:0:4:0:a) with
+ Microsoft SMTP Server (version=TLS1_3, cipher=TLS_AES_256_GCM_SHA384) id
+ 15.20.9228.7 via Frontend Transport; Sat, 11 Oct 2025 13:50:22 +0000
+Received: by mail-oa1-x35.google.com with SMTP id 586e51a60fabf-3ac1ad95537so1801996fac.2
+        for <Miguel.Barbeitos@deco.proteste.pt>; Sat, 11 Oct 2025 06:50:22 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=montedosobreiro-com.20230601.gappssmtp.com; s=20230601; t=1760190621; x=1760795421; darn=deco.proteste.pt;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=MKKpZTBPt3OuiXcJRiiog6zjRL5lRTDqttnqMLLQjWI=;
+        b=z6Vh/wYdB37dYzX02Hmp1j11k/DdswXcUGa4kjy9vXocxLN9fOg7EQOJs2IvD7/8XV
+         V06k+xnPCpl30N5m4GcrgPIzbH+6B/nj8UUv6N2ZVAHvjaFYY3CmfJ0VEkj/8rtxTRqB
+         hN13ekm/1aVPalQXOgJKycJwvFgZQWy7+11PO/h/fS2xGVWVRBJfHueJGK2PS++zBuDU
+         8u+oHZ8upYMjN0pdYL5ZgnVQOFbyh5YD490Y4IHTYlJZ1cIKyzeIM+hdQe2PqU0982re
+         NI79czm3X+KHYgAmKyV5P+T47B3FO5gRHHVJawFsOBn1i88rYydJGWw0GhlBCiVKbT/j
+         P/jQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1760190621; x=1760795421;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=MKKpZTBPt3OuiXcJRiiog6zjRL5lRTDqttnqMLLQjWI=;
+        b=caPdbwODIG20JHqlWzSelK5O6odQqJJ4nUEUKyPPEHPDocX+Mn7mDvykqYXfT9GwDO
+         XXYUniPkBWkQxdDopACnfSP/hMt3Io36Sm8TnAQVW7F6oOdajHNIdCEOeXF2XuZL6T1d
+         JromGC4SVOMDboByYy5yAixJO+bQKMcx6nYAR7OY0h3Y9Qqm/IXutitOTnGwOnjDnG0Y
+         bm6MYhTjkYqnThuRV2aQml0DWjuI6wcP0Af/4loN6uqCdbmtFqw1BbAD4nGt9fCsrEDB
+         uGXAictLw6UZSg66Mxddr9JmIHpWCjbbBEZmy3AZVfwyYCMCq2ZwZeZL/n5M+nMgBNnE
+         nCuA==
+X-Gm-Message-State: AOJu0Yz+nPzSThPl+N5qxZAFXQo1lLMybiesXkpuUDrvBqGY6VYf6K3R
+	FJ8LOnbXitTMzxn9Ly216eTf7pc2H0RHp6quTtv5smEQPUO2ABlAAs5owK6nUrSngTTDgxeTc88
+	d55oOdg6kVX/vPr8MRJewja2zOvOYQZgHxSOPK7wnOGqskuILWOUL
+X-Gm-Gg: ASbGncvkpQX1PlcCc2Ts4gyHzkSMXJC6Ps6pygaPvvDbGKUx4kf9X/Dv5DbIGCsoteB
+	gdmrucZZZkjy59zstoIMrRhBZVvcSsmm+L2gDfRQA0Qc/kcIaioF416gDiqlQWHYHfgY5Uwuq7a
+	Fh//vfGw29CzmIyfusGEDDZ+u481PYflOFdB24RoeUO4hgz352FThnWgZ+pvXL9olRTcZNt0EKt
+	fEDAGZ0W1O2uN5MXZ9M/+8L8V3zFZHxtWgyKw==
+X-Google-Smtp-Source: AGHT+IEyTzRXzPtbbMll9Yp3hph30kutZK6QK8sQw+1xbR9rD/IH2REQeN7UL8SnF6MMx9EILiHuOUMy7bErH2dI8FQ=
+X-Received: by 2002:a05:6870:810c:b0:301:fec8:fc5 with SMTP id
+ 586e51a60fabf-3c0f91a5af1mr6837623fac.23.1760190621313; Sat, 11 Oct 2025
+ 06:50:21 -0700 (PDT)
+References: <DB8PR04MB6747B18582EEA2B558BD8FD1ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+In-Reply-To: <DB8PR04MB6747B18582EEA2B558BD8FD1ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+From: Monte do Sobreiro <info@montedosobreiro.com>
+Date: Sat, 11 Oct 2025 14:50:10 +0100
+X-Gm-Features: AS18NWDCNRQWGXR0vKrkZNYayvUm_SDlkgpQVmn8rwmYWRrqqi_PYoJoBYA0qc0
+Message-ID: <CA++JR=LiPxLfTHSj0H=bAFXpMunaLiE4SyiwhuikGMYGH19qng@mail.gmail.com>
+Subject: =?UTF-8?Q?Re=3A_Pedido_de_Or=C3=A7amento_=E2=80=93_Alojamento_para_Fam=C3=ADli?=
+	=?UTF-8?Q?as_=2836_adultos_=2B_7_crian=C3=A7as?=
+To: Miguel Barbeitos <Miguel.Barbeitos@deco.proteste.pt>
+Cc: morgadosan@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000b8890b0640e250cb"
+Return-Path: info@montedosobreiro.com
+X-MS-Exchange-Organization-ExpirationStartTime: 11 Oct 2025 13:50:22.9275
+ (UTC)
+X-MS-Exchange-Organization-ExpirationStartTimeReason: OriginalSubmit
+X-MS-Exchange-Organization-ExpirationInterval: 1:00:00:00.0000000
+X-MS-Exchange-Organization-ExpirationIntervalReason: OriginalSubmit
+X-MS-Exchange-Organization-Network-Message-Id: b4d566b4-1a0c-4aa1-ea12-08de08cd1fdf
+X-EOPAttributedMessage: 0
+X-EOPTenantAttributedMessage: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4:0
+X-MS-Exchange-Organization-MessageDirectionality: Incoming
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: AM4PEPF00027A5F:EE_|DB9PR04MB9775:EE_|DB8PR04MB6747:EE_
+X-MS-Exchange-Organization-AuthSource: AM4PEPF00027A5F.eurprd04.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Office365-Filtering-Correlation-Id: b4d566b4-1a0c-4aa1-ea12-08de08cd1fdf
+X-MS-Exchange-AtpMessageProperties: SA|SL
+X-MS-Exchange-Organization-BypassClutter: True
+X-MS-Exchange-Organization-SCL: 1
+X-Microsoft-Antispam: BCL:0;ARA:13230040|43022699015|69100299015|4076899003|8096899003|7053199007;
+X-Forefront-Antispam-Report: CIP:2001:4860:4864:20::35;CTRY:;LANG:pt;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:mail-oa1-x35.google.com;PTR:mail-oa1-x35.google.com;CAT:NONE;SFS:(13230040)(43022699015)(69100299015)(4076899003)(8096899003)(7053199007);DIR:INB;
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 11 Oct 2025 13:50:22.8412
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: b4d566b4-1a0c-4aa1-ea12-08de08cd1fdf
+X-MS-Exchange-CrossTenant-Id: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4
+X-MS-Exchange-CrossTenant-AuthSource: AM4PEPF00027A5F.eurprd04.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DB9PR04MB9775
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:04.5402862
+X-MS-Exchange-Processed-By-BccFoldering: 15.20.9182.007
+X-Microsoft-Antispam-Mailbox-Delivery:
+	ucf:0;jmr:0;auth:0;dest:I;ENG:(910005)(944506478)(944626604)(920097)(930097)(140003);
+X-Microsoft-Antispam-Message-Info:
+	=?utf-8?B?dXJvRTI4UERPNVNVRXZXZHpUUWdBSm1KYmdiTkRsWXlIMnAxV01tQy9ITXkw?=
+ =?utf-8?B?Wlc0UjlSVEhQQ1BqT21RQnU2a0M1eGg1ZzJTMnU0dVFqYjVkZjBuRmt5OExP?=
+ =?utf-8?B?RzNYa2crSHNDMXU3K3pYQ2pHZE1BM1V0d0JGQkJtcytaSDEvQnJSbVMwZUV5?=
+ =?utf-8?B?b0lRYTJWS3NkVHRBVTRoV3RDOHNLakZpenhPRHlQTWczVXZGOVJOTmxINzQ5?=
+ =?utf-8?B?MWJTcE00WlhxbkhDaHlXaUFNZDNha2M5ZGx4QVVyL01kMDlYOEpVZk5rTGtZ?=
+ =?utf-8?B?VzU2MDd2bS9lYVdWdEtVWTZib2lYVzVxTEJJMHo1dExQVE82bFVwZXREWmM0?=
+ =?utf-8?B?cEZ4aDY0Q25HbityT0R0eUh2VDZhVXU0dUlwOVkyVnN1VkxpSGFWY2xGV2lR?=
+ =?utf-8?B?aHBaa2NocXJwckp3V1JLdVZraXNtSllnN3pjUTlSaUViSjJtd3Bpd3V4OHlH?=
+ =?utf-8?B?NjZmOVlGZGZhUlJBRmNTVFdUbXQ4cjhVbFZWeEdhYnppVitoc3U2OTVVVits?=
+ =?utf-8?B?eGZ1a3YxZC8wdDNWK0NlSC9aN1VUenEyQURrZHpob2dHSkUrSkd2dEdjeUVJ?=
+ =?utf-8?B?dnpZTlYxVS93Rm10S0Y5ZUxwcDNQdWgxR3pIbEJMcGxSUFUzanpEQjU2ZHQr?=
+ =?utf-8?B?SHlWR2NwTDZCenQ5WUZ4amF3c2drVVh1UXl2amp5elhHbmtsSDR6c0pXeXZv?=
+ =?utf-8?B?dHVwNXlXSVlLcFR3V0t3QUhTZVdRaGtsTHhiMVltNG5VeUFxYUtESlRlMW5w?=
+ =?utf-8?B?RGIvaXNPMGtlOWpQcS9iMjFHalcxU21CU0lZR1QvRzU1cXFGdG93eGY2eWxF?=
+ =?utf-8?B?c0hORUU0Y090YVNqbGlVUURLQU9xQUxuS3Ria0M3ZVdFRjdWSWRpdzZRYWpU?=
+ =?utf-8?B?QnBFSGZDNnQvMWt3ZlAzN2RFc3NWZThDU0RTVHFYakFKYnkrWjM2UUJWaFI4?=
+ =?utf-8?B?RDFtQlVDN0Y3YURPWlJ4NW94S3kzM3JaRnBwczMvYTg0OUJTNmpieEVHNVdK?=
+ =?utf-8?B?REl0bDUzUFNRa1NqNTIxT1Q3eWZzSlR3UWNCSjJIMjVQbk11bTNNQm5leUFs?=
+ =?utf-8?B?VXBjU1VKT0V6cmF0WTA4cmVCRTZtRHJwUVJTcWJweGFCRGZaZDBxbS93dUJi?=
+ =?utf-8?B?dmhYajJPK3NqNjdZVGJjLzZlWWt5ZUgxVHN5YitVcHlCNmxkZlNwYi9JYlpP?=
+ =?utf-8?B?T3YrbzhtaUhmK0NLb2VWWHJka3BXS0ltV0VCdDY1TTA5NzJtdXFNbU1PTzdl?=
+ =?utf-8?B?U2JiMGo5N0JCTlhLUWdkS0VnM3BJRVJzR2pLQytybk5xRlByL0E3OUdmcjMw?=
+ =?utf-8?B?cU9uWlF2c2ZYTmFjY0EwR0NwdFczbFkxbHcyY21aN2V0UlNTQytIcysrM1VQ?=
+ =?utf-8?B?dm15NWNWMitXa2p2ejdxL2pQb0x3eUFpWlArUjZYUDE5WE5FcVZUTDNOWU1L?=
+ =?utf-8?B?K1hrNFMyNzIyMGhEV2NFM0VZcTlwR2d0REhvM3VEMHQ4Y05tSWZreVpLaE5N?=
+ =?utf-8?B?Rk1rdytZN1Z4WUxFaGlDSEdsMmx1dTY3SFI5THpuRXEzRERlMHN6Y0UveENt?=
+ =?utf-8?B?VFY1MFRCb3FOMmJsMG93VEN2QjNFcVZrQ1RUajQxUVpldFIxV0xCVXVxaFo3?=
+ =?utf-8?B?T0ljT21IZFFJOEJWQWs0ZUxmMzlwWmhxSUpSdzBqdHZnWU5zUXRySzV2c0VR?=
+ =?utf-8?B?bzRIYjYzdGZDRm9JazVmTUVxcmJJZUt3dEo2RkJONy95b09uWWJVM1l3dk01?=
+ =?utf-8?B?dFJLSVZ6MHpEZ0NwZVJMWlJ1dUZtVWRWZVE1YXBERXpNVWsyNjhkei80N0VB?=
+ =?utf-8?B?UjN5MVZkY0QxRDh2aEwwbU5qQ3ZWL3UrVllnQk1qa0VCSEpiSExyK25rSE8x?=
+ =?utf-8?B?WjNxYnQvQVBJc0dTOERWTUdNSzg0Z3hTK25XOGdvSlYzdkdLbEVacEtQTTU3?=
+ =?utf-8?B?UzQ3aFZRbWIxVHdQNVVjVHAzcm1jMzJkN1JhRm1Ya1l4a0VQalZoR3o1b0pj?=
+ =?utf-8?B?RUxBaXlWK2c5bnhNTFE0aHhLM04yYURNT3FLMEZUTkRJQ1lDVFJGWDdRTHJW?=
+ =?utf-8?B?cHUxdlFKZFdWU2VNQzV1ZTAyRU13MUdHUi9iZnptN2pMSlhkQUMrODlKSThO?=
+ =?utf-8?B?MzY3VG5ocisrUTdEc3o3bTRSMS84YVg5dzVCVmRJemJmOWIzQ0F5bklpKzc4?=
+ =?utf-8?B?OHBMVWtIWjdQYjhZdHdqYnRZcVZ2alFpZXFUZ0oxWkpnaGZrdlBoZzhUV3BT?=
+ =?utf-8?B?QTZrS2ZCeU9zSG5iNlp4ZlBlWkFwYjBWbWVpb2MvNDUzYlVncHNMaGwzUk9Q?=
+ =?utf-8?B?R2lqcGsrMmZBTUhPaTYvNW4wZVpGbzFYVGRsZHFTZURPaU5LUnBlOUxrelo1?=
+ =?utf-8?B?NG12TGpzejNvbW9vakZ2dm00TjlOVXVwUHJaRHZvWWF2Nkh4UmJHWERIOUpH?=
+ =?utf-8?B?TG1ESGVydEN1a3V3TjE3czc0eVpGNzFjUXY1NFd2VWVXNFc5eSt1YW0ybUpX?=
+ =?utf-8?B?MDY1dFdzU3c3Tks1bEY1Q3RpTVhvVFhrUVZPcjI2NlI1Z1pZK2hsVURrZGVl?=
+ =?utf-8?B?WWRCN2pIc3N6ZkEvbjZFb3cwblB4TkRSNkk0bmpHcUM0RUdOT2N5N3NJdHMr?=
+ =?utf-8?B?ZmdRMEVCTUhydXhvUDcwQVFxNElqYUFkbEh0NnFKQ09VdExWdHBxZkJ5V1ds?=
+ =?utf-8?B?aTZmS3Izc1dNUGQwcVdsRS8yaCtVSUpUVWxQMVNUdHZSd3pxbXo1bW9IN1h5?=
+ =?utf-8?Q?z8=3D?=
+MIME-Version: 1.0
+
+--000000000000b8890b0640e250cb
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Boa tarde Sr. Miguel,
+
+Agrade=C3=A7o desde j=C3=A1 o seu interesse no nosso alojamento.
+N=C3=B3s temos espa=C3=A7o para 8 adultos, pois temos uma casa com 3 quarto=
+s, 2 casas
+de banho, cozinha totalmente equipa, sala de estar e jantar. No exterior
+temos mais uma suite.
+Caso queira saber mais pode visitar o nosso site Monte do Sobreiro,
+Vimieiro.
+Temos disponibilidade para Dezembro,  de 30 de Dezembroa 4 de Janeiro,
+e o valor para 8 pessoas =C3=A9 de 2.350=E2=82=AC, com pequeno almo=C3=A7o =
+inclu=C3=ADdo.
+Mais uma vez agrade=C3=A7o o seu contacto ficando ao seu dispor para qualqu=
+er
+esclarecimento adicional.
+
+Cumprimentos
+A equipa do Monte do Sobreiro
+
+A s=C3=A1bado, 11/10/2025, 12:49, Miguel Barbeitos <
+Miguel.Barbeitos@deco.proteste.pt> escreveu:
+
+> Somos um grupo de fam=C3=ADlias (36 adultos e 7 crian=C3=A7as) e estamos =
+a planear
+> uma estadia de 5 noites, entre 30 de dezembro de 2024 e 4 de janeiro de
+> 2025.
+> Gostar=C3=ADamos de saber se o vosso alojamento tem disponibilidade para =
+nos
+> receber nesse per=C3=ADodo, preferencialmente em regime de exclusividade =
+ou com
+> total privacidade.
+> Agradec=C3=ADamos que nos informassem sobre:
+> =E2=80=93 Disponibilidade e capacidade m=C3=A1xima;
+> =E2=80=93 Condi=C3=A7=C3=B5es e pre=C3=A7os para reserva em exclusividade=
+ ou ocupa=C3=A7=C3=A3o total;
+> =E2=80=93 Tarifas por noite e eventuais condi=C3=A7=C3=B5es especiais par=
+a grupos familiares;
+> =E2=80=93 Servi=C3=A7os inclu=C3=ADdos (pequeno-almo=C3=A7o, utiliza=C3=
+=A7=C3=A3o de cozinha, piscina,
+> zonas comuns, etc.).
+> Caso necessitem de mais informa=C3=A7=C3=B5es, teremos todo o gosto em fo=
+rnecer.
+> Agradecemos desde j=C3=A1 a vossa aten=C3=A7=C3=A3o e aguardamos o vosso =
+retorno.
+> Com os melhores cumprimentos,
+>
+>  Miguel
+> 966144848
+>
+> -------------------------------------------------------------------------=
+------------------------------------
+>
+> *CONFIDENTIALITY NOTICE*
+> This message contains confidential information and is intended only for
+> the use of the recipient.
+> If you are not the intended recipient, please notify us immediately and
+> delete this e-mail from your system.
+> We ask you not to disclose or distribute the content of this e-mail to an=
+y
+> other person.
+>
+
+--000000000000b8890b0640e250cb
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8"><d=
+iv dir=3D"auto">Boa tarde Sr. Miguel,&nbsp;<div dir=3D"auto"><br></div><div=
+ dir=3D"auto">Agrade=C3=A7o desde j=C3=A1 o seu interesse no nosso alojamen=
+to.&nbsp;</div><div dir=3D"auto">N=C3=B3s temos espa=C3=A7o para 8 adultos,=
+ pois temos uma casa com 3 quartos, 2 casas de banho, cozinha totalmente eq=
+uipa, sala de estar e jantar. No exterior temos mais uma suite.</div><div d=
+ir=3D"auto">Caso queira saber mais pode visitar o nosso site Monte do Sobre=
+iro, Vimieiro.&nbsp;</div><div dir=3D"auto">Temos disponibilidade para Deze=
+mbro,&nbsp; de 30 de Dezembroa 4 de Janeiro,&nbsp; &nbsp;</div><div dir=3D"=
+auto">e o valor para 8 pessoas =C3=A9 de 2.350=E2=82=AC, com pequeno almo=
+=C3=A7o inclu=C3=ADdo.&nbsp;</div><div dir=3D"auto">Mais uma vez agrade=C3=
+=A7o o seu contacto ficando ao seu dispor para qualquer esclarecimento adic=
+ional.&nbsp;</div><div dir=3D"auto"><br></div><div dir=3D"auto">Cumprimento=
+s&nbsp;</div><div dir=3D"auto">A equipa do Monte do Sobreiro&nbsp;</div></d=
+iv><br><div class=3D"gmail_quote gmail_quote_container"><div dir=3D"ltr" cl=
+ass=3D"gmail_attr">A s=C3=A1bado, 11/10/2025, 12:49, Miguel Barbeitos &lt;<=
+a href=3D"mailto:Miguel.Barbeitos@deco.proteste.pt">Miguel.Barbeitos@deco.p=
+roteste.pt</a>&gt; escreveu:<br></div><blockquote class=3D"gmail_quote" sty=
+le=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">
+
+
+
+
+<div dir=3D"ltr">
+<div style=3D"margin-top:1em;margin-bottom:1em;font-family:Aptos,Aptos_Embe=
+ddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;font-size:11pt;co=
+lor:rgb(0,0,0)">
+Somos um grupo de fam=C3=ADlias (36 adultos e 7 crian=C3=A7as) e estamos a =
+planear uma estadia de 5 noites, entre 30 de dezembro de 2024 e 4 de janeir=
+o de 2025.</div>
+<div style=3D"margin-top:1em;margin-bottom:1em;font-family:Aptos,Aptos_Embe=
+ddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;font-size:11pt;co=
+lor:rgb(0,0,0)">
+Gostar=C3=ADamos de saber se o vosso alojamento tem disponibilidade para no=
+s receber nesse per=C3=ADodo, preferencialmente em regime de exclusividade =
+ou com total privacidade.</div>
+<div style=3D"margin-top:1em;margin-bottom:1em;font-family:Aptos,Aptos_Embe=
+ddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;font-size:11pt;co=
+lor:rgb(0,0,0)">
+Agradec=C3=ADamos que nos informassem sobre:<br>
+=E2=80=93 Disponibilidade e capacidade m=C3=A1xima;<br>
+=E2=80=93 Condi=C3=A7=C3=B5es e pre=C3=A7os para reserva em exclusividade o=
+u ocupa=C3=A7=C3=A3o total;<br>
+=E2=80=93 Tarifas por noite e eventuais condi=C3=A7=C3=B5es especiais para =
+grupos familiares;<br>
+=E2=80=93 Servi=C3=A7os inclu=C3=ADdos (pequeno-almo=C3=A7o, utiliza=C3=A7=
+=C3=A3o de cozinha, piscina, zonas comuns, etc.).</div>
+<div style=3D"margin-top:1em;margin-bottom:1em;font-family:Aptos,Aptos_Embe=
+ddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;font-size:11pt;co=
+lor:rgb(0,0,0)">
+Caso necessitem de mais informa=C3=A7=C3=B5es, teremos todo o gosto em forn=
+ecer.</div>
+<div style=3D"margin-top:1em;margin-bottom:1em;font-family:Aptos,Aptos_Embe=
+ddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;font-size:11pt;co=
+lor:rgb(0,0,0)">
+Agradecemos desde j=C3=A1 a vossa aten=C3=A7=C3=A3o e aguardamos o vosso re=
+torno.</div>
+<div style=3D"margin-top:1em;margin-bottom:1em;font-family:Aptos,Aptos_Embe=
+ddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;font-size:11pt;co=
+lor:rgb(0,0,0)">
+Com os melhores cumprimentos,<br>
+<br>
+&nbsp;Miguel&nbsp;<br>
+966144848</div>
+<img src=3D"https://ecdocumentstoragepro.blob.core.windows.net/mail-images-=
+pt-pt/DECOPROteste-Banner.jpg" style=3D"width:25%!important">
+<span lang=3D"EN">
+<p dir=3D"ltr" align=3D"left">---------------------------------------------=
+----------------------------------------------------------------
+<br>
+<b><font color=3D"#8497b0" size=3D"2" face=3D"Calibri">CONFIDENTIALITY NOTI=
+CE</font></b>
+<br>
+This message contains confidential information and is intended only for the=
+ use of the recipient.
+<br>
+If you are not the intended recipient, please notify us immediately and del=
+ete this e-mail from your system.
+<br>
+We ask you not to disclose or distribute the content of this e-mail to any =
+other person.
+</p>
+</span>
+</div>
+
+</blockquote></div>
+
+--000000000000b8890b0640e250cb--

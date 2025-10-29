@@ -1,0 +1,512 @@
+Received: from OSKPR04MB11413.eurprd04.prod.outlook.com (2603:10a6:e10:95::5)
+ by DB8PR04MB6747.eurprd04.prod.outlook.com with HTTPS; Fri, 24 Oct 2025
+ 12:21:44 +0000
+ARC-Seal: i=2; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=pass;
+ b=eSL5SKIR/C7byjZKx1NgSJJvNFVxNm/iAqMxGL2/sn/sk7uQcferd5F5MmA9zDd/slRgXISArI7QaCL/csIIdw9j/sTSUO+ZVU6tPesPbhSkJ/m+hbWQOY6Oc2Y1FzKtYaV4S7vGgjk8jKFLa0MERM7a00sHP8wpR3lEsYrAjYTg6syXhDRelEP2KSYk3pZq6+ZWgoDniw0qdTT7Q9I279pe/4kMCK6JoO4HaTTlOFxyBFnb90xxnuLdthcgCaQrrCD1qrwUHafhrS3wc87hjZoilz9ynasngb+p8f+NyrfoFnPjU26sJ6aSXpl0IGzKhdF277LyNAjw4De64ysIKw==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector10001;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=bCdVM80wNVh2VwwLiXGMDk44jxo5udMMO62CjN4MF3c=;
+ b=V9DfgJaHdgeA26nMx/6lE56rf9ZLD/sET12KietG0OWAjlIZzHLA5sVw23qQUl8fqbTTBrGdbKFfT9GI/tLsHLvdar4tiXf6Y5KhLwhYOClxCosLwCGSbQiyW/sOAuxBMSfbAFyGnpH/scqi3fC7A8I9bCubzqIqrNZJ/UD5iJctimgcS9UEqnOlFPUHCJ3HkWSIbUE3LZPsY/wo3y22H2inQZkqR4fJMCETpKOHNN6XzoFImrnZs3RYp88AmzXMNxUZT8rIMYR63nOAyOH+k9hyhS2A1AguboK0uuV5yb2v+zq5PU/QgPGFhjj19aZ2qPGnrXBsbn3rmXtqbOpd2A==
+ARC-Authentication-Results: i=2; mx.microsoft.com 1; spf=pass (sender ip is
+ 23.83.209.81) smtp.rcpttodomain=deco.proteste.pt
+ smtp.mailfrom=solardealqueva.pt; dmarc=pass (p=reject sp=none pct=100)
+ action=none header.from=solardealqueva.pt; dkim=pass (signature was verified)
+ header.d=solardealqueva.pt; arc=pass (0 oda=0 ltdi=0 93)
+Received: from AS4P191CA0025.EURP191.PROD.OUTLOOK.COM (2603:10a6:20b:5d9::15)
+ by OSKPR04MB11413.eurprd04.prod.outlook.com (2603:10a6:e10:95::5) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9253.13; Fri, 24 Oct
+ 2025 12:21:39 +0000
+Received: from AM3PEPF0000A791.eurprd04.prod.outlook.com
+ (2603:10a6:20b:5d9:cafe::1b) by AS4P191CA0025.outlook.office365.com
+ (2603:10a6:20b:5d9::15) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9253.13 via Frontend Transport; Fri,
+ 24 Oct 2025 12:21:34 +0000
+Authentication-Results: spf=pass (sender IP is 23.83.209.81)
+ smtp.mailfrom=solardealqueva.pt; dkim=pass (signature was verified)
+ header.d=solardealqueva.pt;dmarc=pass action=none
+ header.from=solardealqueva.pt;compauth=pass reason=100
+Received-SPF: Pass (protection.outlook.com: domain of solardealqueva.pt
+ designates 23.83.209.81 as permitted sender) receiver=protection.outlook.com;
+ client-ip=23.83.209.81; helo=hedgehog.birch.relay.mailchannels.net; pr=C
+Received: from hedgehog.birch.relay.mailchannels.net (23.83.209.81) by
+ AM3PEPF0000A791.mail.protection.outlook.com (10.167.16.120) with Microsoft
+ SMTP Server (version=TLS1_3, cipher=TLS_AES_256_GCM_SHA384) id 15.20.9253.7
+ via Frontend Transport; Fri, 24 Oct 2025 12:21:37 +0000
+X-Sender-Id: ptispadmins|x-authuser|info@solardealqueva.pt
+Received: from relay.mailchannels.net (localhost [127.0.0.1])
+	by relay.mailchannels.net (Postfix) with ESMTP id A05988A2CF6
+	for <Miguel.Barbeitos@deco.proteste.pt>; Fri, 24 Oct 2025 12:21:35 +0000 (UTC)
+Received: from cpp31.webserver.pt (trex-green-3.trex.outbound.svc.cluster.local [100.121.22.161])
+	(Authenticated sender: ptispadmins)
+	by relay.mailchannels.net (Postfix) with ESMTPA id 372EB8A162E
+	for <Miguel.Barbeitos@deco.proteste.pt>; Fri, 24 Oct 2025 12:21:34 +0000 (UTC)
+ARC-Seal: i=1; s=arc-2022; d=mailchannels.net; t=1761308494; a=rsa-sha256;
+	cv=none;
+	b=V2PD1vEfGdBKUqOarLBaJNjUPcfL96xUY+YX62T53XkM87V5Frf40pkkhH3LqGLb1W1mvo
+	o+MRMnztZV8V9MP+/0+cSeJInmjvUNaUKUb3DOe3ld4fuLoaHPjPVRUe6guAQ1E3DuXS6m
+	3VXGoDhB9wjFm1Ct6IKdedlrifziOp2VeshHGLLfk6Oazut8YZJ6kyZBeCIdgOr+EaLNKS
+	cEHjEi17bTlZOYGetbHhQBfXjAdhWxwBn9NbKtkO8m4XRbeb8vCJveH4oyZU8AE0oQbIDh
+	pD3NnFl0HelCeUj/8LqAcn5WsXHahdUGMsk2JewC6KfiuDh7qX6uUlgw0p8STg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed;
+ d=mailchannels.net;
+	s=arc-2022; t=1761308494;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references:dkim-signature;
+	bh=Db4feR3fdH8dliUstP81IstRV+znUmj3LvaKtnx7nQU=;
+	b=VJqnO5mNOR/j4Giu+AexslbMvbsNJJZjxmdPNp/Vpzzq88MEo5HMCLmTdVRCeRRRvxb7tx
+	I971UiqFNxSYZtGLUzWIYFIFWqZBJaYs4TdfAjHq/Qni/y2h1WynXWdkdcFopbdDEpWonG
+	Lj6pvaiay9PQN5YuLYTHcT6QUNHoiN7VWDKjapm+GdENp7X+rULqu/insM+h7nteRt2iZI
+	J51VSpyADaP59jwn3QgRFlyRQOQx+J+96JoHnGJZLWyTzr+EvroTVR4r4L+1GLljwwT/WR
+	AShK+hskUU0+7kTQcvH0tDP8KZwhyr2X7qpzyi8UNxmqtE2h9GmO7OWvVhb/9w==
+ARC-Authentication-Results: i=1;
+	rspamd-674f557ffc-ftv94;
+	auth=pass smtp.auth=ptispadmins smtp.mailfrom=info@solardealqueva.pt
+X-Sender-Id: ptispadmins|x-authuser|info@solardealqueva.pt
+X-MC-Relay: Neutral
+X-MailChannels-SenderId: ptispadmins|x-authuser|info@solardealqueva.pt
+X-MailChannels-Auth-Id: ptispadmins
+X-Blushing-Oafish: 447d0581519b2e5d_1761308494956_2882787427
+X-MC-Loop-Signature: 1761308494956:449147248
+X-MC-Ingress-Time: 1761308494956
+Received: from cpp31.webserver.pt (cpp31.webserver.pt [94.46.183.112])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384)
+	by 100.121.22.161 (trex/7.1.3);
+	Fri, 24 Oct 2025 12:21:34 +0000
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=solardealqueva.pt; s=default; h=Content-Type:MIME-Version:Message-ID:Date:
+	Subject:In-Reply-To:References:To:From:Sender:Reply-To:Cc:
+	Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:
+	Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:List-Id:
+	List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive;
+	bh=Db4feR3fdH8dliUstP81IstRV+znUmj3LvaKtnx7nQU=; b=Uq5YbDb8/oCWRF/KQQ2H9fEWyh
+	zgq2w0lMMzI8dOJV5N8ORFfrm56wxLT8Le4iQ9awfotL62rNF9TzxrkjqiN+3gxYSZTutaWE8wkHI
+	hz61zK6oAv4mPifZiq55onWFGOLSwZYgmIUH5C+zaAuMUFLxulr3RLc2Joem6GNPTGQJBiNmcvN8b
+	jOdyR4RV/niGd+CLPs/40SlflC91F0v1K6SH0+7qQgEKGyq/IegcN7PPCqHxX4sdG+XujvfmcsJEV
+	PAyncxZCQiNc4bOIuRGKj3cyS0cS5mXsl8kOXZfeAjPMHJpavwbACLu0N1ysaS9nbbcbxj8WGxLL9
+	RQKQXbdw==;
+Received: from a81-84-30-125.cpe.netcabo.pt ([81.84.30.125]:63738 helo=Solar)
+	by cpp31.webserver.pt with esmtpa (Exim 4.98.2)
+	(envelope-from <info@solardealqueva.pt>)
+	id 1vCGl5-00000008BAl-3Irz
+	for Miguel.Barbeitos@deco.proteste.pt;
+	Fri, 24 Oct 2025 13:19:03 +0100
+From: <info@solardealqueva.pt>
+To: "'Miguel Barbeitos'" <Miguel.Barbeitos@deco.proteste.pt>
+References: <DB8PR04MB6747D20D442ACFD873B68B28ABF0A@DB8PR04MB6747.eurprd04.prod.outlook.com>
+In-Reply-To: <DB8PR04MB6747D20D442ACFD873B68B28ABF0A@DB8PR04MB6747.eurprd04.prod.outlook.com>
+Subject: =?iso-8859-1?Q?RE:_Pedido_de_Or=E7amento_-_Alojamento_para_Fam=EDlias_=28?=
+	=?iso-8859-1?Q?36_adultos_+_7_crian=E7as=29?=
+Date: Fri, 24 Oct 2025 13:21:32 +0100
+Message-ID: <009b01dc44e0$bb96fd70$32c4f850$@solardealqueva.pt>
+Content-Type: multipart/related;
+	boundary="----=_NextPart_000_009C_01DC44E9.1D5CEC10"
+X-Mailer: Microsoft Outlook 16.0
+Thread-Index: AQH/fJkD5cqa+8NKJ+UXSKpBp/IhsLSKx0NQ
+Content-Language: pt
+X-AuthUser: info@solardealqueva.pt
+Return-Path: info@solardealqueva.pt
+X-MS-Exchange-Organization-ExpirationStartTime: 24 Oct 2025 12:21:38.5447
+ (UTC)
+X-MS-Exchange-Organization-ExpirationStartTimeReason: OriginalSubmit
+X-MS-Exchange-Organization-ExpirationInterval: 1:00:00:00.0000000
+X-MS-Exchange-Organization-ExpirationIntervalReason: OriginalSubmit
+X-MS-Exchange-Organization-Network-Message-Id: ef2c2d82-9e26-4069-5590-08de12f7e1aa
+X-EOPAttributedMessage: 0
+X-EOPTenantAttributedMessage: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4:0
+X-MS-Exchange-Organization-MessageDirectionality: Incoming
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: AM3PEPF0000A791:EE_|OSKPR04MB11413:EE_|DB8PR04MB6747:EE_
+X-MS-Exchange-Organization-AuthSource: AM3PEPF0000A791.eurprd04.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Office365-Filtering-Correlation-Id: ef2c2d82-9e26-4069-5590-08de12f7e1aa
+X-MS-Exchange-AtpMessageProperties: SA|SL
+X-MS-Exchange-Organization-BypassClutter: True
+X-MS-Exchange-Organization-SCL: 1
+X-Microsoft-Antispam: BCL:0;ARA:13230040|29132699027|4076899003|8096899003|7053199007|13003099007|4013099003|4053099003;
+X-Forefront-Antispam-Report: CIP:23.83.209.81;CTRY:CA;LANG:pt;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:hedgehog.birch.relay.mailchannels.net;PTR:hedgehog.birch.relay.mailchannels.net;CAT:NONE;SFS:(13230040)(29132699027)(4076899003)(8096899003)(7053199007)(13003099007)(4013099003)(4053099003);DIR:INB;
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 24 Oct 2025 12:21:37.5717
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: ef2c2d82-9e26-4069-5590-08de12f7e1aa
+X-MS-Exchange-CrossTenant-Id: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4
+X-MS-Exchange-CrossTenant-AuthSource: AM3PEPF0000A791.eurprd04.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: OSKPR04MB11413
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:06.9997232
+X-MS-Exchange-Processed-By-BccFoldering: 15.20.9253.009
+X-Microsoft-Antispam-Mailbox-Delivery:
+	ucf:0;jmr:0;auth:0;dest:I;ENG:(910005)(944506478)(944626604)(920097)(930097)(140003);
+X-Microsoft-Antispam-Message-Info:
+	=?Windows-1252?Q?/HK+RaRUMnNAeozt6Hu3RlyO9n95N3+K5v+FbOxZ2yUsR8OlGirblT61?=
+ =?Windows-1252?Q?c29ssjQwy93fLitH258KUavk+XAgvxVMZIcfYaMb0jOMlM+WLPvmEuKB?=
+ =?Windows-1252?Q?yonJHhxeAaS0V8iXVrGGDNvEPG3OjgEYg36gF8l9aP+aK84Iy1qnu6d6?=
+ =?Windows-1252?Q?sHZGrQoYyU8SV9dcgbZb/cOgsLq84BNJTTiOtQU4x7I5aSQrvk/62h33?=
+ =?Windows-1252?Q?mRpM6NHZfh3+ZSM/mZ/8RXMgmr2vZGowXv58PbJlJF2u3RyxGUKl9+cF?=
+ =?Windows-1252?Q?k6J8BD5bGVrJgoHgkJ3duRstFMVgZuev6iAotB7rOSTHAjX9JIBy72jm?=
+ =?Windows-1252?Q?Ucbem9Q1V71Q1auSjsJMq9EQ7ZV7OTfhGj4MKA/+wOKCJy4QiWTsy7GP?=
+ =?Windows-1252?Q?CGJ7YZA4Yr6dKEHMYxLxlZ32xxQBaXkDNLkBotZ+uDRN7Z3Umj0FZDP2?=
+ =?Windows-1252?Q?qBtAbVKApr7hzfKiGQp8fO6TV1YV2SmDKGd9nMXwEbxC+nWUcgrXcdnt?=
+ =?Windows-1252?Q?E44vxMtZ2NAK9sfTRaZL4faNWyRfp9dshyGH7bP45R8mJJCN/zqJ35if?=
+ =?Windows-1252?Q?hAVhExK7zmpTUeCaO9w6V0kN/vobSu6OrXrtkVolMfoec5aoaKfxgfYz?=
+ =?Windows-1252?Q?4gkHWC0GY1UntuViXW5bW0q5mkWCSk/aIacHWfn7aLd2GbcRQ6FnM14D?=
+ =?Windows-1252?Q?8H+2ZAAxEvQOuBi2kJKcYeXTIIrJv+k4Id36W/Wuwvdf9+HLbDwa9vTj?=
+ =?Windows-1252?Q?idId8Y2E9WIqxW3RXOMBQexzbWCnPSDUi3PsPESUaz4MGhqXM6gYbTSj?=
+ =?Windows-1252?Q?xYgJLPmIIS6KKFo2MD5f5PMwPQB6TM9yDCx2mQpDI3sudLYvf9jGg6yf?=
+ =?Windows-1252?Q?EbojUMCk7G0gVkPsZTiCl0nqRGa+5Wz5eCVb8rYIbBElqiwGMb60oC7W?=
+ =?Windows-1252?Q?DwFmDP9+d/fmL8/7aahI8DiBBVGsGlAqrvUSv9Iz9VLe7EsNhKc/XgLQ?=
+ =?Windows-1252?Q?v1Fz0HGijywl23ETtj7giJnHztqmDB1KwGNdRw69zbBFx0V7T1SOmAf2?=
+ =?Windows-1252?Q?JC+OULThygpVjgUH6OFYMM/aZDm0FCGcqEJIWmxivkqQI4aLf92/pJtb?=
+ =?Windows-1252?Q?sU4CJASjIBIzUF9vIVFUu3FAC0IYKsMwPY0fWz90G2YCOFEEsc+g1rfI?=
+ =?Windows-1252?Q?uvSC21G2bJPPBSeITeK16YHDUVlYLuTW7yZLbhx9Jcume7l+QZU0x934?=
+ =?Windows-1252?Q?IsOHDWCOiq7/M7Rg/u8sUR2bnr+CQpvU5iyNsq2uW13Pfp5UOIoQXBbH?=
+ =?Windows-1252?Q?bg3rs83nmCvQXTc3KUsx16CXhv7y0TIxCFq70d43veUGrW+bkd2t6HRM?=
+ =?Windows-1252?Q?o5+APrdwOeDsq6zGKyfDKB/Mf2KevGXlpoDky3HtFn2S3V0Akrokdjkf?=
+ =?Windows-1252?Q?/zJTINyxj7uuxOtmhFfAcbTGH+eSyPX8MTSC10gZ7x62MedHSRByqlWg?=
+ =?Windows-1252?Q?AUh0ZYUxg+lIgCTHZW9s0FXSo+cpHYxomGH5yBQI0lLawrk4dVL2wQUb?=
+ =?Windows-1252?Q?SDCPaT1U8zXX4vOo+v86Cskmu0xj1dx+J7MXEVB/Z52tmyC289c7rOLL?=
+ =?Windows-1252?Q?vdaUKVwxHWBbDKtr9Ldl8OmNMiXoQwFAu1+/IBsTUbe+DptyjCDjTMap?=
+ =?Windows-1252?Q?3YIXREJmgE7AA4q2d+VpqBOGy5eX7wUmulwnUb2UjBBAwJ/twuo/6IcT?=
+ =?Windows-1252?Q?UG6DBGnSHXXgzz9lnZxNIyTWVERDbKcKnlReE2XFwv5MC9+26lDLTXJT?=
+ =?Windows-1252?Q?ArPipPc+bsnANtDvKPmJEJNpjFMX2qi7h4UZuz60+X/Bvb9NcqRyq4YZ?=
+ =?Windows-1252?Q?37hcf8Rq0YvSbxPaI9u3OeK/Uh9AtKzeCdQC8TWmazgOr0rbiA9ZIzT+?=
+ =?Windows-1252?Q?SeuZm/Ph+6EPFLkBu5ppMLSKfDtbFx3HZG1C5JGk8mAgj5D6n4C0+qp3?=
+ =?Windows-1252?Q?fZtWjZpV+H/FQNCkwh6aO3FniC1uMbdza7AMK1h1YZLslVpO6nj7EXuA?=
+ =?Windows-1252?Q?tQTGnYkTdM7F4WjMcs4bDvmpJsx9TxEE7ugSm2XrDLY9Mw7fpiZ78EbS?=
+ =?Windows-1252?Q?syW7suRnPLj4wm/MsQcH4fZGjdG/3bCuk62z+51WYzBFYUXUYx81DP1q?=
+ =?Windows-1252?Q?n/CaMQfuMkgCu7FMZXcoGFCvBRu4qkbiQAdhZ8KiFtGta22yPfRiGw?=
+ =?Windows-1252?Q?=3D=3D?=
+MIME-Version: 1.0
+
+------=_NextPart_000_009C_01DC44E9.1D5CEC10
+Content-Type: multipart/alternative;
+	boundary="----=_NextPart_001_009D_01DC44E9.1D5CEC10"
+
+------=_NextPart_001_009D_01DC44E9.1D5CEC10
+Content-Type: text/plain;
+	charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+
+Boa tarde Sr. Miguel,
+
+=20
+
+=20
+
+Agradecemos a sua consulta.
+
+Informo que n=E3o temos disponibilidade para a data pretendida.
+
+=20
+
+=20
+
+Caso necessite de alguma informa=E7=E3o adicional, n=E3o hesite em =
+contactar-nos.
+
+=20
+
+Obrigado.
+
+=20
+
+Os melhores cumprimentos,
+
+=20
+
+=20
+
+---------------------------------------
+
+S=F3nia Flores
+
+Solar de Alqueva =96 Alojamento Local, Lda
+
+Rua  S=E3o Marcos do Campo, N=BA 22 A
+
+7200-377 Reguengos de Monsaraz
+
+ <http://www.solardealqueva.pt/> www.solardealqueva.pt
+
+Telef. 266 502 105=20
+
+NIF: 509 129 668
+
+LAT: 38.425046  LONG: -7.538434
+------------------------------------
+
+=20
+
+=20
+
+=20
+
+=20
+
+De: Miguel Barbeitos <Miguel.Barbeitos@deco.proteste.pt>=20
+Enviada: 24 de outubro de 2025 00:31
+Cc: morgadosan@gmail.com
+Assunto: Pedido de Or=E7amento - Alojamento para Fam=EDlias (36 adultos =
++ 7
+crian=E7as)
+
+=20
+
+Boa noite.
+
+Somos um grupo de fam=EDlias (36 adultos e 7 crian=E7as) e estamos a =
+planear uma
+estadia de 5 noites, entre 30 de dezembro de 2024 e 4 de janeiro de =
+2025.
+
+Gostar=EDamos de saber se o vosso alojamento tem disponibilidade para =
+nos
+receber nesse per=EDodo, preferencialmente em regime de exclusividade ou =
+com
+total privacidade.
+
+Agradec=EDamos que nos informassem sobre:
+=96 Disponibilidade e capacidade m=E1xima;
+=96 Condi=E7=F5es e pre=E7os para reserva em exclusividade ou =
+ocupa=E7=E3o total;
+=96 Tarifas por noite e eventuais condi=E7=F5es especiais para grupos =
+familiares;
+=96 Servi=E7os inclu=EDdos (pequeno-almo=E7o, utiliza=E7=E3o de cozinha, =
+piscina, zonas
+comuns, etc.).
+
+Caso necessitem de mais informa=E7=F5es, teremos todo o gosto em =
+fornecer.
+
+Agradecemos desde j=E1 a vossa aten=E7=E3o e aguardamos o vosso retorno.
+
+Com os melhores cumprimentos,
+
+ Miguel=20
+966144848
+
+=20
+
+
+
+-------------------------------------------------------------------------=
+---
+---------------------------------=20
+CONFIDENTIALITY NOTICE=20
+This message contains confidential information and is intended only for =
+the
+use of the recipient.=20
+If you are not the intended recipient, please notify us immediately and
+delete this e-mail from your system.=20
+We ask you not to disclose or distribute the content of this e-mail to =
+any
+other person.=20
+
+
+------=_NextPart_001_009D_01DC44E9.1D5CEC10
+Content-Type: text/html;
+	charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Diso-8859-=
+1">
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
+osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
+//www.w3.org/TR/REC-html40"><head><meta name=3D"Generator" content=3D"Micro=
+soft Word 15 (filtered medium)"><!--[if !mso]><style>v\:* {behavior:url(#de=
+fault#VML);}
+o\:* {behavior:url(#default#VML);}
+w\:* {behavior:url(#default#VML);}
+.shape {behavior:url(#default#VML);}
+</style><![endif]--><style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+@font-face
+	{font-family:Aptos;}
+@font-face
+	{font-family:"Arial Black";
+	panose-1:2 11 10 4 2 1 2 2 2 4;}
+@font-face
+	{font-family:"Comic Sans MS";
+	panose-1:3 15 7 2 3 3 2 2 2 4;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0cm;
+	font-size:12.0pt;
+	font-family:"Aptos",sans-serif;}
+p.elementtoproof, li.elementtoproof, div.elementtoproof
+	{mso-style-name:elementtoproof;
+	margin:0cm;
+	font-size:12.0pt;
+	font-family:"Aptos",sans-serif;}
+span.EstiloCorreioEletrnico20
+	{mso-style-type:personal-reply;
+	font-family:"Calibri",sans-serif;
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-size:10.0pt;
+	mso-ligatures:none;}
+@page WordSection1
+	{size:612.0pt 792.0pt;
+	margin:70.85pt 3.0cm 70.85pt 3.0cm;}
+div.WordSection1
+	{page:WordSection1;}
+--></style></head><body lang=3D"PT" link=3D"#0563C1" vlink=3D"#954F72" styl=
+e=3D"word-wrap:break-word"><div class=3D"WordSection1"><p class=3D"MsoNorma=
+l"><span style=3D"font-size:11.0pt;font-family:&quot;Comic Sans MS&quot;;co=
+lor:#203864;mso-style-textfill-fill-color:#203864;mso-style-textfill-fill-a=
+lpha:100.0%;mso-fareast-language:EN-US">Boa tarde Sr. Miguel,<o:p></o:p></s=
+pan></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:=
+&quot;Comic Sans MS&quot;;color:#203864;mso-style-textfill-fill-color:#2038=
+64;mso-style-textfill-fill-alpha:100.0%;mso-fareast-language:EN-US"><o:p>&n=
+bsp;</o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt=
+;font-family:&quot;Comic Sans MS&quot;;color:#203864;mso-style-textfill-fil=
+l-color:#203864;mso-style-textfill-fill-alpha:100.0%;mso-fareast-language:E=
+N-US"><o:p>&nbsp;</o:p></span></p><p class=3D"MsoNormal" style=3D"mso-margi=
+n-top-alt:auto;mso-margin-bottom-alt:auto"><span style=3D"font-size:11.0pt;=
+font-family:&quot;Comic Sans MS&quot;;color:#203864;mso-style-textfill-fill=
+-color:#203864;mso-style-textfill-fill-alpha:100.0%">Agradecemos a sua cons=
+ulta</span><span style=3D"font-size:11.0pt;font-family:&quot;Comic Sans MS&=
+quot;;color:#002060">.<o:p></o:p></span></p><p class=3D"MsoNormal"><span st=
+yle=3D"font-size:11.0pt;font-family:&quot;Comic Sans MS&quot;;color:#002060=
+;mso-fareast-language:EN-US">Informo que n=E3o temos disponibilidade para a=
+ data pretendida.<o:p></o:p></span></p><p class=3D"MsoNormal"><span style=
+=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif;mso-fareast=
+-language:EN-US"><o:p>&nbsp;</o:p></span></p><p class=3D"MsoNormal"><span s=
+tyle=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif;mso-far=
+east-language:EN-US"><o:p>&nbsp;</o:p></span></p><p class=3D"MsoNormal"><sp=
+an style=3D"font-size:11.0pt;font-family:&quot;Comic Sans MS&quot;;color:#0=
+02060">Caso necessite de alguma informa=E7=E3o adicional, n=E3o hesite em c=
+ontactar-nos.<o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"fo=
+nt-size:11.0pt;font-family:&quot;Comic Sans MS&quot;;color:#002060"><o:p>&n=
+bsp;</o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt=
+;font-family:&quot;Comic Sans MS&quot;;color:#002060">Obrigado.<o:p></o:p><=
+/span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-famil=
+y:&quot;Comic Sans MS&quot;;color:#002060"><o:p>&nbsp;</o:p></span></p><p c=
+lass=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Comic =
+Sans MS&quot;;color:#002060">Os melhores cumprimentos,<o:p></o:p></span></p=
+><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;C=
+alibri&quot;,sans-serif;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></span=
+></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&qu=
+ot;Calibri&quot;,sans-serif"><o:p>&nbsp;</o:p></span></p><p class=3D"MsoNor=
+mal"><b><span style=3D"font-family:&quot;Calibri&quot;,sans-serif;color:#17=
+365D">---------------------------------------<o:p></o:p></span></b></p><p c=
+lass=3D"MsoNormal"><span style=3D"font-size:9.0pt;font-family:&quot;Arial B=
+lack&quot;,sans-serif;color:#0070C0">S=F3nia Flores<o:p></o:p></span></p><p=
+ class=3D"MsoNormal"><b><span style=3D"font-size:8.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#17365D">Solar de Alqueva &#8211; Alojamento L=
+ocal, Lda<o:p></o:p></span></b></p><p class=3D"MsoNormal"><b><span style=3D=
+"font-size:8.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:#17365D">=
+Rua&nbsp; S=E3o Marcos do Campo, N=BA 22 A<o:p></o:p></span></b></p><p clas=
+s=3D"MsoNormal"><b><span style=3D"font-size:8.0pt;font-family:&quot;Calibri=
+&quot;,sans-serif;color:#17365D">7200-377 Reguengos de Monsaraz<o:p></o:p><=
+/span></b></p><p class=3D"MsoNormal"><b><span style=3D"font-size:8.0pt;font=
+-family:&quot;Calibri&quot;,sans-serif;color:#17365D"><a href=3D"http://www=
+.solardealqueva.pt/"><span style=3D"color:blue">www.solardealqueva.pt</span=
+></a><o:p></o:p></span></b></p><p class=3D"MsoNormal"><b><span lang=3D"EN-U=
+S" style=3D"font-size:8.0pt;font-family:&quot;Calibri&quot;,sans-serif;colo=
+r:#17365D">Telef. 266 502 105 <o:p></o:p></span></b></p><p class=3D"MsoNorm=
+al"><b><span lang=3D"EN-US" style=3D"font-size:8.0pt;font-family:&quot;Cali=
+bri&quot;,sans-serif;color:#17365D">NIF: 509 129 668<o:p></o:p></span></b><=
+/p><p class=3D"MsoNormal"><b><span lang=3D"EN-US" style=3D"font-size:8.0pt;=
+font-family:&quot;Calibri&quot;,sans-serif;color:#17365D;background:white">=
+LAT: 38.425046</span></b><b><span lang=3D"EN-US" style=3D"font-size:8.0pt;f=
+ont-family:&quot;Calibri&quot;,sans-serif;color:#17365D">&nbsp; LONG: -7.53=
+8434</span></b><b><span lang=3D"EN-US" style=3D"font-size:8.0pt;font-family=
+:&quot;Arial&quot;,sans-serif;color:#17365D"><br></span></b><b><span lang=
+=3D"EN-US" style=3D"font-family:&quot;Calibri&quot;,sans-serif;color:#17365=
+D">------------------------------------</span></b><b><span lang=3D"EN-US" s=
+tyle=3D"font-size:8.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:#1=
+7365D"><o:p></o:p></span></b></p><p class=3D"MsoNormal"><span style=3D"font=
+-size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif"><o:p>&nbsp;</o:p><=
+/span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-famil=
+y:&quot;Calibri&quot;,sans-serif;mso-fareast-language:EN-US"><o:p>&nbsp;</o=
+:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-f=
+amily:&quot;Calibri&quot;,sans-serif;mso-fareast-language:EN-US"><o:p>&nbsp=
+;</o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;fo=
+nt-family:&quot;Calibri&quot;,sans-serif;mso-fareast-language:EN-US"><o:p>&=
+nbsp;</o:p></span></p><div><div style=3D"border:none;border-top:solid #E1E1=
+E1 1.0pt;padding:3.0pt 0cm 0cm 0cm"><p class=3D"MsoNormal"><b><span style=
+=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif">De:</span>=
+</b><span style=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-se=
+rif"> Miguel Barbeitos &lt;Miguel.Barbeitos@deco.proteste.pt&gt; <br><b>Env=
+iada:</b> 24 de outubro de 2025 00:31<br><b>Cc:</b> morgadosan@gmail.com<br=
+><b>Assunto:</b> Pedido de Or=E7amento - Alojamento para Fam=EDlias (36 adu=
+ltos + 7 crian=E7as)<o:p></o:p></span></p></div></div><p class=3D"MsoNormal=
+"><o:p>&nbsp;</o:p></p><div style=3D"margin-top:12.0pt;margin-bottom:12.0pt=
+"><p class=3D"elementtoproof" style=3D"background:white"><span style=3D"fon=
+t-size:11.0pt;color:black">Boa noite.<br><br>Somos um grupo de fam=EDlias (=
+36 adultos e 7 crian=E7as) e estamos a planear uma estadia de 5 noites, ent=
+re 30 de dezembro de 2024 e 4 de janeiro de 2025.</span><o:p></o:p></p></di=
+v><div style=3D"margin-top:12.0pt;margin-bottom:12.0pt"><p class=3D"element=
+toproof" style=3D"background:white"><span style=3D"font-size:11.0pt;color:b=
+lack">Gostar=EDamos de saber se o vosso alojamento tem disponibilidade para=
+ nos receber nesse per=EDodo, preferencialmente em regime de exclusividade =
+ou com total privacidade.</span><o:p></o:p></p></div><div style=3D"margin-t=
+op:12.0pt;margin-bottom:12.0pt"><p class=3D"elementtoproof" style=3D"backgr=
+ound:white"><span style=3D"font-size:11.0pt;color:black">Agradec=EDamos que=
+ nos informassem sobre:<br>&#8211; Disponibilidade e capacidade m=E1xima;<b=
+r>&#8211; Condi=E7=F5es e pre=E7os para reserva em exclusividade ou ocupa=
+=E7=E3o total;<br>&#8211; Tarifas por noite e eventuais condi=E7=F5es espec=
+iais para grupos familiares;<br>&#8211; Servi=E7os inclu=EDdos (pequeno-alm=
+o=E7o, utiliza=E7=E3o de cozinha, piscina, zonas comuns, etc.).</span><o:p>=
+</o:p></p></div><div style=3D"margin-top:12.0pt;margin-bottom:12.0pt"><p cl=
+ass=3D"elementtoproof" style=3D"background:white"><span style=3D"font-size:=
+11.0pt;color:black">Caso necessitem de mais informa=E7=F5es, teremos todo o=
+ gosto em fornecer.</span><o:p></o:p></p></div><div style=3D"margin-top:12.=
+0pt;margin-bottom:12.0pt"><p class=3D"elementtoproof" style=3D"background:w=
+hite"><span style=3D"font-size:11.0pt;color:black">Agradecemos desde j=E1 a=
+ vossa aten=E7=E3o e aguardamos o vosso retorno.</span><o:p></o:p></p></div=
+><div style=3D"margin-top:12.0pt;margin-bottom:12.0pt"><p class=3D"elementt=
+oproof" style=3D"background:white"><span style=3D"font-size:11.0pt;color:bl=
+ack">Com os melhores cumprimentos,<br><br>&nbsp;Miguel&nbsp;<br>966144848</=
+span><o:p></o:p></p></div><div><p class=3D"MsoNormal"><span style=3D"font-s=
+ize:11.0pt;color:black"><o:p>&nbsp;</o:p></span></p></div><p class=3D"MsoNo=
+rmal"><span style=3D"border:solid windowtext 1.0pt;padding:0cm"><img border=
+=3D"0" width=3D"100" height=3D"100" style=3D"width:1.0416in;height:1.0416in=
+" id=3D"Imagem_x0020_1" src=3D"cid:~WRD0003.jpg" alt=3D"Imagem removida pel=
+o remetente."></span><span lang=3D"EN"><o:p></o:p></span></p><p><span lang=
+=3D"EN">-------------------------------------------------------------------=
+------------------------------------------ <br></span><b><span lang=3D"EN" =
+style=3D"font-size:10.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:=
+#8497B0">CONFIDENTIALITY NOTICE</span></b><span lang=3D"EN"> <br>This messa=
+ge contains confidential information and is intended only for the use of th=
+e recipient. <br>If you are not the intended recipient, please notify us im=
+mediately and delete this e-mail from your system. <br>We ask you not to di=
+sclose or distribute the content of this e-mail to any other person. <o:p><=
+/o:p></span></p></div></body></html>=
+
+------=_NextPart_001_009D_01DC44E9.1D5CEC10--
+
+------=_NextPart_000_009C_01DC44E9.1D5CEC10
+Content-Type: image/jpeg;
+	name="~WRD0003.jpg"
+Content-Transfer-Encoding: base64
+Content-ID: <~WRD0003.jpg>
+
+/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a
+HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIy
+MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCABkAGQDASIA
+AhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQA
+AAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3
+ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWm
+p6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEA
+AwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSEx
+BhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElK
+U1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3
+uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKA
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoo
+ooAKKKKACiiigAooooAKKKKACiiigD//2Q==
+
+------=_NextPart_000_009C_01DC44E9.1D5CEC10--

@@ -1,0 +1,592 @@
+Received: from DB4PR04MB11279.eurprd04.prod.outlook.com (2603:10a6:10:5e5::18)
+ by DB8PR04MB6747.eurprd04.prod.outlook.com with HTTPS; Mon, 13 Oct 2025
+ 18:44:14 +0000
+Received: from AS4P189CA0053.EURP189.PROD.OUTLOOK.COM (2603:10a6:20b:659::17)
+ by DB4PR04MB11279.eurprd04.prod.outlook.com (2603:10a6:10:5e5::18) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9203.12; Mon, 13 Oct
+ 2025 18:44:10 +0000
+Received: from AM3PEPF0000A79C.eurprd04.prod.outlook.com
+ (2603:10a6:20b:659:cafe::9e) by AS4P189CA0053.outlook.office365.com
+ (2603:10a6:20b:659::17) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9203.13 via Frontend Transport; Mon,
+ 13 Oct 2025 18:44:09 +0000
+Authentication-Results: spf=pass (sender IP is 2a00:1450:4864:20::329)
+ smtp.mailfrom=gmail.com; dkim=pass (signature was verified)
+ header.d=gmail.com;dmarc=pass action=none header.from=gmail.com;compauth=pass
+ reason=100
+Received-SPF: Pass (protection.outlook.com: domain of gmail.com designates
+ 2a00:1450:4864:20::329 as permitted sender) receiver=protection.outlook.com;
+ client-ip=2a00:1450:4864:20::329; helo=mail-wm1-x329.google.com; pr=C
+Received: from mail-wm1-x329.google.com (2a00:1450:4864:20::329) by
+ AM3PEPF0000A79C.mail.protection.outlook.com (2603:10a6:20f:fff4:0:6:0:b) with
+ Microsoft SMTP Server (version=TLS1_3, cipher=TLS_AES_256_GCM_SHA384) id
+ 15.20.9228.7 via Frontend Transport; Mon, 13 Oct 2025 18:44:09 +0000
+Received: by mail-wm1-x329.google.com with SMTP id 5b1f17b1804b1-46e3cdc1a6aso33607365e9.1
+        for <Miguel.Barbeitos@deco.proteste.pt>; Mon, 13 Oct 2025 11:44:09 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1760381049; x=1760985849; darn=deco.proteste.pt;
+        h=content-language:thread-index:mime-version:message-id:date:subject
+         :in-reply-to:references:cc:to:from:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=px2eYVPEvxTPd2UQHO/uV2+cQZviqmNgyFXuH6yotFc=;
+        b=AK6HlRLWyRSsCbEelp4dXZQCiBZr5EI6KKoPb+admjvzUgNQpYjd6uXPmTmgf7b8Cj
+         i3nfJxSI0PYeDEY8U4wHMcwlTnd1BWHtlR8Ic8cwa0cMJ8b1IUZmMpQmtqiL6+wq9mvi
+         jtfDTDFjcvHELnBlFEBdy24qA/DqE+vzYYa+vN58qCYButvMuxblnKBcrrCLlaB7SeoG
+         b33Slm7s5EBGOispc5Qf5l7QZGHcui+Am3b2SRt2MpGqK0fnm/kF4uPatusb1kCuz03i
+         jGuEe5xoSr0B3k4Pa3Bzq86lELdiu8E47DAzMWK4lcjStNMmnJqlHeerIyKjLAA/lLJU
+         Kf0g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1760381049; x=1760985849;
+        h=content-language:thread-index:mime-version:message-id:date:subject
+         :in-reply-to:references:cc:to:from:x-gm-message-state:from:to:cc
+         :subject:date:message-id:reply-to;
+        bh=px2eYVPEvxTPd2UQHO/uV2+cQZviqmNgyFXuH6yotFc=;
+        b=CQBNZcWGkhuH36/g2yJSjskXLvpz//rhP14NmueXdehzXv+LYmFhJZaTUZSeEO0K1n
+         eP8Ms4/efJPDgcGdgS1f/a4rKPgdZk2bpdVL2D7frsGmh+lLFoaQ8lIFu9yKEt6WlL/G
+         f042rrvqlgl2axcxSL97dauzJmhBcHZSbJLDvueqY5RueVua0bf8gebzhD5unhHF6+0R
+         uwEgnrddf+m66iKEb1yD0v2/sOu5B52o+xkJElUJseKRc1QCWmcAdNHFt/X7qI+8HWwO
+         JAaHpZ9RwR2iNs61P6vqkfuqKR1gNWHKB9jUE9tPrM5gjRdEgn/zvRygmq6E8BReDjlC
+         G9hg==
+X-Gm-Message-State: AOJu0Yxks1gSUtc+04mzgejiQyxNeLNuf6AuCUMdEw4x3LCL5PiqrVZ8
+	E6gZLlwVC6/JbXqthBtghiYZzKW2R2Gtw1MG1v9h7lzGHrb5x0/Qx/7k
+X-Gm-Gg: ASbGncvuqnVOypJi7m+J/wHXjWRnfylSTkcUiQGSADAnyuM3h0wz55jSGrhWDegLIeg
+	lAZpzO3+UPs6gdTA4Q4mW+zsRoo5DZqp5Y77XOfgEMTwGiF7bbrJ/lD2jK8nyqKpqt5zrTHtZor
+	Wkjv0S8wxC/y7VTFTFivkTxFWamcXgjquCkIJMFlQdOPIB47/xzayg3mIUFwAk0+hhVjXH9/APh
+	euJAvKBVEjxB9WB5k2jFPsvstKdXusAC3L0eYKAPbBrcPXlwRrEqBZBZvO52ZImBYAyBrvU8u7h
+	qna9qC6wWb1GZOvxvafbvz5Gr3wdzljF4pa6JnPHo0M2MAA/GclQ7xVLYRqjkAf4/mz0tmsJQqb
+	DZYZVs4KQLshNRbX/aGdIx3yUVkw0/xr4lGiyEVg/PEHeGybAZbpeVXhT
+X-Google-Smtp-Source: AGHT+IGk89wBU7m2QaJCl4/VNm99g8ngFcfic5v8VWVuPqqATR2z6fNe1akeMXKlFgEKe3q2k/6ESQ==
+X-Received: by 2002:a05:600c:1384:b0:46e:6339:79c5 with SMTP id 5b1f17b1804b1-46fa9e985e3mr171521165e9.5.1760381048963;
+        Mon, 13 Oct 2025 11:44:08 -0700 (PDT)
+Return-Path: casasdotoural1@gmail.com
+Received: from EFNLFOSORIO ([2001:8a0:ef8f:4300:783a:8bef:b12e:3b7e])
+        by smtp.gmail.com with ESMTPSA id 5b1f17b1804b1-46fab500706sm136284305e9.3.2025.10.13.11.44.07
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Mon, 13 Oct 2025 11:44:07 -0700 (PDT)
+From: "Casas do Toural" <casasdotoural1@gmail.com>
+To: "'Miguel Barbeitos'" <Miguel.Barbeitos@deco.proteste.pt>
+Cc: <casasdotoural1@gmail.com>
+References: <DB8PR04MB6747B18582EEA2B558BD8FD1ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+In-Reply-To: <DB8PR04MB6747B18582EEA2B558BD8FD1ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+Subject: =?utf-8?Q?RE:_Pedido_de_Or=C3=A7amento_=E2=80=93_Alojam?=
+	=?utf-8?Q?ento_para_Fam=C3=ADlias_=2836_adultos_+?=
+	=?utf-8?Q?_7_crian=C3=A7as?=
+Date: Mon, 13 Oct 2025 19:44:06 +0100
+Message-ID: <019d01dc3c71$5aee4d10$10cae730$@gmail.com>
+Content-Type: multipart/related;
+	boundary="----=_NextPart_000_019E_01DC3C79.BCB4FF00"
+X-Mailer: Microsoft Outlook 16.0
+Thread-Index: AQG3a4QHUOhowfrwT5zxGX84ZQZn3rUKC5Zg
+Content-Language: pt
+X-MS-Exchange-Organization-ExpirationStartTime: 13 Oct 2025 18:44:09.8793
+ (UTC)
+X-MS-Exchange-Organization-ExpirationStartTimeReason: OriginalSubmit
+X-MS-Exchange-Organization-ExpirationInterval: 1:00:00:00.0000000
+X-MS-Exchange-Organization-ExpirationIntervalReason: OriginalSubmit
+X-MS-Exchange-Organization-Network-Message-Id: ee8f2142-c47a-489b-d0a5-08de0a887f2e
+X-EOPAttributedMessage: 0
+X-EOPTenantAttributedMessage: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4:0
+X-MS-Exchange-Organization-MessageDirectionality: Incoming
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: AM3PEPF0000A79C:EE_|DB4PR04MB11279:EE_|DB8PR04MB6747:EE_
+X-MS-Exchange-Organization-AuthSource: AM3PEPF0000A79C.eurprd04.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Office365-Filtering-Correlation-Id: ee8f2142-c47a-489b-d0a5-08de0a887f2e
+X-MS-Exchange-AtpMessageProperties: SA|SL
+X-MS-Exchange-Organization-BypassClutter: True
+X-MS-Exchange-Organization-SCL: 1
+X-Microsoft-Antispam: BCL:0;ARA:13230040|7093399015|4053099003|4013099003|7053199007|13003099007|8096899003|4076899003;
+X-Forefront-Antispam-Report: CIP:2a00:1450:4864:20::329;CTRY:;LANG:pt;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:mail-wm1-x329.google.com;PTR:mail-wm1-x329.google.com;CAT:NONE;SFS:(13230040)(7093399015)(4053099003)(4013099003)(7053199007)(13003099007)(8096899003)(4076899003);DIR:INB;
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 13 Oct 2025 18:44:09.8220
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: ee8f2142-c47a-489b-d0a5-08de0a887f2e
+X-MS-Exchange-CrossTenant-Id: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4
+X-MS-Exchange-CrossTenant-AuthSource: AM3PEPF0000A79C.eurprd04.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DB4PR04MB11279
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:04.9690541
+X-MS-Exchange-Processed-By-BccFoldering: 15.20.9203.007
+X-Microsoft-Antispam-Mailbox-Delivery:
+	ucf:0;jmr:0;auth:0;dest:I;ENG:(910005)(944506478)(944626604)(920097)(930097)(140003);
+X-Microsoft-Antispam-Message-Info:
+	=?utf-8?B?Nlk3RS9vMlFUak5JRmdpbVd3ejNhUWlEOWxkWVRQVnozSlFVZkhCRHRCcHZ1?=
+ =?utf-8?B?WWVQNi9IaVBzVFlmMEtCRC9zQWJLSGU5Tk9GM0ovVjhUWTZjMzVpVldSeXVS?=
+ =?utf-8?B?ZU41blRuelNIQXc4ZlgvdWdJMytkZkJkU1RrVUZuaFpVTmowQ0Z4c2xYSXoy?=
+ =?utf-8?B?Q0kzUDc3dzluV3p5S0g1SldsSGd4bmZXWTNaL21rMUN1UVJQUkhlTnZXbGFh?=
+ =?utf-8?B?Yjk1NDMxaE1ITkFNd3lxckdtU0xNV3N3NzVFT3R5eXRaQmVUUUdlMjZ5TC82?=
+ =?utf-8?B?ZHVzYnU0WUhwZzQwQ01rdWs3cDRUL1dmUzdjVUs0UWtmZXZkWEh1ZnZhbmJo?=
+ =?utf-8?B?ZWNZVmhjSG5CeHIvVTFnQTFINXRnOWVWZVI3Q3ArcjlrdEtUNk1EeGpWaDRL?=
+ =?utf-8?B?REdqRUNNb1V0ZEU1N2FOY0ovQ3lzWFh0OXBRTktvKzN0QVYwaHAvRmlTdnNl?=
+ =?utf-8?B?bWJobXRkM2owMzFtNUQxRWUwM1ZDejNqN2l2Yyt3QnhIeXZyeTg2U0lnRFVw?=
+ =?utf-8?B?YjBGcTFheU02T2IwZnZ6eXJxRFgyMEZ3MENHZUFDZjBjSTNDZTEycUJEVTE1?=
+ =?utf-8?B?SjM5b2NIQjJHTW5Eb3ludHpsZWNtcGp1clZ6c1Q5QTFMNlhsSDdGeE9keHIz?=
+ =?utf-8?B?YU91MStWZ2FSeFN3aXRLVEVIYW1SQkhQWXRwYmVCVGRlOGRzR2pnMkJRVHM0?=
+ =?utf-8?B?UnRKNktST1VKWXoxMWxteEhtQTNCTm1yVitIYmVjeC9RSGo4RmxaR0paZENi?=
+ =?utf-8?B?T3FRZTg1TEN2dzRURE9DK3lkN2twYzhJa2F3WU9heEFXTEpKRG9QTThrSG5F?=
+ =?utf-8?B?Z0E2aWV3ZUdyTnhjMnhsTnB3aTdkMGJ1RFNsOWxQTlpPOTBKejdFRFJUVG5t?=
+ =?utf-8?B?VENNU084RWNmd1ozVjFRa1VXcVNmbkdyZWVQM2NLNGE3cGlsNTFwMG9mdU9H?=
+ =?utf-8?B?WlRzbHNuQm9lTjBleUpBWm1OeGFDT1I4U1dadXJYQmFiR0RuYnEvSGIxLzk0?=
+ =?utf-8?B?OGJnUUdoQ3VjM0hDdTUycS9CSDZzR0k2NXVSYnBIMGpQUjlzQS9XK0laR2ZS?=
+ =?utf-8?B?cCtodHgzTHdtdk5ldThxYTcyc01xbkRneVRKVzVtZy9na0Z2ZXRiZWtNQjll?=
+ =?utf-8?B?K244Vnh4L01ZRVFkVWZHTHZHRGhQNzdPNlJvbllqdUZvbFBVdE9DWU5qRURz?=
+ =?utf-8?B?SmdKYWZRZVZsVVZoV2N2TkdRKzlVTEhFVzFFNStCWVc4YXBScGFwTTVrQUN5?=
+ =?utf-8?B?SG5EeGROd2NNNTRCNXQ5MWkvOWU3bUNxMlRDM2dJVGZDR3JLV1phR0E3dEpl?=
+ =?utf-8?B?WDFBMi9yRjV0cnBnMTNLV3J3TFR4aElUanlDVER3aWU2Q1pUWGYxREYySExh?=
+ =?utf-8?B?ZmJSRFE3MUdhSlRBdDM2QlJ3b0t2bSt2eG91dHdyOGRWZElzMEpjUVNZRGd1?=
+ =?utf-8?B?R0VPMGRNN21zaUJ1VGV2U2tTcHFUUEQydU9YcjRCRU9SWEVxQ0E2Q0tHMVpj?=
+ =?utf-8?B?ejhRbnF2Q0U0R3BZNDhaUTZnY0I5RE5KWDg0c0tZNVNBQjZQVWxPNlIzUmVz?=
+ =?utf-8?B?cVQ4bzZpS3MyNWFwZmlOVHdWeVhvYmNRcW5NMk1uL3pVV0kxcUN6Z0o5Z0kw?=
+ =?utf-8?B?SWtHNkhkbnNPWXBjbGI3dWtZVFhqL1FKRHhWdUVzd1RDSG1KcXNYbGpWc0dz?=
+ =?utf-8?B?OGk4cnFXelo4d3Rvbkw2MXlUL1M4MVZra3FJUi9NYmY1YkpUcHh1SnorRlNB?=
+ =?utf-8?B?Rkt6L1cxc0kvSFYyQ0NLMEZQOVZkRzk2bnp1OVQ4WTNpY2FJM1pCN2MzSmJV?=
+ =?utf-8?B?eDFja2c1cDV3YWJuUDhnUld0dWRTVkN3TUxPSFR3WkdieVhjaCsxRXA5V1p0?=
+ =?utf-8?B?b25McGVqQnRyOEJNeHhGQVUzZG1QblNlVVNEbmFXdFFVSUdHcnA1ODVVcWNQ?=
+ =?utf-8?B?V3NvNDZuVTNONVFzR3pVU1pvaHZmMXNTQlZ3NUxwbVpHZ3NFUWkwbVNnc0Qv?=
+ =?utf-8?B?anRDSlJ5WkNZQTlWZ053WXV1VFVkV2tLYXdzY21MYktvRGJ3MCtPMXd6VDBh?=
+ =?utf-8?B?RGJiTlhwb21xRG1MczN4RXpYVThFYUpib2lPRG54V0lURzZqWHc1ZXk3eWZU?=
+ =?utf-8?B?NGdNczhJT0k5OUlRMTNQNVBNSFRnaDlnZ0FONmt5eUVhVEZuL0t2dWJha0ll?=
+ =?utf-8?B?S2N5S0xhN0V4bHVMWGI1UXdiZ1BxQ3U1UXhMZERadHV3TisvK3RCK1dyS0l3?=
+ =?utf-8?B?MWV1ZnhZUGdpOFZ5MHE0SzhNbjZ5S3lIMy84TWhMaXFSTC83SWNvRHU4TlA2?=
+ =?utf-8?B?WUlXMXVSQi9seEc5QXVPVklkN1FSRlBqT29xNWNMWk00QlQzZUFNOTg0U3BS?=
+ =?utf-8?B?MGNXZXhWK1IxRGNDMlBYL3lYQzkyRDVIVEZVb3VoZC9IYlNTazIyYVJiazFt?=
+ =?utf-8?B?bStYWEdoTHdNTmxud1JzcGtHNjZXeXhyNGxsM3YyQ2xZa0t3UHlhWjRoRkhR?=
+ =?utf-8?B?cm5peHowb0hxeDE2bHVQVXJsK3E5SzdrUDlNTVk2TXpvUTgxNXJsQVhtVVJ2?=
+ =?utf-8?B?NEwrV0RWMEhLeWtQUlRIRGRtZ253VXpKYVlWN1JUbTRDYjQ1bUljaHNzeXgx?=
+ =?utf-8?B?czRrS2lQSGFHbHljRzQ0TjU2THhUU0ljZjROcUxsYWJqL3BXUVNOa1pxRGFP?=
+ =?utf-8?B?RlpzMGhvZlBFclVuQmVjbkFhREZMcng5TXNCR1ZjUWx6VlpGZHFsVTNCZzcz?=
+ =?utf-8?B?SEdKaUtRdjRaTkpkbUtmYVFmbmpNQ01RWm9WZnl3UXMvQ0ZpVmhGY3pkaXhO?=
+ =?utf-8?B?RGVHS2FvRGdxUmJ6cEtTanllYzhteE5xMlcwdnVydXJkbWRSSEx5djNwU01H?=
+ =?utf-8?B?eCtUT1hrVE40ZzVYckpDMndMUT09?=
+MIME-Version: 1.0
+
+------=_NextPart_000_019E_01DC3C79.BCB4FF00
+Content-Type: multipart/alternative;
+	boundary="----=_NextPart_001_019F_01DC3C79.BCB4FF00"
+
+------=_NextPart_001_019F_01DC3C79.BCB4FF00
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Boa tarde
+
+=20
+
+Bem haja pela Vossa consulta.
+
+Desculpe o atraso na resposta.
+
+Temos neste momento disponibilidade para 46 pessoas. Temos:
+
+=20
+
+2 T0 -  Casa da C=C3=A2ndida 1 cama de casal              - 2 Pax        =
+85=E2=82=AC por noite
+
+             Casa da Eva 2 camas individuais                  - 2Pax     =
+   85=E2=82=AC por noite=20
+
+2 T1 =E2=80=93 Casa das Framboesas 1 cama de casal    - 2 Pax       =
+95=E2=82=AC por noite
+
+             Casa da Cerejeiras 1 cama de casal          - 2 Pax       =
+95=E2=82=AC por noite
+
+3 T2 =E2=80=93 Casa da Lurdes 1 cama de casal                 - 2 Pax    =
+ 150=E2=82=AC por noite                                              =20
+
+                                               2 camas individuais       =
+   - 2Pax
+
+          Casa da Palheira 1 cama de casal                 - 2 Pax     =
+150=E2=82=AC por noite                                                =20
+
+                                               2 camas individuais       =
+   - 2Pax
+
+           Casa do caseiro 1 cama de casal                  - 2 Pax     =
+150=E2=82=AC por noite                                              =20
+
+                                               2 camas individuais       =
+   - 2Pax
+
+2 T3 =E2=80=93 Casa do Feitor 1 cama de casal                    - 2 Pax =
+     210=E2=82=AC por noite                                              =
+=20
+
+                                            4 camas individuais          =
+   - 4 Pax
+
+           Cas do Balc=C3=A3o 1 cama de casal                      - 2 =
+Pax    210=E2=82=AC por noite                                            =
+  =20
+
+                                          4 camas individuais            =
+   - 4 Pax
+
+1 T7 =E2=80=93 Casa da Fonte 2 cama de casal                     - 4 Pax =
+   520=E2=82=AC por noite                                              =20
+
+                                            10 camas individuais         =
+ - 10 Pax
+
+                                                                   TOTAL =
+                 - 46 Pax
+
+=20
+
+N=C3=A3o temos de momento servi=C3=A7o de pequenos almo=C3=A7os.
+
+Todas as casas tem cozinha ou kitchenette.
+
+Pode visualizar as casas em www.casasdotoural.pt =
+<http://www.casasdotoural.pt>=20
+
+=20
+
+Com os melhores cumprimentos=20
+
+Filipe Os=C3=B3rio
+
+Casas do Toural, Lda.
+
+Alameda das Linhas de Torres 124 4=C2=BA
+
+1750-148 Lisboa/Portugal
+
+M. +351933926623
+
+www.casasdotoural.pt <http://www.casasdotoural.pt> =20
+
+=20
+
+=20
+
+=20
+
+De: Miguel Barbeitos <Miguel.Barbeitos@deco.proteste.pt>=20
+Enviada: 11 de outubro de 2025 12:49
+Cc: morgadosan@gmail.com
+Assunto: Pedido de Or=C3=A7amento =E2=80=93 Alojamento para =
+Fam=C3=ADlias (36 adultos + 7 crian=C3=A7as
+
+=20
+
+Somos um grupo de fam=C3=ADlias (36 adultos e 7 crian=C3=A7as) e estamos =
+a planear uma estadia de 5 noites, entre 30 de dezembro de 2024 e 4 de =
+janeiro de 2025.
+
+Gostar=C3=ADamos de saber se o vosso alojamento tem disponibilidade para =
+nos receber nesse per=C3=ADodo, preferencialmente em regime de =
+exclusividade ou com total privacidade.
+
+Agradec=C3=ADamos que nos informassem sobre:
+=E2=80=93 Disponibilidade e capacidade m=C3=A1xima;
+=E2=80=93 Condi=C3=A7=C3=B5es e pre=C3=A7os para reserva em =
+exclusividade ou ocupa=C3=A7=C3=A3o total;
+=E2=80=93 Tarifas por noite e eventuais condi=C3=A7=C3=B5es especiais =
+para grupos familiares;
+=E2=80=93 Servi=C3=A7os inclu=C3=ADdos (pequeno-almo=C3=A7o, =
+utiliza=C3=A7=C3=A3o de cozinha, piscina, zonas comuns, etc.).
+
+Caso necessitem de mais informa=C3=A7=C3=B5es, teremos todo o gosto em =
+fornecer.
+
+Agradecemos desde j=C3=A1 a vossa aten=C3=A7=C3=A3o e aguardamos o vosso =
+retorno.
+
+Com os melhores cumprimentos,
+
+ Miguel=20
+966144848
+
+
+
+-------------------------------------------------------------------------=
+------------------------------------=20
+CONFIDENTIALITY NOTICE=20
+This message contains confidential information and is intended only for =
+the use of the recipient.=20
+If you are not the intended recipient, please notify us immediately and =
+delete this e-mail from your system.=20
+We ask you not to disclose or distribute the content of this e-mail to =
+any other person.=20
+
+
+------=_NextPart_001_019F_01DC3C79.BCB4FF00
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8">
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
+osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
+//www.w3.org/TR/REC-html40"><head><meta name=3D"Generator" content=3D"Micro=
+soft Word 15 (filtered medium)"><!--[if !mso]><style>v\:* {behavior:url(#de=
+fault#VML);}
+o\:* {behavior:url(#default#VML);}
+w\:* {behavior:url(#default#VML);}
+.shape {behavior:url(#default#VML);}
+</style><![endif]--><style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+@font-face
+	{font-family:Aptos;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0cm;
+	font-size:12.0pt;
+	font-family:"Aptos",sans-serif;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:#467886;
+	text-decoration:underline;}
+span.EstiloCorreioEletrnico19
+	{mso-style-type:personal-reply;
+	font-family:"Aptos",sans-serif;
+	color:windowtext;}
+p.xmsonormal, li.xmsonormal, div.xmsonormal
+	{mso-style-name:x_msonormal;
+	margin:0cm;
+	font-size:11.0pt;
+	font-family:"Calibri",sans-serif;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-size:10.0pt;
+	mso-ligatures:none;}
+@page WordSection1
+	{size:612.0pt 792.0pt;
+	margin:70.85pt 3.0cm 70.85pt 3.0cm;}
+div.WordSection1
+	{page:WordSection1;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext=3D"edit">
+<o:idmap v:ext=3D"edit" data=3D"1" />
+</o:shapelayout></xml><![endif]--></head><body lang=3D"PT" link=3D"#467886"=
+ vlink=3D"#96607D" style=3D"word-wrap:break-word"><div class=3D"WordSection=
+1"><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-fareast-langu=
+age:EN-US">Boa tarde<o:p></o:p></span></p><p class=3D"MsoNormal"><span styl=
+e=3D"font-size:11.0pt;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></span><=
+/p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-fareast-langu=
+age:EN-US">Bem haja pela Vossa consulta.<o:p></o:p></span></p><p class=3D"M=
+soNormal"><span style=3D"font-size:11.0pt;mso-fareast-language:EN-US">Descu=
+lpe o atraso na resposta.<o:p></o:p></span></p><p class=3D"MsoNormal"><span=
+ style=3D"font-size:11.0pt;mso-fareast-language:EN-US">Temos neste momento =
+disponibilidade para 46 pessoas. Temos:<o:p></o:p></span></p><p class=3D"Ms=
+oNormal"><span style=3D"font-size:11.0pt;mso-fareast-language:EN-US"><o:p>&=
+nbsp;</o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0p=
+t;mso-fareast-language:EN-US">2 T0 -&nbsp; Casa da C=C3=A2ndida 1 cama de c=
+asal&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbs=
+p;&nbsp;- 2 Pax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 85=E2=82=AC por n=
+oite<o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:1=
+1.0pt;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Casa da Eva 2 camas individuais&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &n=
+bsp;&nbsp;&nbsp;- 2Pax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 85=E2=82=
+=AC por noite <o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"f=
+ont-size:11.0pt;mso-fareast-language:EN-US">2 T1 =E2=80=93 Casa das Framboe=
+sas 1 cama de casal&nbsp; &nbsp;&nbsp;- 2 Pax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp; 95=E2=82=AC por noite<o:p></o:p></span></p><p class=3D"MsoNormal"><s=
+pan style=3D"font-size:11.0pt;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Casa da Cerejeiras =
+1 cama de casal&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;- 2 P=
+ax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 95=E2=82=AC por noite<o:p></o:p></sp=
+an></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-fareast-l=
+anguage:EN-US">3 T2 =E2=80=93 Casa da Lurdes 1 cama de casal&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp; - 2 Pax&nbsp;&nbsp;&nbsp;&nbsp; 150=E2=82=AC por noite&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <o:p></o:p></span></p><p class=3D"Mso=
+Normal"><span style=3D"font-size:11.0pt;mso-fareast-language:EN-US">&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2 camas individuais&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - 2Pax<o:p></o:p></span></=
+p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-fareast-langua=
+ge:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Casa da Pa=
+lheira 1 cama de casal&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - 2 Pax&nbsp;&nbsp;&nbsp;&nbsp;=
+ 150=E2=82=AC por noite&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp; <o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"fon=
+t-size:11.0pt;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;2 camas individuais&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp; - 2Pax<o:p></o:p></span></p><p class=3D"MsoNormal"><=
+span style=3D"font-size:11.0pt;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Casa do caseiro 1 cama de casa=
+l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp; - 2 Pax&nbsp;&nbsp;&nbsp;&nbsp; 150=E2=82=AC p=
+or noite&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <o:p></o:p></sp=
+an></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-fareast-l=
+anguage:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2 c=
+amas individuais&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - 2P=
+ax<o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.=
+0pt;mso-fareast-language:EN-US">2 T3 =E2=80=93 Casa do Feitor 1 cama de cas=
+al&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - 2 Pax&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp; 210=E2=82=AC por noite&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp; <o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:1=
+1.0pt;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4 =
+camas individuais&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp; - 4 Pax<o:p></o:p></span></p><p class=3D"MsoNormal"><span st=
+yle=3D"font-size:11.0pt;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Cas do Balc=C3=A3o 1 cama de casal&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - 2 Pax&nbsp;&nbsp;&nbsp; =
+210=E2=82=AC por noite&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <=
+o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt=
+;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4 camas individuais=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp; - 4 Pax<o:p></o:p></span></p><p class=3D"MsoNormal"><span style=
+=3D"font-size:11.0pt;mso-fareast-language:EN-US">1 T7 =E2=80=93 Casa da Fon=
+te 2 cama de casal&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - 4 Pax&nbs=
+p;&nbsp; &nbsp;520=E2=82=AC por noite&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp; <o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"f=
+ont-size:11.0pt;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;10 camas individuais&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp; - 10 Pax<o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D=
+"font-size:11.0pt;mso-fareast-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; TOTAL&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp; - 46 Pax<o:p></o:p></span></p><p class=3D"MsoNorm=
+al"><span style=3D"font-size:11.0pt;mso-fareast-language:EN-US"><o:p>&nbsp;=
+</o:p></span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso=
+-fareast-language:EN-US">N=C3=A3o temos de momento servi=C3=A7o de pequenos=
+ almo=C3=A7os.<o:p></o:p></span></p><p class=3D"MsoNormal"><span style=3D"f=
+ont-size:11.0pt;mso-fareast-language:EN-US">Todas as casas tem cozinha ou k=
+itchenette.<o:p></o:p></span></p><p class=3D"xmsonormal"><span style=3D"fon=
+t-size:14.0pt">Pode visualizar as casas em <span style=3D"color:#1F497D"><a=
+ href=3D"http://www.casasdotoural.pt">www.casasdotoural.pt</a><o:p></o:p></=
+span></span></p><p class=3D"xmsonormal"><span style=3D"font-size:14.0pt;col=
+or:#1F497D"><o:p>&nbsp;</o:p></span></p><p class=3D"xmsonormal"><span style=
+=3D"font-size:14.0pt;color:#1F497D">Com os melhores cumprimentos</span> <o:=
+p></o:p></p><p class=3D"xmsonormal"><span style=3D"font-size:14.0pt;color:#=
+1F497D">Filipe Os=C3=B3rio</span><o:p></o:p></p><p class=3D"xmsonormal"><sp=
+an style=3D"font-size:14.0pt;color:#1F497D">Casas do Toural, Lda.</span><o:=
+p></o:p></p><p class=3D"xmsonormal"><span style=3D"color:#1F497D">Alameda d=
+as Linhas de Torres 124 4=C2=BA</span><o:p></o:p></p><p class=3D"xmsonormal=
+"><span style=3D"color:#1F497D">1750-148 Lisboa/Portugal</span><o:p></o:p><=
+/p><p class=3D"xmsonormal"><span style=3D"color:#1F497D">M. +351933926623</=
+span><o:p></o:p></p><p class=3D"xmsonormal"><a href=3D"http://www.casasdoto=
+ural.pt">www.casasdotoural.pt</a> <o:p></o:p></p><p class=3D"MsoNormal"><sp=
+an style=3D"font-size:11.0pt;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p><=
+/span></p><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-fareas=
+t-language:EN-US"><o:p>&nbsp;</o:p></span></p><p class=3D"MsoNormal"><span =
+style=3D"font-size:11.0pt;mso-fareast-language:EN-US"><o:p>&nbsp;</o:p></sp=
+an></p><div><div style=3D"border:none;border-top:solid #E1E1E1 1.0pt;paddin=
+g:3.0pt 0cm 0cm 0cm"><p class=3D"MsoNormal"><b><span style=3D"font-size:11.=
+0pt;font-family:&quot;Calibri&quot;,sans-serif">De:</span></b><span style=
+=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif"> Miguel Ba=
+rbeitos &lt;Miguel.Barbeitos@deco.proteste.pt&gt; <br><b>Enviada:</b> 11 de=
+ outubro de 2025 12:49<br><b>Cc:</b> morgadosan@gmail.com<br><b>Assunto:</b=
+> Pedido de Or=C3=A7amento =E2=80=93 Alojamento para Fam=C3=ADlias (36 adul=
+tos + 7 crian=C3=A7as<o:p></o:p></span></p></div></div><p class=3D"MsoNorma=
+l"><o:p>&nbsp;</o:p></p><div style=3D"margin-top:12.0pt;margin-bottom:12.0p=
+t"><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;color:black">Somo=
+s um grupo de fam=C3=ADlias (36 adultos e 7 crian=C3=A7as) e estamos a plan=
+ear uma estadia de 5 noites, entre 30 de dezembro de 2024 e 4 de janeiro de=
+ 2025.<o:p></o:p></span></p></div><div style=3D"margin-top:12.0pt;margin-bo=
+ttom:12.0pt"><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;color:b=
+lack">Gostar=C3=ADamos de saber se o vosso alojamento tem disponibilidade p=
+ara nos receber nesse per=C3=ADodo, preferencialmente em regime de exclusiv=
+idade ou com total privacidade.<o:p></o:p></span></p></div><div style=3D"ma=
+rgin-top:12.0pt;margin-bottom:12.0pt"><p class=3D"MsoNormal"><span style=3D=
+"font-size:11.0pt;color:black">Agradec=C3=ADamos que nos informassem sobre:=
+<br>=E2=80=93 Disponibilidade e capacidade m=C3=A1xima;<br>=E2=80=93 Condi=
+=C3=A7=C3=B5es e pre=C3=A7os para reserva em exclusividade ou ocupa=C3=A7=
+=C3=A3o total;<br>=E2=80=93 Tarifas por noite e eventuais condi=C3=A7=C3=B5=
+es especiais para grupos familiares;<br>=E2=80=93 Servi=C3=A7os inclu=C3=AD=
+dos (pequeno-almo=C3=A7o, utiliza=C3=A7=C3=A3o de cozinha, piscina, zonas c=
+omuns, etc.).<o:p></o:p></span></p></div><div style=3D"margin-top:12.0pt;ma=
+rgin-bottom:12.0pt"><p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;=
+color:black">Caso necessitem de mais informa=C3=A7=C3=B5es, teremos todo o =
+gosto em fornecer.<o:p></o:p></span></p></div><div style=3D"margin-top:12.0=
+pt;margin-bottom:12.0pt"><p class=3D"MsoNormal"><span style=3D"font-size:11=
+.0pt;color:black">Agradecemos desde j=C3=A1 a vossa aten=C3=A7=C3=A3o e agu=
+ardamos o vosso retorno.<o:p></o:p></span></p></div><div style=3D"margin-to=
+p:12.0pt;margin-bottom:12.0pt"><p class=3D"MsoNormal"><span style=3D"font-s=
+ize:11.0pt;color:black">Com os melhores cumprimentos,<br><br>&nbsp;Miguel&n=
+bsp;<br>966144848<o:p></o:p></span></p></div><p class=3D"MsoNormal"><span s=
+tyle=3D"border:solid windowtext 1.0pt;padding:0cm"><img border=3D"0" width=
+=3D"100" height=3D"100" style=3D"width:1.0416in;height:1.0416in" id=3D"Imag=
+em_x0020_1" src=3D"cid:~WRD0001.jpg" alt=3D"Imagem removida pelo remetente.=
+"></span><span lang=3D"EN"><o:p></o:p></span></p><p><span lang=3D"EN">-----=
+---------------------------------------------------------------------------=
+----------------------------- <br></span><b><span lang=3D"EN" style=3D"font=
+-size:10.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:#8497B0">CONF=
+IDENTIALITY NOTICE</span></b><span lang=3D"EN"> <br>This message contains c=
+onfidential information and is intended only for the use of the recipient. =
+<br>If you are not the intended recipient, please notify us immediately and=
+ delete this e-mail from your system. <br>We ask you not to disclose or dis=
+tribute the content of this e-mail to any other person. <o:p></o:p></span><=
+/p></div></body></html>=
+
+------=_NextPart_001_019F_01DC3C79.BCB4FF00--
+
+------=_NextPart_000_019E_01DC3C79.BCB4FF00
+Content-Type: image/jpeg; name="~WRD0001.jpg"
+Content-Transfer-Encoding: base64
+Content-ID: <~WRD0001.jpg>
+
+/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a
+HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIy
+MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCABkAGQDASIA
+AhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQA
+AAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3
+ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWm
+p6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEA
+AwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSEx
+BhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElK
+U1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3
+uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKA
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoo
+ooAKKKKACiiigAooooAKKKKACiiigD//2Q==
+
+------=_NextPart_000_019E_01DC3C79.BCB4FF00--

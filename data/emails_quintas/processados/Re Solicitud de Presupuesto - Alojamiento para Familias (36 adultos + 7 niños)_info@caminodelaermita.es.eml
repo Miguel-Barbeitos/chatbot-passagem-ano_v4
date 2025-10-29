@@ -1,0 +1,295 @@
+Received: from VE1PR04MB7487.eurprd04.prod.outlook.com (2603:10a6:800:1a2::13)
+ by DB8PR04MB6747.eurprd04.prod.outlook.com with HTTPS; Mon, 27 Oct 2025
+ 06:05:30 +0000
+Received: from AM9P250CA0029.EURP250.PROD.OUTLOOK.COM (2603:10a6:20b:21c::34)
+ by VE1PR04MB7487.eurprd04.prod.outlook.com (2603:10a6:800:1a2::13) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9253.18; Mon, 27 Oct
+ 2025 06:05:28 +0000
+Received: from AMS0EPF000001B0.eurprd05.prod.outlook.com
+ (2603:10a6:20b:21c:cafe::ea) by AM9P250CA0029.outlook.office365.com
+ (2603:10a6:20b:21c::34) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9253.15 via Frontend Transport; Mon,
+ 27 Oct 2025 06:05:28 +0000
+Authentication-Results: spf=pass (sender IP is 185.254.206.204)
+ smtp.mailfrom=caminodelaermita.es; dkim=pass (signature was verified)
+ header.d=caminodelaermita.es;dmarc=pass action=none
+ header.from=caminodelaermita.es;compauth=pass reason=100
+Received-SPF: Pass (protection.outlook.com: domain of caminodelaermita.es
+ designates 185.254.206.204 as permitted sender)
+ receiver=protection.outlook.com; client-ip=185.254.206.204;
+ helo=heracloud.pecesgordosestudio.es; pr=C
+Received: from heracloud.pecesgordosestudio.es (185.254.206.204) by
+ AMS0EPF000001B0.mail.protection.outlook.com (10.167.16.164) with Microsoft
+ SMTP Server (version=TLS1_3, cipher=TLS_AES_256_GCM_SHA384) id 15.20.9275.10
+ via Frontend Transport; Mon, 27 Oct 2025 06:05:27 +0000
+Received: from mail-pj1-f45.google.com (unknown [209.85.216.45])
+	by heracloud.pecesgordosestudio.es (Postfix) with ESMTPSA id 729456E3FF
+	for <Miguel.Barbeitos@deco.proteste.pt>; Sat, 25 Oct 2025 18:40:18 +0200 (CEST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=caminodelaermita.es;
+	s=default; t=1761410418;
+	bh=y0KgS7MlQAL1YDhuG5k11ZpFsA8pVg7O9/n+pkYRrdA=;
+	h=Received:From:Subject:To;
+	b=0zgdSJU+znY1kYYxM9WW7gDPTQOb65fKgRn/Vd0qseiXTjFHio4Hu3/KBEfsYSwfR
+	 PtGYyA2XPlGU14rzNbc0KsDhKcoDS37gTfHa2spyU359yLv4KEYYNGvnpLcjTS4tj9
+	 X5QsLcWcZoT4qnWMhA+gS42z+Ax5VOE5oY/a7ZPA=
+Authentication-Results-Original: heracloud.pecesgordosestudio.es;
+        spf=pass (sender IP is 209.85.216.45)
+ smtp.mailfrom=info@caminodelaermita.es smtp.helo=mail-pj1-f45.google.com
+Received-SPF: pass (heracloud.pecesgordosestudio.es: connection is authenticated)
+Received: by mail-pj1-f45.google.com with SMTP id
+ 98e67ed59e1d1-33ba2f134f1so3053095a91.2
+        for <Miguel.Barbeitos@deco.proteste.pt>;
+ Sat, 25 Oct 2025 09:40:18 -0700 (PDT)
+X-Gm-Message-State: AOJu0YxI3nWeApjIoMbOXbhLTK+Nu2Bjp5g1FTJBXPucBiXpKXU72v/n
+	NEqS/HayInwbIN/Zdn0a8tK/HkdgZ338fcGSVjVDJyNpJYBc32T2tFw/ewKY1FnOEJNV8oj2ity
+	K6qRVu2Tu8D/hpWt4zUhwaYHTXpviBxM=
+X-Google-Smtp-Source: AGHT+IFwzt9uXNhpnlsEyLM8w0YQTfwjNPoNhy85U2F8FucAa+BRMzIxLufONBBf1wYmMwiOn5B5F9Hvf3qt+rpXw0U=
+X-Received: by 2002:a17:90b:28c4:b0:32e:5646:d43f with SMTP id
+ 98e67ed59e1d1-33bcf8e96d3mr41709588a91.19.1761410416925; Sat, 25 Oct 2025
+ 09:40:16 -0700 (PDT)
+References: <DB8PR04MB67470E60FC4544635CAC7965ABF1A@DB8PR04MB6747.eurprd04.prod.outlook.com>
+In-Reply-To: <DB8PR04MB67470E60FC4544635CAC7965ABF1A@DB8PR04MB6747.eurprd04.prod.outlook.com>
+From: Camino de la ermita <info@caminodelaermita.es>
+Date: Sat, 25 Oct 2025 18:40:06 +0200
+X-Gmail-Original-Message-ID: <CAGfK9FK9u7XAkVDaJqOGvGR=045bT=291YpeKhQh+EvMh0mDpA@mail.gmail.com>
+X-Gm-Features: AWmQ_bn2SKs6A8vecTeG63NGRu36NHMqEdSg5DY8XHIqEsUjq8n_ghA5ZaVA9ug
+Message-ID: <CAGfK9FK9u7XAkVDaJqOGvGR=045bT=291YpeKhQh+EvMh0mDpA@mail.gmail.com>
+Subject: =?UTF-8?Q?Re=3A_Solicitud_de_Presupuesto_=2D_Alojamiento_para_Fami?=
+	=?UTF-8?Q?lias_=2836_adultos_=2B_7_ni=C3=B1os=29?=
+To: Miguel Barbeitos <Miguel.Barbeitos@deco.proteste.pt>
+Content-Type: multipart/alternative; boundary="0000000000003462ca0641fe526b"
+X-PPP-Message-ID: <176141041867.7909.2251065790843098395@heracloud.pecesgordosestudio.es>
+X-PPP-Vhost: caminodelaermita.es
+Return-Path: info@caminodelaermita.es
+X-MS-Exchange-Organization-ExpirationStartTime: 27 Oct 2025 06:05:27.9281
+ (UTC)
+X-MS-Exchange-Organization-ExpirationStartTimeReason: OriginalSubmit
+X-MS-Exchange-Organization-ExpirationInterval: 1:00:00:00.0000000
+X-MS-Exchange-Organization-ExpirationIntervalReason: OriginalSubmit
+X-MS-Exchange-Organization-Network-Message-Id: 3ea4583e-a3f1-4d3f-ce36-08de151ed3c4
+X-EOPAttributedMessage: 0
+X-EOPTenantAttributedMessage: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4:0
+X-MS-Exchange-Organization-MessageDirectionality: Incoming
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: AMS0EPF000001B0:EE_|VE1PR04MB7487:EE_|DB8PR04MB6747:EE_
+X-MS-Exchange-Organization-AuthSource: AMS0EPF000001B0.eurprd05.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Office365-Filtering-Correlation-Id: 3ea4583e-a3f1-4d3f-ce36-08de151ed3c4
+X-MS-Exchange-AtpMessageProperties: SA|SL
+X-MS-Exchange-Organization-BypassClutter: True
+X-MS-Exchange-Organization-SCL: 1
+X-Microsoft-Antispam: BCL:0;ARA:13230040|69100299015|43022699015|7053199007|4076899003|8096899003;
+X-Forefront-Antispam-Report: CIP:185.254.206.204;CTRY:ES;LANG:es;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:heracloud.pecesgordosestudio.es;PTR:heracloud.pecesgordosestudio.es;CAT:NONE;SFS:(13230040)(69100299015)(43022699015)(7053199007)(4076899003)(8096899003);DIR:INB;
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 27 Oct 2025 06:05:27.8210
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: 3ea4583e-a3f1-4d3f-ce36-08de151ed3c4
+X-MS-Exchange-CrossTenant-Id: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4
+X-MS-Exchange-CrossTenant-AuthSource: AMS0EPF000001B0.eurprd05.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: VE1PR04MB7487
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:02.3924655
+X-MS-Exchange-Processed-By-BccFoldering: 15.20.9253.009
+X-Microsoft-Antispam-Mailbox-Delivery:
+	ucf:0;jmr:0;auth:0;dest:I;ENG:(910005)(944506478)(944626604)(920097)(930097)(140003);
+X-Microsoft-Antispam-Message-Info:
+	=?utf-8?B?Nk9ESzgxbXhWMXNMSzVnVFFYVW40dVdlQm9nUFdaNWtEZ0dhZ2o4WmJMYnda?=
+ =?utf-8?B?NXQwd0dGYkNjM3BBUlFoVzJDK2RpL2lLL1VTTlE3cjhuU1FxVlgzZHBpR0V3?=
+ =?utf-8?B?WkMxUlNMT0dwd0VrVTk1ODAxY2NSU0VZRFVLOU1keUllak81WkpzUHAzRTdN?=
+ =?utf-8?B?cW5aak1VTHovTDFzaUZKQWZBTStmTTZzMnRMRXgvZmpxUmJ5QlRndUlrSGJj?=
+ =?utf-8?B?OUJVTnRxbi83Zmw1cUc0QUtiUzUyZEhmM2wxOS9QaWkyOG1RSG1tcVhPdnJN?=
+ =?utf-8?B?YWV5TkxxVDdaSlhTNDg5OEUwVEJGRE96ZmdzUGI1Qy9LaS9SNHphK3VwRm9V?=
+ =?utf-8?B?TkxoWXhuUkFRNWw2SXQvbnIrZHhYVVNNWU1XY3FoUTErS3dnUDBCZW5RanJn?=
+ =?utf-8?B?Q0gwQXg4WTgzU01UcjgrY2dVWlNQa0JRMzJUZWxnV3Q1L1o5YUtyVU0yMGhl?=
+ =?utf-8?B?Q1dxRHpFMTlRdGVja2dhSnJuVGRaKy9FbCt6UkRKQXJPUDQ5TUdhRkRKL3hk?=
+ =?utf-8?B?V0NmelR5STZ6cEp6bXFocGwwNm9kYlVDWm82NXJhaGNXbW1GZXlRYkhQajNw?=
+ =?utf-8?B?aTliMWM3WTRITVhZRllaL3V3TXlOVkh6U1lleXlnNTZjcEdmVlFYbGw3d1Fi?=
+ =?utf-8?B?d1U3WkZDcUpYbTc4WUpsMC8vaytkb3ZHMCtNWHdOS3orNzlYdkJBSE1sUEVM?=
+ =?utf-8?B?bTRBd3J6M01oaFFrdExWZS9jYzU5L2htb1BVcGxWdGs0Nmt2TkwrbldOOGho?=
+ =?utf-8?B?eWVwTHV0NERDMzgyajgrYzVZYUFvbCtMVDN6N2Y0YnlJUEpoT2IyUlI4VDJw?=
+ =?utf-8?B?YlUzVmxmODdyRTlqT0xhV3FjcjJhTkNBZ0J1K1IxNUIxZzBTOW5ybHc3dWFL?=
+ =?utf-8?B?eWt3WTAyS21ZL0QycjI3ajhSUm5KaWJ0eHBId3hZdjVlRUlFQTJHcHlSM2hn?=
+ =?utf-8?B?bURmYmxMV1RLTlQvL2kvbEdObGs5bHg0RWFBWUo4M3RhbmwxZEFBaTlHNm5J?=
+ =?utf-8?B?dTFJWE9EYkVsWGlYb1hZUk85bHZvTTdjTndwNXhadnpUQzUrZmphaXE5SkJV?=
+ =?utf-8?B?cDB4ZGkwOFMvNHp3S3o5Vm45Q21vS2llSXNnOHhVejNqaUhZZGRqdWw5Ym9o?=
+ =?utf-8?B?OTRvdGhFblYwYVlGN2xuZWxaWnFuU1E3R2RDSEhobzVPclNIcU1HRWRaOHlT?=
+ =?utf-8?B?V2h6NUNvVkZWUWFMOUVCRkVZOHFVc3c3MWtmaEFrb2tQTEMxYkNZdDA1ekJ2?=
+ =?utf-8?B?SjNtQ3pUT0RxRVdNZm5DSWJCRWl6K0VwZnFxczBwY2Vhb1NaeEVGdVZiWVZn?=
+ =?utf-8?B?ZzVENDkyWUttUnA1cnZOWXU1c0gvTlJDQlMzQjZkb2dxbG41NXRzc0ZmNWJm?=
+ =?utf-8?B?ZDF2ZkR5MGRqdUlUaFBoOGFQaDIyTURYSFMzSGx3YXYwekxINVQ0aVZHQm5T?=
+ =?utf-8?B?aXc3Ykxwdkl0SHo5dGZxaHRBNFIyVi9FRVBRNXB2cUJqQmluclBzcU5WS1pO?=
+ =?utf-8?B?cFFCTmNnUDN2ay9idFZMd2FVNEQyaGJ6MXJXYlE0c2VleWpVSzZFanR3QUlG?=
+ =?utf-8?B?YU0wVE9lVnQvYXN0UFV5YzN1L0NGT2g4bjJYMFhGQ05xYzZKeGpWZ0VRdFRG?=
+ =?utf-8?B?ZnBtRUpsTUdNNnF2cUovN1hpTTNVVUVtRktuLysrd2hXaGJQYThJN2NtclBh?=
+ =?utf-8?B?ajB6bUlvWnRaQVQrcG5rR2FFWlFiaVZ1VEZTR3RWckpid29qV0N1dXgzSDlx?=
+ =?utf-8?B?M3l2QXFMMWZkWVBEaUd2ekcySWd1aFgwRDlQcFcrUGUzNy9mRlJ0c2hKVDNM?=
+ =?utf-8?B?cU9ESGQ4cGZLL3luTFJyaUkvd29JdUxGdVZyaVBnUXRLcVRaVXFJQUM3RDFF?=
+ =?utf-8?B?Z2VmRkVRM052UmNlRFQvOHlxb2o2Q1lVSlpvSU9JbjdMSUw4YndmS0NZWHgv?=
+ =?utf-8?B?WWJvbWdMZ1hNSmZLZ3NWK0p0S2REU0FrckxSQlJHZ1dFeXhUcWxHQURPUFp1?=
+ =?utf-8?B?NGNabWVKODhvc2FZOXBYcytwNW16eG9iOUsyT08xbkpSSWUzOEpscU5YYk55?=
+ =?utf-8?B?YnY5ekUwRm1pOFJ3ZVcwd0xyUWVYZUZRZVY3eXJ1ZE5UejR4SFArLy92K1FN?=
+ =?utf-8?B?bUUrSUdLYkY1VHlMVHlnUmdrd0k3SjBYaHhlU1IyNzRQY1htNU5RejkxK255?=
+ =?utf-8?B?NU1KbVlpaDU3eWxoUmlDVi81VldxQ0VpWUlPUWROcHRNcTZ0Y1J2SG9od0h4?=
+ =?utf-8?B?MWRxWmVyc0tIZWpQdHJjK3dRNUhKbDFZQkxDczdTZzVNeVFvc01DMFFTTG5o?=
+ =?utf-8?B?MDRZZ3NGei95ODcrU3dwMkpxVW1BTkwyMGkvV1paOGJnOWZuaU1zdUxNM2lT?=
+ =?utf-8?B?U25UcndYOVdnMHRBK0NjU080S0lpUXpoWjRlWENOQzVRU3ArU2J2ZXNiUktO?=
+ =?utf-8?B?T0ZnV0dvSXZ4ZlRFNzVOc0JudmhSeHhZQ1RISHo2Ymg2T25QZTFkM1BnaGxa?=
+ =?utf-8?B?NG80WjhHc1FGQldQc3AxajFvVDFaWTdJZDd3NnJDVnV4UjVpK0VEcUtvUzRu?=
+ =?utf-8?B?NTdZQU0rOTRKbDNxN2o4Uzc5QkEvdnFPWVprSStTemdUNG1DbmNYTlpHN0VO?=
+ =?utf-8?B?ZFgyQWozRXUxUlRnNTlmaEgzVnNYR0x0dVhtLzFSL3cyQzVUaC9vMXM2cmpG?=
+ =?utf-8?B?YUxpNVY4RnhqbitKNStCU3VLNjF0amRHdDQyTFhuQmVHcnJUcEs1VmJ6ekty?=
+ =?utf-8?B?NG9WWFg3YVNxMFhxdUpDVDl0dWhReGFJYldoYU9MTVRsYVBBV1c3UnYzRmdu?=
+ =?utf-8?Q?s6yhUWT3DWis/OWjSD6Kw=3D?=
+MIME-Version: 1.0
+
+--0000000000003462ca0641fe526b
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hola, Miguel.
+Agradecemos tu petici=C3=B3n de informaci=C3=B3n, pero para esas fechas ya =
+tenemos
+todas las casas ocupadas.
+Cordiales saludos.
+Natividad.-
+
+El vie, 24 oct 2025 a las 14:36, Miguel Barbeitos (<
+Miguel.Barbeitos@deco.proteste.pt>) escribi=C3=B3:
+
+> Buenas tardes.=EF=BB=BF
+>
+> Somos un grupo de familias (36 adultos y 7 ni=C3=B1os) y estamos planeand=
+o una
+> estancia de 5 noches, entre el 30 de diciembre de 2024 y el 4 de enero de
+> 2025.
+> =EF=BB=BF
+> Nos gustar=C3=ADa saber si su alojamiento tiene disponibilidad para recib=
+irnos
+> en ese per=C3=ADodo, preferentemente en r=C3=A9gimen de exclusividad o co=
+n total
+> privacidad.
+> =EF=BB=BF
+> Agradecer=C3=ADamos que nos informaran sobre:=EF=BB=BF
+> =E2=80=93 Disponibilidad y capacidad m=C3=A1xima;=EF=BB=BF
+> =E2=80=93 Condiciones y precios para reserva en exclusividad u ocupaci=C3=
+=B3n total;=EF=BB=BF
+> =E2=80=93 Tarifas por noche y posibles condiciones especiales para grupos
+> familiares;=EF=BB=BF
+> =E2=80=93 Servicios incluidos (desayuno, uso de cocina, piscina, zonas co=
+munes,
+> etc.).=EF=BB=BF
+> Si necesitan m=C3=A1s informaci=C3=B3n, estaremos encantados de proporcio=
+narla.
+> =EF=BB=BF
+> Agradecemos de antemano su atenci=C3=B3n y esperamos su respuesta.
+> =EF=BB=BF
+> Atentamente,=EF=BB=BF
+> Miguel
+>
+> -------------------------------------------------------------------------=
+------------------------------------
+>
+> *CONFIDENTIALITY NOTICE*
+> This message contains confidential information and is intended only for
+> the use of the recipient.
+> If you are not the intended recipient, please notify us immediately and
+> delete this e-mail from your system.
+> We ask you not to disclose or distribute the content of this e-mail to an=
+y
+> other person.
+>
+
+--0000000000003462ca0641fe526b
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8"><d=
+iv dir=3D"ltr"><div>Hola, Miguel.</div><div>Agradecemos tu petici=C3=B3n de=
+ informaci=C3=B3n, pero para esas fechas ya tenemos todas las casas ocupada=
+s.</div><div>Cordiales saludos.</div><div>Natividad.-</div></div><br><div c=
+lass=3D"gmail_quote gmail_quote_container"><div dir=3D"ltr" class=3D"gmail_=
+attr">El vie, 24 oct 2025 a las 14:36, Miguel Barbeitos (&lt;<a href=3D"mai=
+lto:Miguel.Barbeitos@deco.proteste.pt">Miguel.Barbeitos@deco.proteste.pt</a=
+>&gt;) escribi=C3=B3:<br></div><blockquote class=3D"gmail_quote" style=3D"m=
+argin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left=
+:1ex"><div class=3D"msg-3599384575142890251">
+
+
+
+
+<div dir=3D"ltr">
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+<span style=3D"font-weight:500">Buenas tardes.=EF=BB=BF<br>
+<br>
+Somos un grupo de familias (36 adultos y 7 ni=C3=B1os) y estamos planeando =
+una estancia de 5 noches, entre el 30 de diciembre de 2024 y el 4 de enero =
+de 2025.</span></div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+=EF=BB=BF</div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+<span style=3D"font-weight:500">Nos gustar=C3=ADa saber si su alojamiento t=
+iene disponibilidad para recibirnos en ese per=C3=ADodo, preferentemente en=
+ r=C3=A9gimen de exclusividad o con total privacidad.</span></div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+=EF=BB=BF</div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+<span style=3D"font-weight:500">Agradecer=C3=ADamos que nos informaran sobr=
+e:</span>=EF=BB=BF</div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+<span style=3D"font-weight:500">=E2=80=93 Disponibilidad y capacidad m=C3=
+=A1xima;</span>=EF=BB=BF<br>
+<span style=3D"font-weight:500">=E2=80=93 Condiciones y precios para reserv=
+a en exclusividad u ocupaci=C3=B3n total;</span>=EF=BB=BF<br>
+<span style=3D"font-weight:500">=E2=80=93 Tarifas por noche y posibles cond=
+iciones especiales para grupos familiares;</span>=EF=BB=BF<br>
+<span style=3D"font-weight:500">=E2=80=93 Servicios incluidos (desayuno, us=
+o de cocina, piscina, zonas comunes, etc.).</span>=EF=BB=BF</div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+<span style=3D"font-weight:500">Si necesitan m=C3=A1s informaci=C3=B3n, est=
+aremos encantados de proporcionarla.</span></div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+=EF=BB=BF</div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+<span style=3D"font-weight:500">Agradecemos de antemano su atenci=C3=B3n y =
+esperamos su respuesta.</span></div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+=EF=BB=BF<br>
+<span style=3D"font-weight:500">Atentamente,</span>=EF=BB=BF</div>
+<div style=3D"font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Cali=
+bri,Helvetica,sans-serif;font-size:11pt;color:rgb(0,0,0)">
+Miguel</div>
+<img src=3D"https://ecdocumentstoragepro.blob.core.windows.net/mail-images-=
+pt-pt/DECOPROteste-Banner.jpg" style=3D"width: 25%;">
+<span lang=3D"EN">
+<p dir=3D"ltr" align=3D"left">---------------------------------------------=
+----------------------------------------------------------------
+<br>
+<b><font color=3D"#8497b0" size=3D"2" face=3D"Calibri">CONFIDENTIALITY NOTI=
+CE</font></b>
+<br>
+This message contains confidential information and is intended only for the=
+ use of the recipient.
+<br>
+If you are not the intended recipient, please notify us immediately and del=
+ete this e-mail from your system.
+<br>
+We ask you not to disclose or distribute the content of this e-mail to any =
+other person.
+</p>
+</span>
+</div>
+
+</div></blockquote></div>
+
+--0000000000003462ca0641fe526b--

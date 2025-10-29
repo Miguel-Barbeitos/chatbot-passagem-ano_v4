@@ -1,0 +1,328 @@
+Received: from AS8PR04MB8916.eurprd04.prod.outlook.com (2603:10a6:20b:42f::23)
+ by DB8PR04MB6747.eurprd04.prod.outlook.com with HTTPS; Sat, 11 Oct 2025
+ 13:45:01 +0000
+Received: from CWLP123CA0209.GBRP123.PROD.OUTLOOK.COM (2603:10a6:400:19d::6)
+ by AS8PR04MB8916.eurprd04.prod.outlook.com (2603:10a6:20b:42f::23) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9203.11; Sat, 11 Oct
+ 2025 13:44:57 +0000
+Received: from AMS0EPF0000019D.eurprd05.prod.outlook.com
+ (2603:10a6:400:19d:cafe::1e) by CWLP123CA0209.outlook.office365.com
+ (2603:10a6:400:19d::6) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9203.10 via Frontend Transport; Sat,
+ 11 Oct 2025 13:44:57 +0000
+Authentication-Results: spf=pass (sender IP is 2607:f8b0:4864:20::1030)
+ smtp.mailfrom=escutismo.pt; dkim=pass (signature was verified)
+ header.d=escutismo.pt;dmarc=pass action=none
+ header.from=escutismo.pt;compauth=pass reason=100
+Received-SPF: Pass (protection.outlook.com: domain of escutismo.pt designates
+ 2607:f8b0:4864:20::1030 as permitted sender) receiver=protection.outlook.com;
+ client-ip=2607:f8b0:4864:20::1030; helo=mail-pj1-x1030.google.com; pr=C
+Received: from mail-pj1-x1030.google.com (2607:f8b0:4864:20::1030) by
+ AMS0EPF0000019D.mail.protection.outlook.com (2603:10a6:20f:fff4:0:15:0:9)
+ with Microsoft SMTP Server (version=TLS1_3, cipher=TLS_AES_256_GCM_SHA384) id
+ 15.20.9228.7 via Frontend Transport; Sat, 11 Oct 2025 13:44:57 +0000
+Received: by mail-pj1-x1030.google.com with SMTP id 98e67ed59e1d1-3327f8ed081so3842803a91.1
+        for <Miguel.Barbeitos@deco.proteste.pt>; Sat, 11 Oct 2025 06:44:57 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=escutismo.pt; s=google; t=1760190296; x=1760795096; darn=deco.proteste.pt;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=t0L2Vku0TAwW8mOgk8HVnn97qfKY8Aws7dmQnjo+LWY=;
+        b=lOMUi+yqK9oCwfInNB1Cu3Mmx1JSlFU0uAeaBEYE60cWwYCqzOpn0987zNH0rfW9y5
+         8DY8lgTnZWuPn75Fjx8JnZtOlKV3OK4NNElHIBX0JyxLf/FyDEzELwsrK6WdeLVQ7b1T
+         Uv8wb0nwp5nSPBwglH7pgECaktSMKEHxSCEO/C/3bao5N+EumlF135jLuKaXJGgmer3N
+         0ILVzCWdk3tYXog2l1iX5iE4EIpLFwM+kRB3tNG2qlCc3ZXjj6m2FQrv6yKnX6PqTwiW
+         RfWa91UbGZulkigrWADK6+7o7wSxDhdxbjahCCX6N2lyOu9XwzPAwmu3yEQiGzcbtmAy
+         tCjQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1760190296; x=1760795096;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=t0L2Vku0TAwW8mOgk8HVnn97qfKY8Aws7dmQnjo+LWY=;
+        b=Qn2XqH/xr4SDhve3wXhmMqVqnnVtqmpaA2ML5iL23RRahDhTNH02yKoJZx5mh37zfw
+         nPlExsWD/Ch1jQATnxhniOnaR+IqDTxE5qXK1uIPMXADpPeYaWBI5gRwymLfc+XGbD6t
+         7F43/oygLOvK9l/IUescfL9gR65AV0NTQCXFaz1+DkpVQjxKlA3bFb0qX0mQQXwJgaSB
+         19b9A0oKQu0/ELmyoptVbF7m0GmLAjywpoqKs8DjWAjgFLpfE5qA9MGMyv9eMrhllmF5
+         FH83Z/fB2dI3/WdCNPDe1WlUwhiE1WKJXp9+E6SBMUxbLiCmYSw5bhVHPE7oIWFA8MYm
+         K19g==
+X-Gm-Message-State: AOJu0YyXqg8RkjG3M+QJ67v014AisYPfi8qXAbyn7cVkLVqdtpi8u/4J
+	bcQsEKmANV090Ws2WIJm1hR3GTWMBEPfWhj5qNuehwFSTwT61WFbsBzmZTpcBE4TXiTuh+n+Xsa
+	T7fjzNEGbyAnRuLbsnqa9EARzmVc63QiTAylFhJwgwxvorSuGDKt49Q==
+X-Gm-Gg: ASbGnctqREzdfvjkYCLyUk6W8RhO65CcEE7TknRjEqTTfEf8y5DdhFOEs4HOXiUkVuz
+	3iiXnRkvtGVMGC0unQ+RBKM4uKghv1RG9XvXYqo4CmHxnpvOan/HmYeChmXmOhIYuGVLAezC383
+	l/nGip0fuEwSBfn/0m4HPkxu+TFVazdvIxMXcIkV2uzqrpOL8LtSMlXFr4BFfjTEcqehVeKrOzr
+	CyFeR9xUYW1GW9Py93ECVj/Bnt47n/0hOPP
+X-Google-Smtp-Source: AGHT+IEDERwFtiborX7/deWr/xu7XQxFscuaHIzeNhz8Gful/gQH2AU9DwijedZqQEzOzZ4QeWfuRhaBdyK7n2U9WD4=
+X-Received: by 2002:a17:90b:1b42:b0:330:a228:d32 with SMTP id
+ 98e67ed59e1d1-33b5111891emr21812402a91.10.1760190295697; Sat, 11 Oct 2025
+ 06:44:55 -0700 (PDT)
+References: <DB8PR04MB6747B18582EEA2B558BD8FD1ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+ <DB8PR04MB6747214193E7198DC3321F25ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+ <DB8PR04MB67475DC210CBA4ED5A500040ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+In-Reply-To: <DB8PR04MB67475DC210CBA4ED5A500040ABECA@DB8PR04MB6747.eurprd04.prod.outlook.com>
+From: =?UTF-8?Q?CNE_=2D_ACE_=2D_Ap=C3=BAlia_Centro_Escutista?= <apulia@escutismo.pt>
+Date: Sat, 11 Oct 2025 14:44:44 +0100
+X-Gm-Features: AS18NWAVyzfPCrHWU_tPXkB8vG0q6wulIae3OzIyYLJ9UalH_peRYLJ542V15VA
+Message-ID: <CAJiJFK8K_VHjejbnYNsW5x84J4HaMf-aPdpeP9GfjSb_=Rhm-A@mail.gmail.com>
+Subject: =?UTF-8?Q?Re=3A_Pedido_de_Or=C3=A7amento_=E2=80=93_Alojamento_para_Fam=C3=ADli?=
+	=?UTF-8?Q?as_=2836_adultos_=2B_7_crian=C3=A7as?=
+To: Miguel Barbeitos <Miguel.Barbeitos@deco.proteste.pt>, 
+	"morgadosan@gmail.com" <morgadosan@gmail.com>
+Cc: direcao.ace.grupo@escutismo.pt
+Content-Type: multipart/alternative; boundary="0000000000005005c30640e23d9a"
+Return-Path: apulia@escutismo.pt
+X-MS-Exchange-Organization-ExpirationStartTime: 11 Oct 2025 13:44:57.6774
+ (UTC)
+X-MS-Exchange-Organization-ExpirationStartTimeReason: OriginalSubmit
+X-MS-Exchange-Organization-ExpirationInterval: 1:00:00:00.0000000
+X-MS-Exchange-Organization-ExpirationIntervalReason: OriginalSubmit
+X-MS-Exchange-Organization-Network-Message-Id: 20a71eba-a9f7-4beb-b132-08de08cc5e02
+X-EOPAttributedMessage: 0
+X-EOPTenantAttributedMessage: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4:0
+X-MS-Exchange-Organization-MessageDirectionality: Incoming
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: AMS0EPF0000019D:EE_|AS8PR04MB8916:EE_|DB8PR04MB6747:EE_
+X-MS-Exchange-Organization-AuthSource: AMS0EPF0000019D.eurprd05.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Office365-Filtering-Correlation-Id: 20a71eba-a9f7-4beb-b132-08de08cc5e02
+X-MS-Exchange-AtpMessageProperties: SA|SL
+X-MS-Exchange-Organization-BypassClutter: True
+X-MS-Exchange-Organization-SCL: 1
+X-Microsoft-Antispam: BCL:0;ARA:13230040|69100299015|43022699015|7053199007|8096899003|4076899003;
+X-Forefront-Antispam-Report: CIP:2607:f8b0:4864:20::1030;CTRY:;LANG:pt;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:mail-pj1-x1030.google.com;PTR:mail-pj1-x1030.google.com;CAT:NONE;SFS:(13230040)(69100299015)(43022699015)(7053199007)(8096899003)(4076899003);DIR:INB;
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 11 Oct 2025 13:44:57.5784
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: 20a71eba-a9f7-4beb-b132-08de08cc5e02
+X-MS-Exchange-CrossTenant-Id: cc97dfab-85ff-4ec7-8fb2-3380e5d475f4
+X-MS-Exchange-CrossTenant-AuthSource: AMS0EPF0000019D.eurprd05.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: AS8PR04MB8916
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:04.0597472
+X-MS-Exchange-Processed-By-BccFoldering: 15.20.9182.007
+X-Microsoft-Antispam-Mailbox-Delivery:
+	ucf:0;jmr:0;auth:0;dest:I;ENG:(910005)(944506478)(944626604)(920097)(930097)(140003);
+X-Microsoft-Antispam-Message-Info:
+	=?utf-8?B?WTFvOEVkSGNiaCtQZTdtVTAzcmpFSFRkY2lIN2hkZVdVcmREelJ5Qi9HYTN2?=
+ =?utf-8?B?UVZhR2t0a1llbk9TWUFqM1YyemRSNHdPbS9UNGxtVVJCb054b21idjVGWWps?=
+ =?utf-8?B?Rzd4SkhKSmhTRW1sYnN1OXlYbitrU3pxSlRFVDBoMGRJdzY2WVFwT1d6SGRp?=
+ =?utf-8?B?dGF3Q0lkeW1tRWxhTllYVGhsYVdaZE1EcGo5ekE4U08xZ01iSzVZQnNpeTRX?=
+ =?utf-8?B?YlJIY2pzRWtsTUFRNnVDVzhSUUQ4YXgyQUpFNmJlNXYxWFEyNm5tZzJMRzJW?=
+ =?utf-8?B?VU11bU9ybnlYZGd1d1hyakEwbWZucVpjL2c4VmZLdzluSmJOQnpydkNKUjlD?=
+ =?utf-8?B?TnZVdXhCWFlIdHYwUGYwZXduWENBSXRaMFlqV1RxOEtDVEs1cVJnZnBxYXZj?=
+ =?utf-8?B?VGRZTVJOWHhRWHgrMnh4Tmg4S1FTQzkwWjFGSG1PS0kzdG92UUFLY3ozUjVO?=
+ =?utf-8?B?b0txU3E3b1htRkVaOXlBejd2c2RSQVZkWVRlQTFjY28xaWFFZVQzMVFibUpD?=
+ =?utf-8?B?Rm1PT2o0bTBoRjJsY2lyU094UmdmSkV4dWtRSzYwV3AzWVNITjFIYXlicjV1?=
+ =?utf-8?B?K0x3cnhndFFEVCtNelNRNi9QUjNjNnpOdHRUWjJ1d1d6RXMyNTdmclo5eVhO?=
+ =?utf-8?B?NzZGbkhEUkgvWnR4aDMrUlo4Z3E4dmlDcjdrbVEzTHRoREowLytVM3gvM2JT?=
+ =?utf-8?B?OXFDU1cydXdVYVpRMFIzUDJxYmZTdGV0dnl6MjVKQW9lYWNQSzg5Z0xSc21o?=
+ =?utf-8?B?VVNoWlN1a3RjU3dMK0ZYSlBIZDNPaUZZUTdBYkZLdzV3dGpqa0p4R3AvZ0ZB?=
+ =?utf-8?B?bzRLSkxhQ1BRMFA2VFhPOThkK1IrZ0lOc3YyT21laUlvSnpERW9RdWppQ2dO?=
+ =?utf-8?B?dkVJY0xxcXhFV3lUYjJJeWhEbVlHY3Rmc0hHbURnc1dWTTZJWkErNGVRSmJI?=
+ =?utf-8?B?b0I5UzloVFJBakU5U2ZtWWFxUFk4YkdwTG9Laklza2RrbHVYT1ZocFdhWkNI?=
+ =?utf-8?B?VEZkM2hyQmFZdG52Z1h2RHJYelVJUVQxajVWanY4a3JFQW56blVwWEpIOTVG?=
+ =?utf-8?B?SXhkTGg2T2tUckt6R0w0WVNtWGttL2s2b1NQSUNqbjZPc2hGODZvb3BudWVZ?=
+ =?utf-8?B?dVF2eGVabFRwb1ZNWnY4RldoN0lZejVNQnQ1bnRIeTNTc05TNkZndjJKZTEv?=
+ =?utf-8?B?NnVYYWxHTlR3ajNyejJVTWVFTzRPY3VpTjNxakV2cnNyY1ZVRlg3MTRraGMr?=
+ =?utf-8?B?U3JHeUo4NzVBbjk2c3J3WUNHZVp3UnpEN0tLUFY3TFcvWGJXMEhla0EyWjRW?=
+ =?utf-8?B?eTRqZmVVc3NwNkdJWXRjeGhUWmp2djBBNThOMWh1SFF2Qm85eVhiWVpHbFV0?=
+ =?utf-8?B?L0J6YndHTlRjNTJFb00xSFk5ZmxlSTFYWVd2K0VENlNVL0FXZ1k3VmtNbmxH?=
+ =?utf-8?B?SzdBNkRKZFpycGxSL1JuS3ByUlZNZC85STdBSWpJQ0J6OUxDeStrM045d0ox?=
+ =?utf-8?B?N0FkYWVFaEt0YXFUc1FlbFZWVGpmdjdOdEtWbnhpWU9pV3VyVzJLUDBUUlRG?=
+ =?utf-8?B?M09rQmZhQ0Uxc3N1MzJjQkNRa1VtSjJmTWpEdkZGZEtGWkx5M2pLK3ZJZkNk?=
+ =?utf-8?B?c3RMZ1duMEZzQ05iZlIvakwzcEs3TkxTdzhxS0U2VnIzeVJpcHVPeDlBWXBi?=
+ =?utf-8?B?ZUY2U0I2UG03cEVlekV6RFRMdGNLc0kyM0lyOURHNHRZNUZxaVRXb0dIeGlT?=
+ =?utf-8?B?NXdiZEtlYWNtRWdNTHJ0ajFVUjFTbDI2bHhxWUN0SnB4R3J5ZzdjTUc4dTJh?=
+ =?utf-8?B?eExtN1NKRDgweCs3N3ViNFpSWWFzZEorUm50N0g3NHI2cG1aQkgzcjZ5TFhv?=
+ =?utf-8?B?KzVPZzVUd1JOcGhic0ZVbnJ2b1BDU252dXBOWDZMdkI0blo3UWg5SitMcDBn?=
+ =?utf-8?B?cmExODNjUlhzWU9JeHVtS2M1S3QrQlJXdFM4WnlIZ1RXeE9jMlNwUmI5SDIy?=
+ =?utf-8?B?eUlHUHowU1hYMWpnTENsclQrYitQU1VpNWFEY2FkNkc5aTZnU2RZZFllcmE0?=
+ =?utf-8?B?OXhyZVl6K0FHWmI2dk5LV2ovVHp5Q3QybGwzWnlyUmJFOWFmdzVCemlyVkJG?=
+ =?utf-8?B?NFVKemd4elZWQXp1cStjMzh2RlRHQUhJNnBraDE2RTNBMy9uWUZrWlR5TEFR?=
+ =?utf-8?B?NS9lcGhvNysvb3dIWCttSXYzRlA3TzF4MEpkSEFCK0VxU002RlZSbVBhMzJw?=
+ =?utf-8?B?M25TVnVIUnduWHhlbFJNTkZDSnlKWFNuVEZ3dGwyV1UybXNQQjB3aXpPT09r?=
+ =?utf-8?B?Rm52dzdMbzVRd0U2c2FNL0lvQ1Jad08weWV3VXNVNVhWZG5pelNZc1JyQnR2?=
+ =?utf-8?B?Z1RGemxQSnF2S3ltTmhVeE5EUW92bzlCMW8wRTNUSjFsVFRCU0NHOW9uL1Zh?=
+ =?utf-8?B?TW8xSFlwbER5ZlRGdFpBNWtzU2h1cDdQekg0WkNPWDRCa0tnYXVPc3p6UW1a?=
+ =?utf-8?B?K0FxanpheGtUUDdkSTlMNmR5OURPS0FRZk9UYVVTQ01MaG9pbDVwcWtWa0tE?=
+ =?utf-8?B?cFJ2RHp4TDd3UzZXZytmK3pBWmZhZWRHQWx4amY1aHZZZEdQckF3WWluMUdT?=
+ =?utf-8?B?MzFsRUgrWnVSNFRUUk4weUliZjA3TmhQMCtxUFBqQUpJckhvNlhvRXVHKzhX?=
+ =?utf-8?B?TGtQQlJxOW5sV2xxZk5EMk9ic0d0Q2hFaHU2b3hPaUs4Um4rUjNmSzQ4SEFL?=
+ =?utf-8?Q?yPYO3ThDOtcH+WbI1dvqA7j?=
+MIME-Version: 1.0
+
+--0000000000005005c30640e23d9a
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Viva,
+
+Informamos que n=C3=A3o nos encontramos dispon=C3=ADveis para vos receber.
+
+O ACE - Ap=C3=BAlia Centro Escutista =C3=A9 um local destinado =C3=A0 reali=
+za=C3=A7=C3=A3o de
+atividades Escotistas/Escutistas/Guidistas, de associa=C3=A7=C3=B5es perten=
+centes =C3=A0
+Organiza=C3=A7=C3=A3o Mundial do Movimento Escutista (OMME) ou da Associa=
+=C3=A7=C3=A3o Mundial
+do Movimento Guidista (WAGGGS).
+Mais informamos que n=C3=A3o somos um parque de campismo, nem estamos
+credenciados como tal.
+
+Sugerimos que contactem os parques de campismo de Rio Alto ou F=C3=A3o.
+
+Canhotas,
+Rui Silva
+Staff ACE
+
+[image: Ap=C3=BAlia Centro Escutista | apulia@escutismo.pt | (+351) 935 413=
+ 467]
+
+
+Miguel Barbeitos <Miguel.Barbeitos@deco.proteste.pt> escreveu em s=C3=A1b.,
+11/10/2025 =C3=A0s 13:32 :
+
+>
+> Somos um grupo de fam=C3=ADlias (36 adultos e 7 crian=C3=A7as) e estamos =
+a planear
+> uma estadia de 5 noites, entre 30 de dezembro de 2024 e 4 de janeiro de
+> 2025.
+> Gostar=C3=ADamos de saber se o vosso alojamento tem disponibilidade para =
+nos
+> receber nesse per=C3=ADodo, preferencialmente em regime de exclusividade =
+ou com
+> total privacidade.
+> Agradec=C3=ADamos que nos informassem sobre:
+> =E2=80=93 Disponibilidade e capacidade m=C3=A1xima;
+> =E2=80=93 Condi=C3=A7=C3=B5es e pre=C3=A7os para reserva em exclusividade=
+ ou ocupa=C3=A7=C3=A3o total;
+> =E2=80=93 Tarifas por noite e eventuais condi=C3=A7=C3=B5es especiais par=
+a grupos familiares;
+> =E2=80=93 Servi=C3=A7os inclu=C3=ADdos (pequeno-almo=C3=A7o, utiliza=C3=
+=A7=C3=A3o de cozinha, piscina,
+> zonas comuns, etc.).
+> Caso necessitem de mais informa=C3=A7=C3=B5es, teremos todo o gosto em fo=
+rnecer.
+> Agradecemos desde j=C3=A1 a vossa aten=C3=A7=C3=A3o e aguardamos o vosso =
+retorno.
+> Com os melhores cumprimentos,
+>
+>  Miguel
+> 966144848
+>
+> -------------------------------------------------------------------------=
+------------------------------------
+>
+> *CONFIDENTIALITY NOTICE*
+> This message contains confidential information and is intended only for
+> the use of the recipient.
+> If you are not the intended recipient, please notify us immediately and
+> delete this e-mail from your system.
+> We ask you not to disclose or distribute the content of this e-mail to an=
+y
+> other person.
+>
+
+--0000000000005005c30640e23d9a
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8"><d=
+iv dir=3D"auto">Viva,</div><div dir=3D"auto"><br></div><div dir=3D"auto">In=
+formamos que n=C3=A3o nos encontramos dispon=C3=ADveis para vos receber.</d=
+iv><div dir=3D"auto"><br></div><div dir=3D"auto">O ACE - Ap=C3=BAlia Centro=
+ Escutista =C3=A9 um local destinado =C3=A0 realiza=C3=A7=C3=A3o de ativida=
+des Escotistas/Escutistas/Guidistas, de associa=C3=A7=C3=B5es pertencentes =
+=C3=A0 Organiza=C3=A7=C3=A3o Mundial do Movimento Escutista (OMME) ou da As=
+socia=C3=A7=C3=A3o Mundial do Movimento Guidista (WAGGGS).</div><div dir=3D=
+"auto">Mais informamos que n=C3=A3o somos um parque de campismo, nem estamo=
+s credenciados como tal.</div><div dir=3D"auto"><br></div><div dir=3D"auto"=
+>Sugerimos que contactem os parques de campismo de Rio Alto ou F=C3=A3o.<br=
+ clear=3D"all"><div dir=3D"auto"><div dir=3D"ltr" class=3D"gmail_signature"=
+ data-smartmail=3D"gmail_signature"><div dir=3D"ltr"><div><p dir=3D"auto">C=
+anhotas,&nbsp;<br>Rui Silva<br>Staff ACE</p><p><img title=3D"Ap=C3=BAlia Ce=
+ntro Escutista | apulia@escutismo.pt | (+351) 935 413 467" src=3D"https://a=
+pulia.escutismo.pt/assinatura/202402_JRB_ACE.jpg" alt=3D"Ap=C3=BAlia Centro=
+ Escutista | apulia@escutismo.pt | (+351) 935 413 467" style=3D"height: 120=
+px; width: 597px;"></p></div></div></div></div></div><div><br></div><div><b=
+r><div class=3D"gmail_quote gmail_quote_container"><div dir=3D"ltr" class=
+=3D"gmail_attr">Miguel Barbeitos &lt;<a href=3D"mailto:Miguel.Barbeitos@dec=
+o.proteste.pt">Miguel.Barbeitos@deco.proteste.pt</a>&gt; escreveu em s=C3=
+=A1b., 11/10/2025 =C3=A0s 13:32 :<br></div><blockquote class=3D"gmail_quote=
+" style=3D"margin:0px 0px 0px 0.8ex;border-left-width:1px;border-left-style=
+:solid;padding-left:1ex;border-left-color:rgb(204,204,204)">
+
+
+
+
+<div dir=3D"ltr">
+<div style=3D"font-family:Calibri,Arial,Helvetica,sans-serif;font-size:12pt=
+;color:rgb(0,0,0)">
+<br>
+</div>
+<div style=3D"direction:ltr;margin-top:1em;margin-bottom:1em;font-family:Ap=
+tos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;fon=
+t-size:11pt;color:black">
+Somos um grupo de fam=C3=ADlias (36 adultos e 7 crian=C3=A7as) e estamos a =
+planear uma estadia de 5 noites, entre 30 de dezembro de 2024 e 4 de janeir=
+o de 2025.</div>
+<div style=3D"direction:ltr;margin-top:1em;margin-bottom:1em;font-family:Ap=
+tos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;fon=
+t-size:11pt;color:black">
+Gostar=C3=ADamos de saber se o vosso alojamento tem disponibilidade para no=
+s receber nesse per=C3=ADodo, preferencialmente em regime de exclusividade =
+ou com total privacidade.</div>
+<div style=3D"direction:ltr;margin-top:1em;margin-bottom:1em;font-family:Ap=
+tos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;fon=
+t-size:11pt;color:black">
+Agradec=C3=ADamos que nos informassem sobre:<br>
+=E2=80=93 Disponibilidade e capacidade m=C3=A1xima;<br>
+=E2=80=93 Condi=C3=A7=C3=B5es e pre=C3=A7os para reserva em exclusividade o=
+u ocupa=C3=A7=C3=A3o total;<br>
+=E2=80=93 Tarifas por noite e eventuais condi=C3=A7=C3=B5es especiais para =
+grupos familiares;<br>
+=E2=80=93 Servi=C3=A7os inclu=C3=ADdos (pequeno-almo=C3=A7o, utiliza=C3=A7=
+=C3=A3o de cozinha, piscina, zonas comuns, etc.).</div>
+<div style=3D"direction:ltr;margin-top:1em;margin-bottom:1em;font-family:Ap=
+tos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;fon=
+t-size:11pt;color:black">
+Caso necessitem de mais informa=C3=A7=C3=B5es, teremos todo o gosto em forn=
+ecer.</div>
+<div style=3D"direction:ltr;margin-top:1em;margin-bottom:1em;font-family:Ap=
+tos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;fon=
+t-size:11pt;color:black">
+Agradecemos desde j=C3=A1 a vossa aten=C3=A7=C3=A3o e aguardamos o vosso re=
+torno.</div>
+<div style=3D"direction:ltr;margin-top:1em;margin-bottom:1em;font-family:Ap=
+tos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;fon=
+t-size:11pt;color:black">
+Com os melhores cumprimentos,<br>
+<br>
+&nbsp;Miguel&nbsp;<br>
+966144848</div>
+<img src=3D"https://ecdocumentstoragepro.blob.core.windows.net/mail-images-=
+pt-pt/DECOPROteste-Banner.jpg" style=3D"width: 25% !important;">
+<span lang=3D"EN">
+<p dir=3D"ltr" align=3D"left">---------------------------------------------=
+----------------------------------------------------------------
+<br>
+<b><font size=3D"2" face=3D"Calibri" style=3D"font-family:Calibri;color:rgb=
+(132,151,176)">CONFIDENTIALITY NOTICE</font></b>
+<br>
+This message contains confidential information and is intended only for the=
+ use of the recipient.
+<br>
+If you are not the intended recipient, please notify us immediately and del=
+ete this e-mail from your system.
+<br>
+We ask you not to disclose or distribute the content of this e-mail to any =
+other person.
+</p>
+</span>
+</div>
+
+</blockquote></div></div>
+
+--0000000000005005c30640e23d9a--
