@@ -344,7 +344,38 @@ Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
             print(f"Erro ao listar quintas: {e}")
             return "Erro ao carregar quintas. Tenta novamente!"
     
-    # 3. Quantas quintas
+    # 3. Quantas quintas responderam (ANTES de "quantas quintas" geral)
+    if any(palavra in pergunta_l for palavra in ["quantas responderam", "quantas quintas responderam", "quintas que responderam", "respostas de quintas"]):
+        try:
+            from modules.quintas_qdrant import listar_quintas
+            quintas = listar_quintas()
+            
+            # Conta quintas com resposta (tem email ou status)
+            com_resposta = [q for q in quintas if q.get('respondeu') or q.get('email_resposta') or q.get('status') in ['respondeu', 'interessado', 'disponivel']]
+            
+            total = len(quintas)
+            responderam = len(com_resposta)
+            percentagem = (responderam / total * 100) if total > 0 else 0
+            
+            resposta = f"📧 **Respostas:** {responderam} de {total} quintas ({percentagem:.0f}%)\n\n"
+            
+            if responderam > 0:
+                resposta += "✅ **Quintas que responderam:**\n"
+                for q in com_resposta[:5]:  # Primeiras 5
+                    nome = q.get('nome', 'N/A')
+                    resposta += f"• {nome}\n"
+                
+                if responderam > 5:
+                    resposta += f"\n...e mais {responderam - 5}!"
+            else:
+                resposta += "Ainda nenhuma quinta respondeu. 😔"
+            
+            return resposta
+        except Exception as e:
+            print(f"Erro ao contar respostas: {e}")
+            return "Ainda estamos a processar as respostas dos emails! 📧"
+    
+    # 3.9 Quantas quintas (geral - contactadas)
     if any(palavra in pergunta_l for palavra in ["quantas quintas", "numero de quintas", "total de quintas"]):
         try:
             from modules.quintas_qdrant import listar_quintas
