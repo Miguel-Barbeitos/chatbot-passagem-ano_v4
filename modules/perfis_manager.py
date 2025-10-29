@@ -44,12 +44,34 @@ def gerar_embedding_simples(texto: str):
         return m.encode(texto).tolist()
 
 def inicializar_qdrant():
-    """Inicializa Qdrant"""
+    """Inicializa Qdrant - tenta env vars, depois Streamlit secrets, depois local"""
+    qdrant_url = None
+    qdrant_key = None
+    
+    # 1. Tenta variáveis de ambiente (quando executado fora do Streamlit)
     qdrant_url = os.getenv("QDRANT_URL")
     qdrant_key = os.getenv("QDRANT_API_KEY")
     
+    # 2. Se não encontrou, tenta Streamlit secrets
+    if not qdrant_url or not qdrant_key:
+        try:
+            import streamlit as st
+            if hasattr(st, 'secrets'):
+                qdrant_url = st.secrets.get("QDRANT_URL")
+                qdrant_key = st.secrets.get("QDRANT_API_KEY")
+                if qdrant_url and qdrant_key:
+                    print("☁️  Usando credenciais do Streamlit secrets")
+        except Exception as e:
+            print(f"⚠️  Não conseguiu ler Streamlit secrets: {e}")
+            pass
+    
+    # 3. Se encontrou credenciais cloud, usa Qdrant Cloud
     if qdrant_url and qdrant_key:
+        print(f"☁️  Conectando ao Qdrant Cloud: {qdrant_url}")
         return QdrantClient(url=qdrant_url, api_key=qdrant_key)
+    
+    # 4. Fallback: Qdrant local
+    print("💾 Conectando ao Qdrant local...")
     return QdrantClient(path=os.path.join(BASE_DIR, "qdrant_data"))
 
 client = inicializar_qdrant()
