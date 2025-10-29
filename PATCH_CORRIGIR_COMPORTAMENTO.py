@@ -1,280 +1,97 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PATCH_SEGURO.py
-===============
-Adiciona funções auxiliares ANTES da função gerar_resposta
-Mais seguro - não mexe na indentação existente
+REVERTER_TUDO.py
+================
+Reverte app.py para o backup ORIGINAL (antes de TODOS os patches)
 """
 
 import os
+import glob
 import shutil
 from datetime import datetime
 
-print("🔧 APLICANDO PATCH SEGURO...")
+print("🔄 REVERTENDO PARA VERSÃO ORIGINAL...")
 print("="*70)
 
 # =====================================================
-# BACKUP
+# PROCURA O BACKUP MAIS ANTIGO (original)
 # =====================================================
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-backup_file = f"app.py.backup_{timestamp}"
+backups = sorted(glob.glob("backup_*"))
 
-shutil.copy2("app.py", backup_file)
-print(f"✅ Backup: {backup_file}")
+if not backups:
+    backups = sorted(glob.glob("app.py.backup_*"))
 
-# =====================================================
-# LER APP.PY
-# =====================================================
-with open("app.py", "r", encoding="utf-8") as f:
-    conteudo = f.read()
-
-# =====================================================
-# CÓDIGO NOVO: Funções auxiliares ANTES de gerar_resposta
-# =====================================================
-funcoes_auxiliares = '''
-# ================================================================
-# 🔧 FUNÇÕES AUXILIARES - Detecção prioritária de perguntas
-# ================================================================
-
-def verificar_pergunta_quinta_reservada(pergunta: str) -> tuple[bool, str]:
-    """Verifica se pergunta é sobre ter quinta reservada"""
-    import re
-    
-    padrao = r'\\b(ja\\s+ha|temos|existe)\\s+(quinta|sitio|sítio|local|lugar)'
-    if re.search(padrao, pergunta.lower(), re.IGNORECASE):
-        resposta = """🏡 **Sim!** 
-
-Temos o **Monte da Galega** pré-reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉
-
-Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
-        return True, resposta
-    
-    return False, ""
-
-
-def verificar_pergunta_quem_vai(pergunta: str) -> tuple[bool, str]:
-    """Verifica se pergunta é 'quem vai?'"""
-    import re
-    from modules.confirmacoes import get_confirmados
-    
-    if re.search(r'^(quem\\s+vai|quem\\s+confirmou|lista.*confirmad)', pergunta.lower(), re.IGNORECASE):
-        confirmados_data = get_confirmados()
-        confirmados = confirmados_data.get('confirmados', [])
-        total = len(confirmados)
-        
-        if total == 0:
-            resposta = "Ainda ninguém confirmou. 😔\\n\\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
-        else:
-            resposta = f"**Confirmados ({total}):**\\n\\n"
-            
-            por_familia = confirmados_data.get('por_familia', {})
-            
-            if por_familia:
-                for fam_id, membros in por_familia.items():
-                    resposta += f"• {', '.join(membros)}\\n"
-            else:
-                for nome in confirmados:
-                    resposta += f"• {nome}\\n"
-            
-            resposta += f"\\n🎉 Total: **{total} pessoas**"
-        
-        return True, resposta
-    
-    return False, ""
-
-
-def verificar_pergunta_pessoa_vai(pergunta: str) -> tuple[bool, str]:
-    """Verifica se pergunta é 'X vai?'"""
-    import re
-    import unicodedata
-    from modules.confirmacoes import get_confirmados
-    
-    match = re.search(r'\\b(?:o|a)?\\s*([\\w\\sáéíóúâêôãõç]+?)\\s+vai\\??\\s*$', pergunta.lower(), re.IGNORECASE)
-    
-    if match:
-        nome_busca = match.group(1).strip()
-        
-        # Ignora palavras comuns
-        if nome_busca.lower() not in ['eu', 'tu', 'ele', 'ela', 'voce', 'você']:
-            confirmados_data = get_confirmados()
-            confirmados = confirmados_data.get('confirmados', [])
-            
-            # Normaliza para comparação
-            def norm(s):
-                s = unicodedata.normalize('NFKD', s)
-                s = ''.join(c for c in s if not unicodedata.combining(c))
-                return s.lower().strip()
-            
-            nome_norm = norm(nome_busca)
-            
-            # Procura confirmado
-            nome_encontrado = None
-            for confirmado in confirmados:
-                if norm(confirmado) == nome_norm:
-                    nome_encontrado = confirmado
-                    break
-            
-            if nome_encontrado:
-                resposta = f"✅ **Sim!** {nome_encontrado} já confirmou presença! 🎉"
-            else:
-                resposta = f"❌ **Ainda não.** {nome_busca.title()} ainda não confirmou.\\n\\nAjuda a lembrar! 😊"
-            
-            return True, resposta
-    
-    return False, ""
-
-
-def verificar_pergunta_info_quinta(pergunta: str) -> tuple[bool, str]:
-    """Verifica se pergunta é sobre info específica de quinta por posição"""
-    import re
-    
-    match = re.search(
-        r'(website|site|morada|endereco|endereço|email|telefone|contacto)\\s+da?\\s+(primeira?|segunda?|terceira?|quarta?|quinta?|sexta?|setima?|sétima?|oitava?|nona?|decima?|décima?|\\d+a?)',
-        pergunta.lower(),
-        re.IGNORECASE
-    )
-    
-    if match:
-        tipo_info = match.group(1).lower()
-        posicao = match.group(2).lower().rstrip('aª')
-        
-        mapa_pos = {
-            "primeira": 0, "primeiro": 0, "1": 0,
-            "segunda": 1, "segundo": 1, "2": 1,
-            "terceira": 2, "terceiro": 2, "3": 2,
-            "quarta": 3, "quarto": 3, "4": 3,
-            "quinta": 4, "quinto": 4, "5": 4,
-            "sexta": 5, "sexto": 5, "6": 5,
-            "setima": 6, "sétima": 6, "setimo": 6, "7": 6,
-            "oitava": 7, "oitavo": 7, "8": 7,
-            "nona": 8, "nono": 8, "9": 8,
-            "decima": 9, "décima": 9, "decimo": 9, "10": 9,
-        }
-        
-        indice = mapa_pos.get(posicao)
-        
-        if indice is not None:
-            from modules.quintas_qdrant import listar_quintas
-            todas_quintas = listar_quintas()
-            
-            if indice < len(todas_quintas):
-                quinta = todas_quintas[indice]
-                nome_quinta = quinta.get('nome', 'N/A')
-                zona = quinta.get('zona', 'N/A')
-                
-                campo_map = {
-                    'website': 'website', 'site': 'website',
-                    'morada': 'morada', 'endereco': 'morada', 'endereço': 'morada',
-                    'email': 'email',
-                    'telefone': 'telefone', 'contacto': 'telefone',
-                }
-                
-                campo = campo_map.get(tipo_info, 'website')
-                valor = quinta.get(campo, '')
-                
-                if valor and valor.strip():
-                    icones = {
-                        'website': '🌐',
-                        'morada': '📍',
-                        'email': '📧',
-                        'telefone': '📞'
-                    }
-                    
-                    resposta = f"**{nome_quinta}** ({zona})\\n\\n{icones.get(campo, '')} {valor}"
-                else:
-                    resposta = f"A **{nome_quinta}** não tem {campo} registado. 😕"
-                
-                return True, resposta
-    
-    return False, ""
-
-'''
-
-# =====================================================
-# ENCONTRAR ONDE INSERIR (antes de def gerar_resposta)
-# =====================================================
-import re
-
-# Procura def gerar_resposta
-match = re.search(r'\ndef gerar_resposta\(', conteudo)
-
-if not match:
-    print("❌ Função gerar_resposta não encontrada!")
+if not backups:
+    print("❌ Nenhum backup encontrado!")
+    print()
+    print("⚠️ SOLUÇÃO ALTERNATIVA:")
+    print("  1. Vai ao GitHub do projeto")
+    print("  2. Baixa app.py original")
+    print("  3. Ou usa 'git checkout app.py' se tens git")
     exit(1)
 
-posicao_insercao = match.start()
+# Usa o PRIMEIRO backup (mais antigo = original)
+backup_original = backups[0]
 
-# Insere as funções auxiliares ANTES
-novo_conteudo = (
-    conteudo[:posicao_insercao] + 
-    "\n" + funcoes_auxiliares + "\n" + 
-    conteudo[posicao_insercao:]
-)
+print(f"📦 Backups encontrados: {len(backups)}")
+print(f"✅ Usando o mais antigo (original): {backup_original}")
 
-# =====================================================
-# MODIFICAR INÍCIO DE gerar_resposta para USAR as funções
-# =====================================================
-codigo_uso = '''def gerar_resposta(pergunta: str, perfil_completo: dict):
-    """Gera resposta com detecção prioritária"""
-    
-    # ================================================================
-    # 🎯 VERIFICAÇÕES PRIORITÁRIAS (antes de tudo)
-    # ================================================================
-    
-    # 1. Já há quinta?
-    detectado, resposta = verificar_pergunta_quinta_reservada(pergunta)
-    if detectado:
-        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
-        return resposta
-    
-    # 2. Quem vai?
-    detectado, resposta = verificar_pergunta_quem_vai(pergunta)
-    if detectado:
-        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
-        return resposta
-    
-    # 3. X vai?
-    detectado, resposta = verificar_pergunta_pessoa_vai(pergunta)
-    if detectado:
-        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
-        return resposta
-    
-    # 4. Website/info da primeira
-    detectado, resposta = verificar_pergunta_info_quinta(pergunta)
-    if detectado:
-        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
-        return resposta
-    
-    # ================================================================
-    # Continua com fluxo normal...
-    # ================================================================
-    '''
+# Verifica se tem app.py dentro
+if os.path.isdir(backup_original):
+    backup_file = os.path.join(backup_original, "app.py")
+else:
+    backup_file = backup_original
 
-# Substitui apenas a linha de definição
-novo_conteudo = re.sub(
-    r'def gerar_resposta\(pergunta: str, perfil_completo: dict\):',
-    codigo_uso,
-    novo_conteudo,
-    count=1
-)
+if not os.path.exists(backup_file):
+    print(f"❌ {backup_file} não existe!")
+    exit(1)
 
 # =====================================================
-# GUARDAR
+# GUARDA O ESTADO ATUAL (com erros)
 # =====================================================
-with open("app.py", "w", encoding="utf-8") as f:
-    f.write(novo_conteudo)
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+erro_file = f"app.py.com_erros_{timestamp}"
+
+shutil.copy2("app.py", erro_file)
+print(f"💾 App.py atual (com erros) guardado: {erro_file}")
+
+# =====================================================
+# RESTAURA ORIGINAL
+# =====================================================
+shutil.copy2(backup_file, "app.py")
+print(f"✅ app.py restaurado do backup original!")
+
+# =====================================================
+# LIMPA BACKUPS INTERMÉDIOS (opcional)
+# =====================================================
+print()
+resposta = input("🗑️  Queres apagar backups intermédios com erros? (s/N): ")
+
+if resposta.lower() == 's':
+    for backup in backups[1:]:  # Mantém o primeiro (original)
+        try:
+            if os.path.isdir(backup):
+                shutil.rmtree(backup)
+            else:
+                os.remove(backup)
+            print(f"  🗑️  Apagado: {backup}")
+        except:
+            pass
+    print("✅ Backups intermédios apagados")
 
 print("\n" + "="*70)
-print("✅ PATCH SEGURO APLICADO!")
+print("✅ REVERTIDO PARA VERSÃO ORIGINAL!")
 print("="*70)
-print("\n📝 O QUE FOI FEITO:")
-print("  ✅ Funções auxiliares adicionadas")
-print("  ✅ Verificações prioritárias no início de gerar_resposta")
-print("  ✅ Não mexeu na estrutura existente")
 print()
-print("🧪 TESTA:")
-print("  streamlit run app.py")
+print("📊 ESTADO ATUAL:")
+print(f"  ✅ app.py = versão original (funcional)")
+print(f"  💾 Backup do estado com erros: {erro_file}")
+print(f"  📦 Backup original mantido: {backup_original}")
 print()
-print(f"💾 Backup: {backup_file}")
+print("🚀 PRÓXIMOS PASSOS:")
+print("  1. streamlit run app.py  (deve funcionar!)")
+print("  2. Vou criar fixes SIMPLES e MANUAIS")
+print("  3. Aplicas 1 de cada vez, testando entre cada")
+print()
 print("="*70)
