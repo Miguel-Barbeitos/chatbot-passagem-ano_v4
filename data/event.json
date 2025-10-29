@@ -1,2 +1,13 @@
 {
+  "nome": "Passagem de Ano 2024/2025",
+  "data_inicio": "2025-12-30",
+  "data_fim": "2026-01-04",
+  "check_in": "15:00",
+  "check_out": "12:00",
+  "cor": "Amarelo",
+  "orcamento_pessoa": 300,
+  "quinta_prereservada": "Monte da Galega",
+  "total_convidados": 35,
+  "capacidade_minima": 35,
+  "capacidade_ideal": 40
 }

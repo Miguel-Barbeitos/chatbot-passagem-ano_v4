@@ -20,18 +20,6 @@ import re
 from learning_qdrant import procurar_resposta_semelhante
 
 # =====================================================
-# 🔄 INTEGRAÇÃO COM QDRANT (quintas_info)
-# =====================================================
-try:
-    from modules.quintas_qdrant import executar_sql as executar_sql_qdrant
-    USAR_QDRANT = True
-    print("✅ Quintas: Usando Qdrant (quintas_info)")
-except ImportError as e:
-    USAR_QDRANT = False
-    print(f"⚠️ Quintas: Qdrant não disponível, usando SQLite fallback ({e})")
-
-
-# =====================================================
 # ⚙️ CONFIGURAÇÃO GERAL
 # =====================================================
 # IMPORTANTE: A API key DEVE estar em .streamlit/secrets.toml
@@ -308,16 +296,7 @@ Gera apenas o SQL, sem explicações.
 # 🧠 EXECUTAR SQL
 # =====================================================
 def executar_sql(query: str):
-    """
-    Executa query SQL usando Qdrant (se disponível) ou SQLite fallback
-    """
-    if USAR_QDRANT:
-        try:
-            return executar_sql_qdrant(query)
-        except Exception as e:
-            print(f"⚠️ Erro no Qdrant, tentando SQLite: {e}")
-    
-    # Fallback para SQLite
+    """Executa um SELECT no SQLite."""
     try:
         conn = sqlite3.connect("data/quintas.db")
         df = pd.read_sql_query(query, conn)
@@ -327,6 +306,9 @@ def executar_sql(query: str):
         print(f"⚠️ Erro ao executar SQL: {e}")
         return []
 
+# =====================================================
+# 💬 GERAR RESPOSTA NATURAL (PERSONALIZADA) - MELHORADO
+# =====================================================
 def gerar_resposta_dados_llm(pergunta, dados, perfil_completo=None):
     """
     Transforma dados SQL em texto natural com personalização COMPLETA.
