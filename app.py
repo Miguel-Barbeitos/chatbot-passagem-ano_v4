@@ -278,6 +278,35 @@ def gerar_resposta(pergunta: str, perfil_completo: dict):
         # Fallback genérico para "sim"
         return "Ótimo! 😊 Sobre o que queres saber especificamente?\n\n• Lista de quintas?\n• Datas e preços?\n• Confirmações?"
     
+    # 0.2 Resposta direta às opções do menu
+    if "lista de quintas" in pergunta_l or pergunta_l == "lista":
+        try:
+            from modules.quintas_qdrant import listar_quintas
+            quintas = listar_quintas()
+            
+            if quintas:
+                resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
+                
+                for i, quinta in enumerate(quintas[:10], 1):
+                    nome = quinta.get('nome', 'N/A')
+                    zona = quinta.get('zona', 'N/A')
+                    resposta += f"{i}. **{nome}** ({zona})\n"
+                
+                if len(quintas) > 10:
+                    resposta += f"\n...e mais {len(quintas) - 10} quintas!"
+                
+                resposta += "\n\n💡 Pergunta: 'website da primeira', 'morada da 5', etc."
+                
+                st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:10]]
+                
+                return resposta
+        except Exception as e:
+            print(f"Erro: {e}")
+            return "Erro ao carregar quintas! 😕"
+    
+    if "datas e precos" in pergunta_l or "datas e preco" in pergunta_l or pergunta_l in ["datas", "precos", "preço", "orcamento", "orçamento"]:
+        return "📅 **Datas:** 30 de Dezembro a 2 de Janeiro\n\n💰 **Orçamento:** 250-300€ por pessoa\n\n3 noites de festa incluindo alojamento e refeições! 🎉"
+    
     # 1. Perguntas sobre quinta reservada
     if any(palavra in pergunta_l for palavra in ["ja temos", "temos alguma", "ha alguma", "quinta reservada", "local reservado"]):
         return """🏡 **Sim!** 
@@ -287,7 +316,7 @@ Temos o **Monte da Galega** pré-reservado como plano B, mas ainda estamos a ava
 Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
     
     # 2. Lista de quintas
-    if any(palavra in pergunta_l for palavra in ["quais quintas", "que quintas", "lista de quintas", "quintas contactadas"]):
+    if any(palavra in pergunta_l for palavra in ["quais quintas", "que quintas", "lista de quintas", "quintas contactadas", "lista quintas", "ver quintas", "mostrar quintas"]):
         try:
             from modules.quintas_qdrant import listar_quintas
             quintas = listar_quintas()
@@ -335,7 +364,7 @@ Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
         return "💰 **Orçamento:** 250-300€ por pessoa\n\nInclui alojamento, refeições e festa! 🎉"
     
     # 5. Quem vai / Confirmações
-    if "quem vai" in pergunta_l or "quem confirmou" in pergunta_l:
+    if "quem vai" in pergunta_l or "quem confirmou" in pergunta_l or pergunta_l in ["confirmacoes", "confirmações", "lista de confirmados"]:
         try:
             confirmados_data = get_confirmados()
             confirmados = confirmados_data.get('confirmados', [])
