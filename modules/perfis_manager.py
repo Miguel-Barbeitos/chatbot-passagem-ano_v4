@@ -62,7 +62,6 @@ def inicializar_qdrant():
                 if qdrant_url and qdrant_key:
                     print("☁️  Usando credenciais do Streamlit secrets")
         except Exception as e:
-            print(f"⚠️  Não conseguiu ler Streamlit secrets: {e}")
             pass
     
     # 3. Se encontrou credenciais cloud, usa Qdrant Cloud
