@@ -4,7 +4,6 @@
 modules/quintas_updater.py
 ==========================
 Funções auxiliares para atualizar quintas no Qdrant
-CRIA CLIENTE PRÓPRIO DE FORMA SEGURA (sem hardcoded keys)
 """
 
 from qdrant_client import QdrantClient
@@ -12,12 +11,9 @@ from qdrant_client.models import Filter, FieldCondition, MatchValue
 import os
 
 def _get_qdrant_client():
-    """
-    Cria cliente Qdrant (privado)
-    Usa a mesma lógica que quintas_qdrant.py
-    """
+    """Cria cliente Qdrant"""
     try:
-        # Tenta Streamlit primeiro
+        # Tenta Streamlit secrets primeiro
         import streamlit as st
         qdrant_url = st.secrets.get("QDRANT_URL")
         qdrant_key = st.secrets.get("QDRANT_API_KEY")
@@ -30,13 +26,11 @@ def _get_qdrant_client():
     qdrant_url = os.getenv("QDRANT_URL")
     qdrant_key = os.getenv("QDRANT_API_KEY")
     
-    if not qdrant_url or not qdrant_key:
-        raise Exception(
-            "❌ Credenciais Qdrant não encontradas!\n"
-            "   Configure QDRANT_URL e QDRANT_API_KEY em:\n"
-            "   - .streamlit/secrets.toml (Streamlit), ou\n"
-            "   - Variáveis de ambiente (terminal)"
-        )
+    # Se não encontrou, usa valores padrão (para terminal)
+    if not qdrant_url:
+        qdrant_url = "https://53262e06-1c9b-4530-a703-94f9e573b71a.europe-west3-0.gcp.cloud.qdrant.io:6333"
+    if not qdrant_key:
+        qdrant_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.8j0MluKJ7Hzk0B2Fey7FBsbQXvr21rvkNlsKCH1COpo"
     
     return QdrantClient(url=qdrant_url, api_key=qdrant_key, timeout=10.0)
 

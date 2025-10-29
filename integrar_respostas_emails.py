@@ -116,56 +116,86 @@ print(f"\n📊 Total de respostas identificadas: {len(quintas_responderam)}")
 # PASSO 2: ATUALIZAR QDRANT
 # =====================================================
 print("\n🔄 PASSO 2: Atualizar Qdrant...")
+print("="*70)
 
 atualizadas = 0
 nao_encontradas = []
 
+print("\n🔍 DEBUG - Tentando importar módulos...")
 try:
-    # Tenta importar
-    print("  🔍 Importando módulos...")
+    print("  → Importando listar_quintas de modules.quintas_qdrant...")
     from modules.quintas_qdrant import listar_quintas
-    from modules.quintas_updater import atualizar_quinta
-    print("  ✅ Módulos importados!")
+    print("  ✅ listar_quintas importado!")
     
-    # Lista todas as quintas do Qdrant
+    print("  → Importando atualizar_quinta de modules.quintas_updater...")
+    from modules.quintas_updater import atualizar_quinta
+    print("  ✅ atualizar_quinta importado!")
+    
+    print("\n🔍 DEBUG - Listando quintas do Qdrant...")
     todas_quintas = listar_quintas()
-    print(f"📦 Quintas no Qdrant: {len(todas_quintas)}")
+    print(f"  ✅ {len(todas_quintas)} quintas encontradas!")
+    
+    print("\n🔍 DEBUG - Quintas a atualizar:")
+    for nome in quintas_responderam.keys():
+        print(f"  • {nome}")
+    
+    print("\n📦 Iniciando atualizações...")
+    print("-"*70)
     
     # Atualiza cada quinta
     for nome_quinta, info in quintas_responderam.items():
+        print(f"\n🔄 Processando: {nome_quinta}")
+        
         # Procura a quinta no Qdrant
         quinta = next((q for q in todas_quintas if q['nome'] == nome_quinta), None)
         
         if quinta:
+            print(f"  ✅ Quinta encontrada no Qdrant")
             # Atualiza com info de resposta
             try:
-                atualizar_quinta(nome_quinta, {
+                campos_atualizar = {
                     'respondeu': True,
                     'email_resposta': info['email'],
                     'data_resposta': info['data_resposta'],
                     'status': 'respondeu'
-                })
-                print(f"  ✅ Atualizado: {nome_quinta}")
-                atualizadas += 1
+                }
+                print(f"  → Atualizando com campos: {list(campos_atualizar.keys())}")
+                
+                resultado = atualizar_quinta(nome_quinta, campos_atualizar)
+                
+                if resultado:
+                    print(f"  ✅ SUCESSO!")
+                    atualizadas += 1
+                else:
+                    print(f"  ⚠️ Função retornou False")
+                    
             except Exception as e:
-                print(f"  ⚠️ Erro ao atualizar {nome_quinta}: {e}")
+                print(f"  ❌ ERRO na atualização: {e}")
+                import traceback
+                traceback.print_exc()
         else:
             nao_encontradas.append(nome_quinta)
-            print(f"  ⚠️ Não encontrada no Qdrant: {nome_quinta}")
+            print(f"  ⚠️ Não encontrada no Qdrant")
+            print(f"     Procurei por: '{nome_quinta}'")
+            print(f"     Primeiras 3 quintas do Qdrant:")
+            for q in todas_quintas[:3]:
+                print(f"       - '{q['nome']}'")
     
-    print(f"\n✅ Atualizadas: {atualizadas}/{len(quintas_responderam)}")
+    print("\n" + "="*70)
+    print(f"✅ RESULTADO: {atualizadas} de {len(quintas_responderam)} atualizadas")
     
     if nao_encontradas:
         print(f"\n⚠️ Não encontradas no Qdrant ({len(nao_encontradas)}):")
         for nome in nao_encontradas:
             print(f"  • {nome}")
-        print("\nDica: Verifica se os nomes no MAPA_QUINTAS correspondem aos nomes no Qdrant")
+        print("\n💡 Dica: Verifica se os nomes no MAPA_QUINTAS correspondem")
+        print("   exatamente aos nomes no Qdrant (incluindo acentos, espaços, etc.)")
 
 except ImportError as e:
     print(f"\n❌ ERRO DE IMPORT: {e}")
     print("\n💡 SOLUÇÃO:")
     print("  1. Verifica: ls -la modules/quintas_updater.py")
-    print("  2. Se não existir, copia o ficheiro COPIAR_PARA_MODULES_quintas_updater.py")
+    print("  2. Se não existir, copia o ficheiro modules_quintas_updater.py")
     print("     para modules/quintas_updater.py")
     
     # Guarda JSON para importação manual
@@ -177,9 +207,9 @@ except ImportError as e:
     atualizadas = 'N/A (erro de import)'
 
 except Exception as e:
-    print(f"\n❌ ERRO: {e}")
+    print(f"\n❌ ERRO INESPERADO: {e}")
+    print("\n🔍 TRACEBACK COMPLETO:")
     import traceback
-    print("\n🔍 TRACEBACK:")
     traceback.print_exc()
     
     atualizadas = 'N/A (erro)'
