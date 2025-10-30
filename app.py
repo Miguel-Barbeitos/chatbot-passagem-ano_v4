@@ -234,21 +234,50 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     # PRIORIDADE 0: SAUDAÇÕES E MENSAGENS CASUAIS
     # ====================================================================
     
-    # Normalizar texto (remover acentos)
-    def normalizar(texto):
-        return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
+    # Normalizar pergunta (minúsculas + sem acentos)
+    def normalizar_texto(texto):
+        """Remove acentos e converte para minúsculas"""
+        texto_lower = texto.lower()
+        texto_sem_acentos = ''.join(
+            c for c in unicodedata.normalize('NFD', texto_lower)
+            if unicodedata.category(c) != 'Mn'
+        )
+        return texto_sem_acentos
     
-    pergunta_normalizada = normalizar(pergunta_l)
+    try:
+        pergunta_norm = normalizar_texto(pergunta)
+    except:
+        pergunta_norm = pergunta_l  # Fallback
     
-    # Saudações simples
-    saudacoes = ["ola", "oi", "hey", "bom dia", "boa tarde", "boa noite", "hi", "hello", "e ai", "eai"]
-    if any(saudacao in pergunta_normalizada for saudacao in saudacoes):
-        hora = datetime.now().hour
-        saudacao_resposta = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
-        return f"{saudacao_resposta}, {nome}! 👋 Como posso ajudar com a organização da festa?"
+    # Detectar hora para saudação apropriada
+    try:
+        hora_atual = datetime.now().hour
+        if hora_atual < 12:
+            saudacao_uso = "Bom dia"
+        elif hora_atual < 20:
+            saudacao_uso = "Boa tarde"
+        else:
+            saudacao_uso = "Boa noite"
+    except:
+        saudacao_uso = "Olá"  # Fallback
+    
+    # Saudações simples - detecção robusta
+    palavras_saudacao = ["ola", "oi", "hey", "hi", "hello", "eai", "e ai"]
+    frases_saudacao = ["bom dia", "boa tarde", "boa noite"]
+    
+    # Verifica se é saudação
+    eh_saudacao = False
+    if any(palavra == pergunta_norm.strip() for palavra in palavras_saudacao):
+        eh_saudacao = True
+    if any(frase in pergunta_norm for frase in frases_saudacao):
+        eh_saudacao = True
+    
+    if eh_saudacao:
+        return f"{saudacao_uso}, {nome}! 👋 Como posso ajudar com a organização da festa?"
     
     # Agradecimentos
-    if any(palavra in pergunta_normalizada for palavra in ["obrigado", "obrigada", "thanks", "obg", "valeu"]):
+    palavras_obrigado = ["obrigado", "obrigada", "thanks", "obg", "valeu", "thank you"]
+    if any(palavra in pergunta_norm for palavra in palavras_obrigado):
         return "De nada! 😊 Estou aqui para ajudar!"
     
     # Como está / tudo bem
