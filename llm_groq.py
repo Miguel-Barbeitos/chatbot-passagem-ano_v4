@@ -463,20 +463,26 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
     
     # Se há contexto da conversa anterior, usa para melhorar a compreensão
     if contexto_conversa:
-        # Converte contexto para string se for lista
-        contexto_str = ""
-        if isinstance(contexto_conversa, list):
-            contexto_str = " ".join([str(msg.get('content', '')) for msg in contexto_conversa if isinstance(msg, dict)])
-        else:
-            contexto_str = str(contexto_conversa)
-        
-        contexto_str_lower = contexto_str.lower()
-        
-        if "quinta" in contexto_str_lower or "contacta" in contexto_str_lower:
-            if p in ["diz-me", "mostra", "quais", "lista", "as quintas", "essas"]:
-                pergunta = "que quintas já contactámos"
-                p = pergunta.lower()
-                print(f"🔄 Contexto aplicado: '{pergunta}'")
+        try:
+            # Converte contexto para string se for lista
+            contexto_str = ""
+            if isinstance(contexto_conversa, list):
+                contexto_str = " ".join([str(msg.get('content', '')) for msg in contexto_conversa if isinstance(msg, dict)])
+            elif isinstance(contexto_conversa, str):
+                contexto_str = contexto_conversa
+            else:
+                contexto_str = str(contexto_conversa)
+            
+            contexto_str_lower = contexto_str.lower()
+            
+            if "quinta" in contexto_str_lower or "contacta" in contexto_str_lower:
+                if p in ["diz-me", "mostra", "quais", "lista", "as quintas", "essas"]:
+                    pergunta = "que quintas já contactámos"
+                    p = pergunta.lower()
+                    print(f"🔄 Contexto aplicado: '{pergunta}'")
+        except Exception as e:
+            print(f"⚠️ Erro ao processar contexto: {e}")
+            # Continua sem usar contexto
 
     # ✅ CONSULTAS SOBRE QUINTAS
     if e_pergunta_de_quintas(pergunta):
