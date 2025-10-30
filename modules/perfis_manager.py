@@ -190,21 +190,17 @@ def importar_perfis_do_json():
 def buscar_perfil(nome: str):
     """Busca perfil por nome exato"""
     try:
+        # Sem filtro - busca todos e filtra manualmente (mais lento mas funciona sem índice)
         resultados, _ = client.scroll(
             collection_name=COLLECTION_PERFIS,
-            scroll_filter=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="nome",
-                        match=models.MatchValue(value=nome)
-                    )
-                ]
-            ),
-            limit=1
+            limit=100  # Pega todos
         )
         
-        if resultados:
-            return resultados[0].payload
+        # Filtra manualmente por nome
+        for resultado in resultados:
+            if resultado.payload.get('nome') == nome:
+                return resultado.payload
+        
         return None
     except Exception as e:
         print(f"❌ Erro ao buscar perfil: {e}")
@@ -229,20 +225,19 @@ def buscar_perfil_semantica(texto: str, limit=5):
 def listar_familia(familia_id: str):
     """Lista todos os membros de uma família"""
     try:
+        # Sem filtro - busca todos e filtra manualmente
         resultados, _ = client.scroll(
             collection_name=COLLECTION_PERFIS,
-            scroll_filter=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="familia_id",
-                        match=models.MatchValue(value=familia_id)
-                    )
-                ]
-            ),
-            limit=10
+            limit=100
         )
         
-        return [r.payload for r in resultados]
+        # Filtra manualmente por familia_id
+        familia = []
+        for resultado in resultados:
+            if resultado.payload.get('familia_id') == familia_id:
+                familia.append(resultado.payload)
+        
+        return familia
     except Exception as e:
         print(f"❌ Erro ao listar família: {e}")
         return []
@@ -250,25 +245,23 @@ def listar_familia(familia_id: str):
 def atualizar_perfil(nome: str, atualizacoes: dict):
     """Atualiza campos do perfil"""
     try:
-        # Busca o ponto
+        # Busca sem filtro e filtra manualmente
         resultados, _ = client.scroll(
             collection_name=COLLECTION_PERFIS,
-            scroll_filter=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="nome",
-                        match=models.MatchValue(value=nome)
-                    )
-                ]
-            ),
-            limit=1
+            limit=100
         )
         
-        if not resultados:
+        # Procura o perfil manualmente
+        ponto = None
+        for resultado in resultados:
+            if resultado.payload.get('nome') == nome:
+                ponto = resultado
+                break
+        
+        if not ponto:
             print(f"⚠️ Perfil '{nome}' não encontrado")
             return False
         
-        ponto = resultados[0]
         payload = ponto.payload
         
         # Aplica atualizações
@@ -285,6 +278,8 @@ def atualizar_perfil(nome: str, atualizacoes: dict):
                 payload[chave] = valor
         
         # Atualiza timestamp
+        if "metadata" not in payload:
+            payload["metadata"] = {}
         payload["metadata"]["atualizado_em"] = datetime.now().isoformat()
         
         # Salva

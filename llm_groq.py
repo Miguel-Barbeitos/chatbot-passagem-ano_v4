@@ -463,7 +463,16 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
     
     # Se há contexto da conversa anterior, usa para melhorar a compreensão
     if contexto_conversa:
-        if "quinta" in contexto_conversa.lower() or "contacta" in contexto_conversa.lower():
+        # Converte contexto para string se for lista
+        contexto_str = ""
+        if isinstance(contexto_conversa, list):
+            contexto_str = " ".join([str(msg.get('content', '')) for msg in contexto_conversa if isinstance(msg, dict)])
+        else:
+            contexto_str = str(contexto_conversa)
+        
+        contexto_str_lower = contexto_str.lower()
+        
+        if "quinta" in contexto_str_lower or "contacta" in contexto_str_lower:
             if p in ["diz-me", "mostra", "quais", "lista", "as quintas", "essas"]:
                 pergunta = "que quintas já contactámos"
                 p = pergunta.lower()
