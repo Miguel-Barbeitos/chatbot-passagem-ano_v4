@@ -373,20 +373,24 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     if any(palavra in pergunta_l for palavra in ["quais quintas", "lista de quintas", "que quintas"]):
         try:
             from modules.quintas_qdrant import listar_quintas
-            quintas = listar_quintas(10)
+            quintas = listar_quintas()  # Buscar TODAS
             
             if quintas:
                 resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
-                for i, q in enumerate(quintas[:40], 1):
+                
+                # Mostrar até 20 (em vez de 10)
+                limite_exibicao = min(20, len(quintas))
+                
+                for i, q in enumerate(quintas[:limite_exibicao], 1):
                     nome = q.get('nome', 'N/A')
                     zona = q.get('zona', 'N/A')
                     resposta += f"{i}. **{nome}** ({zona})\n"
                 
-                if len(quintas) > 10:
-                    resposta += f"\n...e mais {len(quintas) - 10}!"
+                if len(quintas) > limite_exibicao:
+                    resposta += f"\n...e mais {len(quintas) - limite_exibicao} quintas!"
                 
                 # Guarda lista no session state
-                st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:10]]
+                st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:limite_exibicao]]
                 
                 return resposta
             else:
