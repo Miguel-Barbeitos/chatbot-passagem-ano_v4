@@ -558,21 +558,54 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                             if quinta:
                                 resposta = f"🏡 **{quinta.get('nome', 'N/A')}**\n\n"
                                 
-                                if 'website' in p and quinta.get('website'):
-                                    resposta += f"🌐 Website: {quinta['website']}\n"
-                                if 'telefone' in p and quinta.get('telefone'):
-                                    resposta += f"📞 Telefone: {quinta['telefone']}\n"
-                                if 'email' in p and quinta.get('email'):
-                                    resposta += f"✉️ Email: {quinta['email']}\n"
-                                if 'resposta' in p and quinta.get('resposta'):
-                                    resposta += f"📧 Resposta: {quinta['resposta']}\n"
+                                # Verificar se pediu algo específico
+                                tem_info = False
                                 
-                                # Se não pediu nada específico, mostra tudo
+                                if 'website' in p:
+                                    if quinta.get('website'):
+                                        resposta += f"🌐 Website: {quinta['website']}\n"
+                                        tem_info = True
+                                    else:
+                                        resposta += f"⚠️ Website: Não disponível\n"
+                                        
+                                if 'telefone' in p:
+                                    if quinta.get('telefone'):
+                                        resposta += f"📞 Telefone: {quinta['telefone']}\n"
+                                        tem_info = True
+                                    else:
+                                        resposta += f"⚠️ Telefone: Não disponível\n"
+                                        
+                                if 'email' in p:
+                                    if quinta.get('email'):
+                                        resposta += f"✉️ Email: {quinta['email']}\n"
+                                        tem_info = True
+                                    else:
+                                        resposta += f"⚠️ Email: Não disponível\n"
+                                        
+                                if 'resposta' in p:
+                                    if quinta.get('resposta'):
+                                        resposta += f"📧 Resposta: {quinta['resposta']}\n"
+                                        tem_info = True
+                                    else:
+                                        resposta += f"⏳ Resposta: Ainda não responderam\n"
+                                
+                                # Se não pediu nada específico, mostra tudo disponível
                                 if not any(x in p for x in ['website', 'telefone', 'email', 'resposta']):
-                                    if quinta.get('zona'): resposta += f"📍 Zona: {quinta['zona']}\n"
-                                    if quinta.get('website'): resposta += f"🌐 Website: {quinta['website']}\n"
-                                    if quinta.get('telefone'): resposta += f"📞 Telefone: {quinta['telefone']}\n"
-                                    if quinta.get('resposta'): resposta += f"📧 Resposta: {quinta['resposta'][:100]}...\n"
+                                    if quinta.get('zona'): 
+                                        resposta += f"📍 Zona: {quinta['zona']}\n"
+                                        tem_info = True
+                                    if quinta.get('website'): 
+                                        resposta += f"🌐 Website: {quinta['website']}\n"
+                                        tem_info = True
+                                    if quinta.get('telefone'): 
+                                        resposta += f"📞 Telefone: {quinta['telefone']}\n"
+                                        tem_info = True
+                                    if quinta.get('resposta'): 
+                                        resposta += f"📧 Resposta: {quinta['resposta'][:100]}...\n"
+                                        tem_info = True
+                                
+                                if not tem_info and any(x in p for x in ['website', 'telefone', 'email']):
+                                    resposta += f"\n💡 Não tenho essa informação ainda."
                                 
                                 return processar_resposta(resposta, perfil_completo)
                         
@@ -863,6 +896,35 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     t = total[0]['total'] if total else len(dados)
                     resposta = f"Já contactámos {t} quintas:\n{nomes}\n{'...e mais!' if t > 8 else ''}"
                     return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
+            
+            # MOSTRAR MAIS / E AS OUTRAS / RESTO
+            if any(frase in p for frase in ["e as outras", "as outras", "mostra mais", "mais quintas", "resto", "restantes", "continua"]):
+                # Pegar quintas 9-20
+                sql = "SELECT nome, zona FROM quintas LIMIT 12 OFFSET 8"
+                dados = executar_sql(sql)
+                if dados and len(dados) > 0:
+                    nomes = "\n".join([f"• {d['nome']} ({d['zona']})" for d in dados])
+                    sql2 = "SELECT COUNT(*) as total FROM quintas"
+                    total = executar_sql(sql2)
+                    t = total[0]['total'] if total else 0
+                    resposta = f"**Mais {len(dados)} quintas** (quintas 9-{8+len(dados)} de {t}):\n{nomes}"
+                    if t > (8 + len(dados)):
+                        resposta += f"\n\n...e ainda há mais {t - 8 - len(dados)} quintas! Pergunta 'mostra todas'."
+                    return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
+                return processar_resposta("Essas são todas as quintas que contactámos! 😊", perfil_completo)
+            
+            # MOSTRA TODAS
+            if "mostra todas" in p or "todas as quintas" in p or "lista completa" in p:
+                sql = "SELECT nome, zona FROM quintas"
+                dados = executar_sql(sql)
+                if dados:
+                    # Mostrar até 20
+                    limite = min(20, len(dados))
+                    nomes = "\n".join([f"• {d['nome']} ({d['zona']})" for d in dados[:limite]])
+                    resposta = f"**Todas as {len(dados)} quintas contactadas:**\n\n{nomes}"
+                    if len(dados) > limite:
+                        resposta += f"\n\n_(Mostradas {limite} de {len(dados)})_"
+                    return processar_resposta(resposta, perfil_completo, dados_quintas=dados[:limite])
             
             # ZONAS
             if "zona" in p and "que" in p:
