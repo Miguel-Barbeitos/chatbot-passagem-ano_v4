@@ -25,21 +25,40 @@ def get_evento():
     try:
         with open(EVENT_JSON, 'r', encoding='utf-8') as f:
             return json.load(f)
+    except UnicodeDecodeError:
+        # Tenta com encoding diferente
+        try:
+            with open(EVENT_JSON, 'r', encoding='latin-1') as f:
+                return json.load(f)
+        except:
+            pass
     except FileNotFoundError:
-        # Dados padrão se ficheiro não existir
-        return {
-            "nome": "Passagem de Ano 2024/2025",
-            "data_inicio": "2025-12-30",
-            "data_fim": "2026-01-04",
-            "check_in": "15:00",
-            "check_out": "12:00",
-            "cor": "Amarelo",
-            "orcamento_pessoa": 300,  # JÁ INCLUI: dormidas + refeições + compras
-            "quinta_prereservada": "Monte da Galega",
-            "total_convidados": 35,
-            "capacidade_minima": 35,
-            "capacidade_ideal": 40
-        }
+        pass
+    except Exception as e:
+        print(f"⚠️ Erro ao ler event.json: {e}")
+    
+    # Dados padrão se ficheiro não existir ou tiver erro
+    return {
+        "nome": "Passagem de Ano 2024/2025",
+        "data_inicio": "2025-12-30",
+        "data_fim": "2026-01-04",
+        "check_in": "15:00",
+        "check_out": "12:00",
+        "cor": "Amarelo",
+        "orcamento_pessoa": 300,  # JÁ INCLUI: dormidas + refeições + compras
+        "quinta_prereservada": "Monte da Galega",
+        "quinta_prereservada_info": {
+            "nome": "Monte da Galega",
+            "zona": "Penafiel",
+            "telefone": "+351 255 000 000",
+            "website": "https://www.montedagalega.pt",
+            "capacidade": 40,
+            "custo_estimado": 4500
+        },
+        "total_convidados": 35,
+        "capacidade_minima": 35,
+        "capacidade_ideal": 40
+    }
 
 def get_datas_evento():
     """Retorna datas formatadas do evento"""
