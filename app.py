@@ -22,7 +22,15 @@ from modules.confirmacoes import (
     detectar_intencao_confirmacao,
     confirmar_familia_completa
 )
-from modules.perfis_manager import buscar_perfil, listar_familia 
+from modules.perfis_manager import buscar_perfil, listar_familia
+from modules.organizacao import (
+    get_evento,
+    get_datas_evento,
+    get_tema_cor,
+    get_orcamento,
+    get_stats_quintas,
+    responder_pergunta_organizacao
+)
 
 # =====================================================
 # ⚙️ CONFIGURAÇÃO
@@ -207,132 +215,119 @@ elif humor >= 4:
 else:
     categoria = "humor_baixo_formal" if formalidade >= 6 else "humor_baixo_informal"
 
-msg_saudacao = random.choice(saudacoes[categoria])
+saudacao_inicial = random.choice(saudacoes[categoria])
 
-if detalhismo >= 7:
-    msg_saudacao += "\n\nPodes perguntar-me sobre quintas, confirmações, detalhes da festa ou o que precisares!"
-
-if emojis < 3:
-    msg_saudacao = re.sub(r'[😀-🙏🌀-🗿🚀-🛿👋🎉🎆🎊]', '', msg_saudacao).strip()
-elif emojis < 5:
-    msg_saudacao = msg_saudacao.replace("🎆", "").replace("🎊", "").replace("🚀", "")
-
-st.success(msg_saudacao)
+st.title("🎆 Assistente da Festa 2025/2026")
+st.markdown(f"_{saudacao_inicial}_")
 
 # =====================================================
-# 🧠 MOTOR DE RESPOSTA
+# 🤖 SISTEMA DE RESPOSTA
 # =====================================================
-def gerar_resposta(pergunta: str, perfil_completo: dict):
-    """Gera resposta personalizada baseada na pergunta"""
+def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
+    """Gera resposta baseada em regras ou LLM"""
     
-    pergunta_l = normalizar(pergunta)
-    contexto_base = get_contexto_base(raw=True)
-    contexto_anterior = ""
-    
-    # Obtém contexto de mensagens anteriores
-    if "historico" in st.session_state and len(st.session_state.historico) > 0:
-        ultimas = [msg for msg in st.session_state.historico[-4:] if msg["role"] == "assistant"]
-        if ultimas:
-            contexto_anterior = ultimas[-1]["content"].replace("**Assistente:** ", "")
+    pergunta_l = pergunta.lower().strip()
+    contexto_anterior = st.session_state.historico[-10:] if "historico" in st.session_state else []
+    contexto_base = get_contexto_base()
     
     # ====================================================================
-    # DETECÇÃO DE PERGUNTAS ESPECÍFICAS (antes do LLM)
+    # PRIORIDADE 1: Usa módulo organizacao.py para perguntas frequentes
+    # ====================================================================
+    resposta_org = responder_pergunta_organizacao(pergunta)
+    if resposta_org:
+        return resposta_org
+    
+    # ====================================================================
+    # PRIORIDADE 2: CONFIRMAÇÕES
     # ====================================================================
     
-    # 0. Saudações básicas
-    if pergunta_l in ["ola", "olá", "oi", "hey", "boas", "boa tarde", "bom dia", "boa noite"]:
-        return f"Olá! 👋 Como posso ajudar com a festa da passagem de ano?\n\nPergunta-me sobre:\n• Quintas disponíveis\n• Datas e orçamento\n• Quem já confirmou\n• Ou o que quiseres saber!"
-    
-    # 0.1 Respostas de continuação (sim, não, ok, etc.)
-    if pergunta_l in ["sim", "yes", "ok", "claro", "quero", "gostaria", "pode ser"]:
-        # Verifica última pergunta
-        if "historico" in st.session_state and st.session_state.historico:
-            ultima_msg = st.session_state.historico[-1].get("content", "")
-            
-            # Se última pergunta foi sobre ver quintas
-            if "queres saber mais" in ultima_msg.lower() or "ver a lista" in ultima_msg.lower():
-                try:
-                    from modules.quintas_qdrant import listar_quintas
-                    quintas = listar_quintas()
-                    
-                    if quintas:
-                        resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
-                        
-                        for i, quinta in enumerate(quintas[:10], 1):
-                            nome = quinta.get('nome', 'N/A')
-                            zona = quinta.get('zona', 'N/A')
-                            resposta += f"{i}. **{nome}** ({zona})\n"
-                        
-                        if len(quintas) > 10:
-                            resposta += f"\n...e mais {len(quintas) - 10} quintas!"
-                        
-                        resposta += "\n\n💡 Pergunta sobre uma específica (ex: 'website da primeira')"
-                        
-                        st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:10]]
-                        
-                        return resposta
-                except Exception as e:
-                    print(f"Erro: {e}")
-                    pass
+    # Detecção de intenção de confirmação
+    if any(palavra in pergunta_l for palavra in ["confirmo", "vou", "eu vou", "conta comigo", "posso confirmar"]):
+        intencao = detectar_intencao_confirmacao(pergunta)
         
-        # Fallback genérico para "sim"
-        return "Ótimo! 😊 Sobre o que queres saber especificamente?\n\n• Lista de quintas?\n• Datas e preços?\n• Confirmações?"
-    
-    # 0.2 Resposta direta às opções do menu
-    if "lista de quintas" in pergunta_l or pergunta_l == "lista":
-        try:
-            from modules.quintas_qdrant import listar_quintas
-            quintas = listar_quintas()
+        if intencao["tipo"] == "familia":
+            familia_id = perfil_completo.get("familia_id")
+            resultado = confirmar_familia_completa(familia_id, nome)
             
-            if quintas:
-                resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
+            if resultado["sucesso"]:
+                return f"🎉 **Confirmado!** Toda a família vai:\n" + "\n".join([f"✅ {n}" for n in resultado["confirmados"]])
+            else:
+                return "❌ Erro ao confirmar família. Tenta novamente!"
+        
+        elif intencao["tipo"] == "individual":
+            resultado = confirmar_pessoa(nome, confirmado_por=nome)
+            
+            if resultado["sucesso"]:
+                resposta = f"🎉 **{resultado['mensagem']}**"
                 
-                for i, quinta in enumerate(quintas[:10], 1):
-                    nome = quinta.get('nome', 'N/A')
-                    zona = quinta.get('zona', 'N/A')
-                    resposta += f"{i}. **{nome}** ({zona})\n"
-                
-                if len(quintas) > 10:
-                    resposta += f"\n...e mais {len(quintas) - 10} quintas!"
-                
-                resposta += "\n\n💡 Pergunta: 'website da primeira', 'morada da 5', etc."
-                
-                st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:10]]
+                if resultado["familia_sugerida"]:
+                    resposta += f"\n\n👨‍👩‍👧‍👦 Mais alguém da família vai?\n"
+                    resposta += "\n".join([f"• {n}" for n in resultado["familia_sugerida"]])
+                    resposta += "\n\nDiz 'confirmo todos' para confirmar a família completa!"
                 
                 return resposta
-        except Exception as e:
-            print(f"Erro: {e}")
-            return "Erro ao carregar quintas! 😕"
+            else:
+                return f"❌ {resultado['mensagem']}"
     
-    if "datas e precos" in pergunta_l or "datas e preco" in pergunta_l or pergunta_l in ["datas", "precos", "preço", "orcamento", "orçamento"]:
-        return "📅 **Datas:** 30 de Dezembro de 2025 a 4 de Janeiro de 2026\n\n💰 **Orçamento:** 250-300€ por pessoa\n\n5 noites de festa incluindo alojamento e refeições! 🎉"
+    # ====================================================================
+    # PRIORIDADE 3: INFORMAÇÕES DE QUINTAS
+    # ====================================================================
     
-    # 1. Perguntas sobre quinta reservada
-    if any(palavra in pergunta_l for palavra in ["ja temos", "temos alguma", "ha alguma", "quinta reservada", "local reservado"]):
-        return """🏡 **Sim!** 
-
-Temos o **Monte da Galega** pré-reservado como plano B, mas ainda estamos a avaliar outras opções para garantir que escolhemos o melhor local para a festa! 🎉
-
-Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
-    
-    # 2. Lista de quintas
-    if any(palavra in pergunta_l for palavra in ["quais quintas", "que quintas", "lista de quintas", "quintas contactadas", "lista quintas", "ver quintas", "mostrar quintas"]):
+    # 1. Website/Telefone de quinta específica
+    if any(palavra in pergunta_l for palavra in ["website", "site", "telefone", "contacto", "email"]):
         try:
             from modules.quintas_qdrant import listar_quintas
-            quintas = listar_quintas()
+            
+            # Tenta detectar nome da quinta
+            quinta_nome = st.session_state.get("ultima_quinta_mencionada")
+            
+            # Busca padrões de nomes próprios
+            match_nome = re.search(r'(Casa|Monte|Quinta|Herdade)\s+[A-Z][a-z]+', pergunta, re.IGNORECASE)
+            if match_nome:
+                quinta_nome = match_nome.group(0)
+            
+            if quinta_nome:
+                quintas = listar_quintas()
+                quinta = next((q for q in quintas if quinta_nome.lower() in q.get('nome', '').lower()), None)
+                
+                if quinta:
+                    info = []
+                    
+                    if "website" in pergunta_l or "site" in pergunta_l:
+                        if quinta.get('website'):
+                            info.append(f"🌐 **Website:** {quinta['website']}")
+                    
+                    if "telefone" in pergunta_l or "contacto" in pergunta_l:
+                        if quinta.get('telefone'):
+                            info.append(f"📞 **Telefone:** {quinta['telefone']}")
+                    
+                    if "email" in pergunta_l:
+                        if quinta.get('email'):
+                            info.append(f"📧 **Email:** {quinta['email']}")
+                    
+                    if not info:
+                        info.append(f"🌐 {quinta.get('website', 'N/A')}")
+                        info.append(f"📞 {quinta.get('telefone', 'N/A')}")
+                    
+                    return f"**{quinta['nome']}**\n\n" + "\n".join(info)
+        except Exception as e:
+            print(f"Erro ao buscar info quinta: {e}")
+    
+    # 2. Lista de quintas
+    if any(palavra in pergunta_l for palavra in ["quais quintas", "lista de quintas", "que quintas"]):
+        try:
+            from modules.quintas_qdrant import listar_quintas
+            quintas = listar_quintas(10)
             
             if quintas:
                 resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
-                
-                for i, quinta in enumerate(quintas[:10], 1):  # Primeiras 10
-                    nome = quinta.get('nome', 'N/A')
-                    zona = quinta.get('zona', 'N/A')
+                for i, q in enumerate(quintas[:10], 1):
+                    nome = q.get('nome', 'N/A')
+                    zona = q.get('zona', 'N/A')
                     resposta += f"{i}. **{nome}** ({zona})\n"
                 
                 if len(quintas) > 10:
-                    resposta += f"\n...e mais {len(quintas) - 10} quintas!"
-                
-                resposta += "\n\n💡 Pergunta sobre uma específica (ex: 'website da primeira') ou por zona (ex: 'quintas em Cáceres')"
+                    resposta += f"\n...e mais {len(quintas) - 10}!"
                 
                 # Guarda lista no session state
                 st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:10]]
@@ -344,14 +339,14 @@ Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
             print(f"Erro ao listar quintas: {e}")
             return "Erro ao carregar quintas. Tenta novamente!"
     
-    # 3. Quantas quintas responderam (ANTES de "quantas quintas" geral)
+    # 3. Quantas quintas responderam (CORRIGIDO!)
     if any(palavra in pergunta_l for palavra in ["quantas responderam", "quantas quintas responderam", "quintas que responderam", "respostas de quintas"]):
         try:
             from modules.quintas_qdrant import listar_quintas
             quintas = listar_quintas()
             
-            # Conta quintas com resposta (tem email ou status)
-            com_resposta = [q for q in quintas if q.get('respondeu') or q.get('email_resposta') or q.get('status') in ['respondeu', 'interessado', 'disponivel']]
+            # CORREÇÃO: Verificar campos corretos do Qdrant
+            com_resposta = [q for q in quintas if q.get('resposta') and q.get('resposta') not in ['', None, 'Sem resposta']]
             
             total = len(quintas)
             responderam = len(com_resposta)
@@ -363,7 +358,8 @@ Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
                 resposta += "✅ **Quintas que responderam:**\n"
                 for q in com_resposta[:5]:  # Primeiras 5
                     nome = q.get('nome', 'N/A')
-                    resposta += f"• {nome}\n"
+                    resposta_quinta = q.get('resposta', 'N/A')
+                    resposta += f"• {nome} - {resposta_quinta}\n"
                 
                 if responderam > 5:
                     resposta += f"\n...e mais {responderam - 5}!"
@@ -373,6 +369,8 @@ Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
             return resposta
         except Exception as e:
             print(f"Erro ao contar respostas: {e}")
+            import traceback
+            traceback.print_exc()
             return "Ainda estamos a processar as respostas dos emails! 📧"
     
     # 3.9 Quantas quintas (geral - contactadas)
@@ -397,16 +395,6 @@ Já contactámos **35 quintas**. Queres saber mais sobre elas?"""
                 return "Ainda **ninguém** confirmou. 😔\n\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
         except:
             return "Ainda estamos a recolher confirmações! 📝"
-    
-    # 4. Informações do evento
-    if any(palavra in pergunta_l for palavra in ["quando e", "que dias", "datas", "data da festa"]):
-        return "📅 **Datas:** 30 de Dezembro de 2025 a 4 de Janeiro de 2026\n\n5 noites de festa! 🎉"
-    
-    if any(palavra in pergunta_l for palavra in ["qual a cor", "cor do ano", "tema"]):
-        return "🎨 **Cor deste ano:** Amarelo! ☀️"
-    
-    if any(palavra in pergunta_l for palavra in ["orcamento", "orçamento", "quanto custa", "preco", "preço"]):
-        return "💰 **Orçamento:** 250-300€ por pessoa\n\nInclui alojamento, refeições e festa! 🎉"
     
     # 5. Quem vai / Confirmações
     if any(palavra in pergunta_l for palavra in ["quem vai", "quem confirmou", "lista de confirmados", "ver confirmados"]) or pergunta_l in ["confirmacoes", "confirmações"]:
