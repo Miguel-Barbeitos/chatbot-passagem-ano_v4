@@ -425,7 +425,7 @@ def responder_pergunta_organizacao(pergunta):
         quinta_pre = get_quinta_prereservada()
         stats = get_stats_quintas()
         
-        resposta = f"""✅ Sim! Temos o **{quinta_pre['nome']}** pré-reservado.
+        resposta = f"""✅ Sim! Temos o **{quinta_pre['nome']}** pré-reservado como plano B, mas estamos à procura de mais quintas.
 
 📊 Estado da procura:
 • {stats['total_contactadas']} quintas contactadas
