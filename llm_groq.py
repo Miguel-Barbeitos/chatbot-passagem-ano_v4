@@ -707,6 +707,38 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                 resposta = "Ainda não tivemos respostas 😅"
                 return processar_resposta(resposta, perfil_completo)
             
+            # QUINTAS INDISPONÍVEIS
+            if "indisponivel" in p or "indisponiveis" in p or "nao disponivel" in p:
+                sql = "SELECT nome, zona, resposta FROM quintas WHERE LOWER(resposta) LIKE '%indisponível%' OR LOWER(resposta) LIKE '%completo%' OR LOWER(resposta) LIKE '%esgotado%' OR LOWER(resposta) LIKE '%ocupado%'"
+                dados = executar_sql(sql)
+                if dados and len(dados) > 0:
+                    resposta = f"📋 **Quintas indisponíveis** ({len(dados)}):\n\n"
+                    for q in dados[:10]:  # Máximo 10
+                        resposta += f"• **{q['nome']}** ({q.get('zona', 'N/A')})\n"
+                        if q.get('resposta'):
+                            resposta += f"  ↳ {q['resposta'][:80]}...\n"
+                    if len(dados) > 10:
+                        resposta += f"\n...e mais {len(dados)-10} quintas"
+                    return processar_resposta(resposta, perfil_completo)
+                resposta = "Ainda não há quintas marcadas como indisponíveis 😊"
+                return processar_resposta(resposta, perfil_completo)
+            
+            # QUINTAS DISPONÍVEIS
+            if "disponivel" in p or "disponiveis" in p and "indisponivel" not in p:
+                sql = "SELECT nome, zona, resposta FROM quintas WHERE LOWER(resposta) LIKE '%disponível%' OR LOWER(resposta) LIKE '%vaga%' OR LOWER(resposta) LIKE '%livre%'"
+                dados = executar_sql(sql)
+                if dados and len(dados) > 0:
+                    resposta = f"✅ **Quintas disponíveis** ({len(dados)}):\n\n"
+                    for q in dados[:10]:
+                        resposta += f"• **{q['nome']}** ({q.get('zona', 'N/A')})\n"
+                        if q.get('resposta'):
+                            resposta += f"  ↳ {q['resposta'][:80]}...\n"
+                    if len(dados) > 10:
+                        resposta += f"\n...e mais {len(dados)-10} quintas"
+                    return processar_resposta(resposta, perfil_completo)
+                resposta = "Ainda não há quintas marcadas como disponíveis 😅"
+                return processar_resposta(resposta, perfil_completo)
+            
             # CAPACIDADE
             if "capacidade" in p or "pessoas" in p:
                 sql = "SELECT COUNT(*) as total FROM quintas WHERE capacidade_43 LIKE '%sim%'"
@@ -739,19 +771,24 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     return processar_resposta(resposta, perfil_completo)
             
             # BUSCA POR ZONA
-            if "em " in p or re.search(r'[A-Z][a-z]+\?', pergunta):
-                zona_busca = re.sub(r'\b(em|zona|quintas|quais)\b', '', p, flags=re.IGNORECASE)
-                zona_busca = re.sub(r'[?!.,;:]', '', zona_busca).strip()
-                if zona_busca and len(zona_busca) > 2:
-                    zona_norm = normalizar_zona(zona_busca)
-                    sql = f"SELECT nome, zona FROM quintas WHERE LOWER(REPLACE(REPLACE(zona, 'ã', 'a'), 'ñ', 'n')) LIKE '%{zona_norm}%' LIMIT 5"
-                    dados = executar_sql(sql)
-                    if dados:
-                        nomes = "\n".join([f"• {d['nome']}" for d in dados])
-                        resposta = f"Quintas em {dados[0]['zona']} ({len(dados)}):\n{nomes}"
+            try:
+                import re
+                if "em " in p or re.search(r'[A-Z][a-z]+\?', pergunta):
+                    zona_busca = re.sub(r'\b(em|zona|quintas|quais)\b', '', p, flags=re.IGNORECASE)
+                    zona_busca = re.sub(r'[?!.,;:]', '', zona_busca).strip()
+                    if zona_busca and len(zona_busca) > 2:
+                        zona_norm = normalizar_zona(zona_busca)
+                        sql = f"SELECT nome, zona FROM quintas WHERE LOWER(REPLACE(REPLACE(zona, 'ã', 'a'), 'ñ', 'n')) LIKE '%{zona_norm}%' LIMIT 5"
+                        dados = executar_sql(sql)
+                        if dados:
+                            nomes = "\n".join([f"• {d['nome']}" for d in dados])
+                            resposta = f"Quintas em {dados[0]['zona']} ({len(dados)}):\n{nomes}"
+                            return processar_resposta(resposta, perfil_completo)
+                        resposta = f"Não encontrei quintas em '{zona_busca}' 😅"
                         return processar_resposta(resposta, perfil_completo)
-                    resposta = f"Não encontrei quintas em '{zona_busca}' 😅"
-                    return processar_resposta(resposta, perfil_completo)
+            except Exception as e:
+                print(f"⚠️ Erro na busca por zona: {e}")
+                pass  # Continua para próxima lógica
             
             # FALLBACK SQL
             sql = gerar_sql_da_pergunta(pergunta, perfil_completo)
