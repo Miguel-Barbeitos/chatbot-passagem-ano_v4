@@ -226,6 +226,9 @@ st.markdown(f"_{saudacao_inicial}_")
 def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     """Gera resposta baseada em regras ou LLM"""
     
+    # Extrair nome do perfil
+    nome = perfil_completo.get("nome", "amigo")
+    
     pergunta_l = pergunta.lower().strip()
     contexto_anterior = st.session_state.historico[-10:] if "historico" in st.session_state else []
     contexto_base = get_contexto_base()
@@ -234,18 +237,17 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     # PRIORIDADE 0: SAUDAÇÕES E MENSAGENS CASUAIS
     # ====================================================================
     
-    # Normalizar pergunta (minúsculas + sem acentos)
-    def normalizar_texto(texto):
-        """Remove acentos e converte para minúsculas"""
-        texto_lower = texto.lower()
-        texto_sem_acentos = ''.join(
-            c for c in unicodedata.normalize('NFD', texto_lower)
+    # Normalizar pergunta (minúsculas + sem acentos) - FORA da função interna
+    def remover_acentos(texto):
+        """Remove acentos de um texto"""
+        return ''.join(
+            c for c in unicodedata.normalize('NFD', texto.lower())
             if unicodedata.category(c) != 'Mn'
         )
-        return texto_sem_acentos
     
+    # Aplicar normalização
     try:
-        pergunta_norm = normalizar_texto(pergunta)
+        pergunta_norm = remover_acentos(pergunta)
     except:
         pergunta_norm = pergunta_l  # Fallback
     
@@ -281,7 +283,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
         return "De nada! 😊 Estou aqui para ajudar!"
     
     # Como está / tudo bem
-    if any(frase in pergunta_normalizada for frase in ["tudo bem", "como esta", "como estas", "how are you"]):
+    if any(frase in pergunta_norm for frase in ["tudo bem", "como esta", "como estas", "how are you"]):
         return "Tudo ótimo por aqui! 🎉 E contigo? Precisas de ajuda com a festa?"
     
     # ====================================================================
