@@ -508,7 +508,7 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                         
                         resposta = f"🏡 **{nome}**\n\n"
                         
-                        # Resposta
+                        # Resposta do email
                         if resposta_quinta and resposta_quinta not in ['', 'Sem resposta', 'Erro email', None]:
                             resposta += f"📧 **Resposta:** {resposta_quinta}\n\n"
                         else:
@@ -529,10 +529,43 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                         return processar_resposta(resposta, perfil_completo)
                     
                     else:
-                        # Quinta não existe - mostrar lista
+                        # Quinta não encontrada - tentar busca aproximada
                         from modules.quintas_qdrant import listar_quintas
                         quintas = listar_quintas()
                         
+                        # Busca aproximada por palavras-chave
+                        palavras_busca = nome_quinta.lower().split()
+                        candidatos = []
+                        
+                        for q in quintas:
+                            nome_q = q.get('nome', '').lower()
+                            # Conta quantas palavras coincidem
+                            matches = sum(1 for palavra in palavras_busca if palavra in nome_q)
+                            if matches > 0:
+                                candidatos.append((q, matches))
+                        
+                        # Ordena por número de matches (descendente)
+                        candidatos.sort(key=lambda x: x[1], reverse=True)
+                        
+                        if candidatos and candidatos[0][1] >= 2:  # Pelo menos 2 palavras em comum
+                            # Sugerir a quinta mais próxima
+                            quinta_sugerida = candidatos[0][0]
+                            resposta = f"🤔 Não encontrei **{nome_quinta}** exatamente.\n\n"
+                            resposta += f"Estavas-te a referir a **{quinta_sugerida.get('nome', 'N/A')}**?\n\n"
+                            
+                            # Mostrar info da quinta sugerida
+                            resposta_q = quinta_sugerida.get('resposta', '')
+                            if resposta_q and resposta_q not in ['', 'Sem resposta', 'Erro email', None]:
+                                resposta += f"📧 **Resposta:** {resposta_q}\n"
+                            else:
+                                resposta += f"⏳ **Resposta:** Ainda não responderam\n"
+                            
+                            if quinta_sugerida.get('zona'):
+                                resposta += f"📍 Zona: {quinta_sugerida['zona']}\n"
+                            
+                            return processar_resposta(resposta, perfil_completo)
+                        
+                        # Não encontrou nada próximo - mostrar lista
                         resposta = f"🤔 Não encontrei **{nome_quinta}** na nossa lista de quintas contactadas.\n\n"
                         resposta += f"📋 **Quintas que já contactámos** ({len(quintas)}):\n\n"
                         
@@ -553,7 +586,8 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                             resposta += "\n"
                         
                         return processar_resposta(resposta, perfil_completo)
-                except:
+                except Exception as e:
+                    print(f"⚠️ Erro na busca de quinta: {e}")
                     pass  # Se falhar, continua com lógica normal
         
         if e_pergunta_estado(pergunta):
