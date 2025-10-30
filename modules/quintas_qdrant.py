@@ -330,20 +330,40 @@ if __name__ == "__main__":
     print("\n" + "="*60)
 
 def buscar_quinta_por_nome(nome: str):
-    """Busca quinta específica por nome (case-insensitive)"""
+    """Busca quinta específica por nome (case-insensitive, flexível)"""
     try:
         quintas = listar_quintas()
-        nome_lower = nome.lower()
+        nome_lower = nome.lower().strip()
         
-        # Busca exata
+        # 1. Busca exata
         for q in quintas:
             if q.get('nome', '').lower() == nome_lower:
                 return q
         
-        # Busca parcial (contém)
+        # 2. Busca parcial (nome contém busca)
         for q in quintas:
-            if nome_lower in q.get('nome', '').lower():
+            nome_quinta = q.get('nome', '').lower()
+            if nome_lower in nome_quinta:
                 return q
+        
+        # 3. Busca reversa (busca contém nome da quinta)
+        # Ex: "Casas de Romaria Brovales" contém "Casas de Romaria"
+        for q in quintas:
+            nome_quinta = q.get('nome', '').lower()
+            if nome_quinta in nome_lower:
+                return q
+        
+        # 4. Busca por palavras-chave principais
+        # Remove palavras comuns e busca pelas principais
+        palavras_comuns = ['quinta', 'casa', 'casas', 'monte', 'herdade', 'centro', 'rural', 'turismo', 'de', 'da', 'do', 'das', 'dos']
+        palavras_busca = [p for p in nome_lower.split() if p not in palavras_comuns and len(p) > 3]
+        
+        if palavras_busca:
+            for q in quintas:
+                nome_quinta = q.get('nome', '').lower()
+                # Se todas as palavras-chave estão no nome
+                if all(palavra in nome_quinta for palavra in palavras_busca):
+                    return q
         
         return None
     except Exception as e:

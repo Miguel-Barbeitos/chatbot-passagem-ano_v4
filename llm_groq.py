@@ -501,7 +501,34 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     from modules.quintas_qdrant import buscar_quinta_por_nome
                     quinta = buscar_quinta_por_nome(nome_quinta)
                     
-                    if not quinta:
+                    if quinta:
+                        # QUINTA ENCONTRADA! Mostrar info
+                        nome = quinta.get('nome', 'N/A')
+                        resposta_quinta = quinta.get('resposta', '')
+                        
+                        resposta = f"🏡 **{nome}**\n\n"
+                        
+                        # Resposta
+                        if resposta_quinta and resposta_quinta not in ['', 'Sem resposta', 'Erro email', None]:
+                            resposta += f"📧 **Resposta:** {resposta_quinta}\n\n"
+                        else:
+                            resposta += f"⏳ **Resposta:** Ainda não responderam\n\n"
+                        
+                        # Outras informações disponíveis
+                        if quinta.get('zona'):
+                            resposta += f"📍 Zona: {quinta['zona']}\n"
+                        if quinta.get('website'):
+                            resposta += f"🌐 Website: {quinta['website']}\n"
+                        if quinta.get('telefone'):
+                            resposta += f"📞 Telefone: {quinta['telefone']}\n"
+                        if quinta.get('email'):
+                            resposta += f"✉️ Email: {quinta['email']}\n"
+                        if quinta.get('preco_estimado'):
+                            resposta += f"💰 Preço estimado: €{quinta['preco_estimado']}\n"
+                        
+                        return processar_resposta(resposta, perfil_completo)
+                    
+                    else:
                         # Quinta não existe - mostrar lista
                         from modules.quintas_qdrant import listar_quintas
                         quintas = listar_quintas()
