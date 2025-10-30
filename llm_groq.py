@@ -956,7 +956,7 @@ if __name__ == "__main__":
         }
     }
     
-    print("\n1️⃣ TESTE: Perfil Humorado--")
+    print("\n1️⃣ TESTE: Perfil Humorado")
     print("-" * 60)
     params1 = calcular_parametros_llm(perfil_humorado)
     print(f"Parâmetros: {params1}")
