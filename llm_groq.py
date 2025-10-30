@@ -486,6 +486,49 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
 
     # ✅ CONSULTAS SOBRE QUINTAS
     if e_pergunta_de_quintas(pergunta):
+        
+        # Detectar se pergunta por quinta específica que não existe
+        # Exemplo: "Qual foi a resposta da Quinta do Sol?"
+        if any(palavra in p for palavra in ['resposta da', 'resposta de', 'website da', 'website de', 'telefone da', 'telefone de']):
+            # Extrair nome da quinta da pergunta
+            import re
+            match = re.search(r'(?:resposta|website|telefone|email|preço|preco)\s+(?:da|de|do)\s+(.+?)(?:\?|$)', pergunta, re.IGNORECASE)
+            if match:
+                nome_quinta = match.group(1).strip()
+                
+                # Buscar no Qdrant se existe
+                try:
+                    from modules.quintas_qdrant import buscar_quinta_por_nome
+                    quinta = buscar_quinta_por_nome(nome_quinta)
+                    
+                    if not quinta:
+                        # Quinta não existe - mostrar lista
+                        from modules.quintas_qdrant import listar_quintas
+                        quintas = listar_quintas()
+                        
+                        resposta = f"🤔 Não encontrei **{nome_quinta}** na nossa lista de quintas contactadas.\n\n"
+                        resposta += f"📋 **Quintas que já contactámos** ({len(quintas)}):\n\n"
+                        
+                        # Agrupar por zona
+                        zonas = {}
+                        for q in quintas[:20]:  # Limitar a 20
+                            zona = q.get('zona', 'Sem zona')
+                            if zona not in zonas:
+                                zonas[zona] = []
+                            zonas[zona].append(q.get('nome', 'Sem nome'))
+                        
+                        for zona, nomes in sorted(zonas.items())[:5]:  # Top 5 zonas
+                            resposta += f"**{zona}** ({len(nomes)}):\n"
+                            for nome in nomes[:3]:  # Max 3 por zona
+                                resposta += f"• {nome}\n"
+                            if len(nomes) > 3:
+                                resposta += f"• ... e mais {len(nomes)-3}\n"
+                            resposta += "\n"
+                        
+                        return processar_resposta(resposta, perfil_completo)
+                except:
+                    pass  # Se falhar, continua com lógica normal
+        
         if e_pergunta_estado(pergunta):
             nota = procurar_resposta_semelhante(pergunta, contexto="quintas")
             if nota:
@@ -493,7 +536,7 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
             
             sql = "SELECT COUNT(*) as total FROM quintas WHERE resposta IS NOT NULL"
             dados = executar_sql(sql)
-            if dados and dados[0].get('total'):
+            if dados and len(dados) > 0 and dados[0].get('total'):
                 resposta = "Já contactámos várias quintas mas ainda estamos a aguardar respostas! 📞"
                 return processar_resposta(resposta, perfil_completo)
             return processar_resposta("Ainda não há quinta fechada, mas já contactámos várias!", perfil_completo)
@@ -607,7 +650,7 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
             if "capacidade" in p or "pessoas" in p:
                 sql = "SELECT COUNT(*) as total FROM quintas WHERE capacidade_43 LIKE '%sim%'"
                 dados = executar_sql(sql)
-                if dados and dados[0]['total'] > 0:
+                if dados and len(dados) > 0 and dados[0].get('total', 0) > 0:
                     resposta = f"Temos {dados[0]['total']} quintas com capacidade para 43 pessoas!"
                     return processar_resposta(resposta, perfil_completo)
                 resposta = "Ainda não temos confirmação de capacidade 😅"

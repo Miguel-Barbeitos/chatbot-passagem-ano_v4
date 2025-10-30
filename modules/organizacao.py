@@ -525,7 +525,24 @@ def responder_pergunta_organizacao(pergunta):
         if quinta_pre.get('custo'):
             resposta += f"\n💰 Custo: €{quinta_pre['custo']}"
         
+        # Calcular distância se tiver zona
+        if quinta_pre.get('zona'):
+            distancia = calcular_distancia(quinta_pre['zona'])
+            if distancia.get('distancia_porto'):
+                resposta += f"\n\n📏 **Distâncias:**"
+                resposta += f"\n• Porto: {distancia['distancia_porto']} km"
+                resposta += f"\n• Lisboa: {distancia['distancia_lisboa']} km"
+        
         return resposta
+    
+    # ===== DISTÂNCIA DE LISBOA =====
+    if any(palavra in p for palavra in ['distancia', 'distância', 'km', 'quilometros', 'quilómetros']) and 'lisboa' in p:
+        quinta_pre = get_quinta_prereservada()
+        if quinta_pre.get('zona'):
+            distancia = calcular_distancia(quinta_pre['zona'])
+            if distancia.get('distancia_lisboa'):
+                return f"📏 A {quinta_pre['nome']} fica a **{distancia['distancia_lisboa']} km de Lisboa** (cerca de {distancia.get('tempo_lisboa', 'N/A')})"
+        return "Ainda não tenho informação exata da distância 😅"
     
     # ===== QUANTO CUSTA? =====
     if any(palavra in p for palavra in ['quanto', 'preço', 'preco', 'custo', 'valor']):

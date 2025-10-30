@@ -328,3 +328,24 @@ if __name__ == "__main__":
         traceback.print_exc()
     
     print("\n" + "="*60)
+
+def buscar_quinta_por_nome(nome: str):
+    """Busca quinta específica por nome (case-insensitive)"""
+    try:
+        quintas = listar_quintas()
+        nome_lower = nome.lower()
+        
+        # Busca exata
+        for q in quintas:
+            if q.get('nome', '').lower() == nome_lower:
+                return q
+        
+        # Busca parcial (contém)
+        for q in quintas:
+            if nome_lower in q.get('nome', '').lower():
+                return q
+        
+        return None
+    except Exception as e:
+        print(f"❌ Erro ao buscar quinta: {e}")
+        return None
