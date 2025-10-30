@@ -377,7 +377,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
             
             if quintas:
                 resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
-                for i, q in enumerate(quintas[:10], 1):
+                for i, q in enumerate(quintas[:40], 1):
                     nome = q.get('nome', 'N/A')
                     zona = q.get('zona', 'N/A')
                     resposta += f"{i}. **{nome}** ({zona})\n"
