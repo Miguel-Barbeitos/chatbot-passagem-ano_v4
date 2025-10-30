@@ -617,10 +617,34 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
             
             # Busca por nome (lógica original)
             match = re.search(r'(?:resposta|website|telefone|email|preço|preco)\s+(?:da|de|do)\s+(.+?)(?:\?|$)', pergunta, re.IGNORECASE)
+            
+            # Guardar tipo de pergunta no session_state
+            tipo_pergunta_anterior = None
+            if match and 'ultima_pergunta_tipo' not in st.session_state:
+                # Detectar tipo
+                if 'website' in p:
+                    st.session_state.ultima_pergunta_tipo = 'website'
+                elif 'telefone' in p:
+                    st.session_state.ultima_pergunta_tipo = 'telefone'
+                elif 'email' in p:
+                    st.session_state.ultima_pergunta_tipo = 'email'
+                elif 'resposta' in p:
+                    st.session_state.ultima_pergunta_tipo = 'resposta'
+            
+            # Se não encontrou, tenta perguntas de seguimento: "e da X", "e de X"
+            if not match:
+                match = re.search(r'^e\s+(?:da|de|do)\s+(.+?)(?:\?|$)', pergunta, re.IGNORECASE)
+                if match:
+                    # Inferir o que está a perguntar do contexto anterior
+                    tipo_pergunta_anterior = st.session_state.get('ultima_pergunta_tipo', 'website')
+                    print(f"🔄 Pergunta de seguimento detectada: '{match.group(1)}' (tipo: {tipo_pergunta_anterior})")
+                    # Adicionar o tipo à pergunta processada
+                    p = f"{tipo_pergunta_anterior} {p}"
+            
             if match:
                 nome_quinta = match.group(1).strip()
                 
-                # Buscar no Qdrant se existe
+                # Buscar no Qdrant se existe (com aproximação automática)
                 try:
                     from modules.quintas_qdrant import buscar_quinta_por_nome
                     quinta = buscar_quinta_por_nome(nome_quinta)

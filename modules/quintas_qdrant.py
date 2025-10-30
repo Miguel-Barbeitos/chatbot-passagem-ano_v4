@@ -365,6 +365,18 @@ def buscar_quinta_por_nome(nome: str):
                 if all(palavra in nome_quinta for palavra in palavras_busca):
                     return q
         
+        # 5. Fuzzy matching (similaridade >=60%)
+        from difflib import get_close_matches
+        nomes_quintas = [q.get('nome', '') for q in quintas]
+        matches = get_close_matches(nome, nomes_quintas, n=1, cutoff=0.6)
+        
+        if matches:
+            nome_aproximado = matches[0]
+            print(f"🔍 Fuzzy match encontrado: '{nome}' → '{nome_aproximado}'")
+            for q in quintas:
+                if q.get('nome', '') == nome_aproximado:
+                    return q
+        
         return None
     except Exception as e:
         print(f"❌ Erro ao buscar quinta: {e}")
