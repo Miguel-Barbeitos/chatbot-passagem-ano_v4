@@ -492,6 +492,65 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
         if any(palavra in p for palavra in ['resposta da', 'resposta de', 'website da', 'website de', 'telefone da', 'telefone de']):
             # Extrair nome da quinta da pergunta
             import re
+            
+            # Detectar referência numérica (1, 2, 3, primeira, segunda, etc)
+            match_numero = re.search(r'(?:da|de)\s+(primeira|1ª?|segunda|2ª?|terceira|3ª?|quarta|4ª?|quinta|5ª?|[0-9]+)', pergunta, re.IGNORECASE)
+            
+            if match_numero:
+                # Referência a número/posição - buscar na última lista mostrada
+                try:
+                    texto_num = match_numero.group(1).lower()
+                    
+                    # Converter para índice
+                    mapa_num = {
+                        'primeira': 0, '1': 0, '1ª': 0,
+                        'segunda': 1, '2': 1, '2ª': 1,
+                        'terceira': 2, '3': 2, '3ª': 2,
+                        'quarta': 3, '4': 3, '4ª': 3,
+                        'quinta': 4, '5': 4, '5ª': 4,
+                    }
+                    
+                    indice = mapa_num.get(texto_num.replace('ª', ''))
+                    if indice is None and texto_num.isdigit():
+                        indice = int(texto_num) - 1
+                    
+                    if indice is not None and 'ultima_lista_quintas' in st.session_state:
+                        lista = st.session_state.ultima_lista_quintas
+                        if 0 <= indice < len(lista):
+                            nome_quinta = lista[indice]
+                            
+                            # Buscar info da quinta
+                            from modules.quintas_qdrant import buscar_quinta_por_nome
+                            quinta = buscar_quinta_por_nome(nome_quinta)
+                            
+                            if quinta:
+                                resposta = f"🏡 **{quinta.get('nome', 'N/A')}**\n\n"
+                                
+                                if 'website' in p and quinta.get('website'):
+                                    resposta += f"🌐 Website: {quinta['website']}\n"
+                                if 'telefone' in p and quinta.get('telefone'):
+                                    resposta += f"📞 Telefone: {quinta['telefone']}\n"
+                                if 'email' in p and quinta.get('email'):
+                                    resposta += f"✉️ Email: {quinta['email']}\n"
+                                if 'resposta' in p and quinta.get('resposta'):
+                                    resposta += f"📧 Resposta: {quinta['resposta']}\n"
+                                
+                                # Se não pediu nada específico, mostra tudo
+                                if not any(x in p for x in ['website', 'telefone', 'email', 'resposta']):
+                                    if quinta.get('zona'): resposta += f"📍 Zona: {quinta['zona']}\n"
+                                    if quinta.get('website'): resposta += f"🌐 Website: {quinta['website']}\n"
+                                    if quinta.get('telefone'): resposta += f"📞 Telefone: {quinta['telefone']}\n"
+                                    if quinta.get('resposta'): resposta += f"📧 Resposta: {quinta['resposta'][:100]}...\n"
+                                
+                                return processar_resposta(resposta, perfil_completo)
+                        
+                        return processar_resposta(f"Não tenho a {texto_num} quinta na lista anterior 😅", perfil_completo)
+                    
+                    return processar_resposta("Não me lembro da lista anterior. Podes perguntar 'lista de quintas'?", perfil_completo)
+                except Exception as e:
+                    print(f"⚠️ Erro ao processar número: {e}")
+            
+            # Busca por nome (lógica original)
             match = re.search(r'(?:resposta|website|telefone|email|preço|preco)\s+(?:da|de|do)\s+(.+?)(?:\?|$)', pergunta, re.IGNORECASE)
             if match:
                 nome_quinta = match.group(1).strip()
@@ -728,8 +787,14 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
             
             # QUINTAS DISPONÍVEIS
             try:
-                if "disponivel" in p or "disponiveis" in p and "indisponivel" not in p:
-                    sql = "SELECT nome, zona, resposta FROM quintas WHERE LOWER(resposta) LIKE '%disponível%' OR LOWER(resposta) LIKE '%vaga%' OR LOWER(resposta) LIKE '%livre%'"
+                if ("disponivel" in p or "disponiveis" in p) and "indisponivel" not in p and "indisponiveis" not in p:
+                    # Query que EXCLUI indisponíveis explicitamente
+                    sql = """SELECT nome, zona, resposta FROM quintas 
+                             WHERE (LOWER(resposta) LIKE '%disponível%' 
+                                    OR LOWER(resposta) LIKE '%vaga%' 
+                                    OR LOWER(resposta) LIKE '%livre%')
+                             AND LOWER(resposta) NOT LIKE '%indisponível%'
+                             AND LOWER(resposta) NOT LIKE '%não disponível%'"""
                     dados = executar_sql(sql)
                     if dados and len(dados) > 0:
                         resposta = f"✅ **Quintas disponíveis** ({len(dados)}):\n\n"
