@@ -172,21 +172,29 @@ def get_stats_quintas():
             from modules.quintas_qdrant import listar_quintas
             quintas = listar_quintas()
             
-            # Conta quintas com resposta válida
+            # Conta quintas com resposta válida (qualquer resposta que não seja erro/vazia)
             com_resposta = [q for q in quintas if q.get('resposta') 
                           and q.get('resposta') not in ['', None, 'Sem resposta', 'Erro email']]
             
-            disponiveis = len([q for q in com_resposta if 'sim' in str(q.get('resposta', '')).lower() 
-                             or 'disponível' in str(q.get('resposta', '')).lower()])
+            # Conta disponíveis (respostas positivas)
+            disponiveis = len([q for q in com_resposta 
+                             if any(palavra in str(q.get('resposta', '')).lower() 
+                                  for palavra in ['sim', 'disponível', 'disponivel', 'temos'])])
             
-            indisponiveis = len([q for q in com_resposta if 'não' in str(q.get('resposta', '')).lower() 
-                               or 'indisponível' in str(q.get('resposta', '')).lower()])
+            # Conta indisponíveis (respostas negativas)
+            indisponiveis = len([q for q in com_resposta 
+                               if any(palavra in str(q.get('resposta', '')).lower() 
+                                    for palavra in ['não', 'nao', 'indisponível', 'indisponivel', 'esgotado', 'lotado'])])
+            
+            # Outras respostas (talvez, a verificar, etc)
+            outras_respostas = len(com_resposta) - disponiveis - indisponiveis
             
             return {
                 "total_contactadas": len(quintas),
                 "responderam": len(com_resposta),
                 "disponiveis": disponiveis,
                 "indisponiveis": indisponiveis,
+                "outras_respostas": outras_respostas,  # NOVO campo
                 "sem_resposta": len(quintas) - len(com_resposta)
             }
         except Exception as e_qdrant:
@@ -388,7 +396,16 @@ def responder_pergunta_organizacao(pergunta):
 
 📊 Estado da procura:
 • {stats['total_contactadas']} quintas contactadas
-• {stats['responderam']} responderam
+• {stats['responderam']} responderam"""
+        
+        if stats.get('outras_respostas', 0) > 0:
+            resposta += f"""
+• {stats['disponiveis']} disponíveis
+• {stats['indisponiveis']} indisponíveis  
+• {stats['outras_respostas']} a verificar
+• {stats['sem_resposta']} sem resposta ainda"""
+        else:
+            resposta += f"""
 • {stats['disponiveis']} disponíveis
 • {stats['indisponiveis']} indisponíveis
 • {stats['sem_resposta']} sem resposta ainda"""
@@ -402,8 +419,12 @@ def responder_pergunta_organizacao(pergunta):
         resposta = f"""📊 **{stats['responderam']}** quintas responderam de {stats['total_contactadas']} contactadas:
 
 ✅ {stats['disponiveis']} disponíveis
-❌ {stats['indisponiveis']} indisponíveis
-⏳ {stats['sem_resposta']} sem resposta"""
+❌ {stats['indisponiveis']} indisponíveis"""
+
+        if stats.get('outras_respostas', 0) > 0:
+            resposta += f"\n🔍 {stats['outras_respostas']} a verificar"
+        
+        resposta += f"\n⏳ {stats['sem_resposta']} sem resposta"
         
         return resposta
     

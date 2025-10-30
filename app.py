@@ -231,6 +231,24 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     contexto_base = get_contexto_base()
     
     # ====================================================================
+    # PRIORIDADE 0: SAUDAÇÕES E MENSAGENS CASUAIS
+    # ====================================================================
+    
+    # Saudações simples
+    if pergunta_l in ["ola", "olá", "oi", "hey", "bom dia", "boa tarde", "boa noite", "hi", "hello"]:
+        hora = datetime.now().hour
+        saudacao = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
+        return f"{saudacao}, {nome}! 👋 Como posso ajudar com a organização da festa?"
+    
+    # Agradecimentos
+    if any(palavra in pergunta_l for palavra in ["obrigado", "obrigada", "thanks", "obg"]):
+        return "De nada! 😊 Estou aqui para ajudar!"
+    
+    # Como está / tudo bem
+    if any(frase in pergunta_l for frase in ["tudo bem", "como esta", "como está", "how are you"]):
+        return "Tudo ótimo por aqui! 🎉 E contigo? Precisas de ajuda com a festa?"
+    
+    # ====================================================================
     # PRIORIDADE 1: Usa módulo organizacao.py para perguntas frequentes
     # ====================================================================
     resposta_org = responder_pergunta_organizacao(pergunta)
