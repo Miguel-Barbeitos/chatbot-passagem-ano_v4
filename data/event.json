@@ -6,7 +6,14 @@
   "check_out": "12:00",
   "cor": "Amarelo",
   "orcamento_pessoa": 300,
-  "quinta_prereservada": "Monte da Galega",
+  "quinta_prereservada_info": {
+    "nome": "Monte da Galega",
+    "zona": "Minas de São Domingos",
+    "telefone": "+351 286 610 100",
+    "website": "https://www.visitmertola.pt/portfolio/monte-da-galega/",
+    "capacidade": 40,
+    "custo_estimado": 4500
+  },
   "total_convidados": 35,
   "capacidade_minima": 35,
   "capacidade_ideal": 40

@@ -234,18 +234,25 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     # PRIORIDADE 0: SAUDAÇÕES E MENSAGENS CASUAIS
     # ====================================================================
     
+    # Normalizar texto (remover acentos)
+    def normalizar(texto):
+        return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
+    
+    pergunta_normalizada = normalizar(pergunta_l)
+    
     # Saudações simples
-    if pergunta_l in ["ola", "olá", "oi", "hey", "bom dia", "boa tarde", "boa noite", "hi", "hello"]:
+    saudacoes = ["ola", "oi", "hey", "bom dia", "boa tarde", "boa noite", "hi", "hello", "e ai", "eai"]
+    if any(saudacao in pergunta_normalizada for saudacao in saudacoes):
         hora = datetime.now().hour
-        saudacao = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
-        return f"{saudacao}, {nome}! 👋 Como posso ajudar com a organização da festa?"
+        saudacao_resposta = "Bom dia" if hora < 12 else "Boa tarde" if hora < 20 else "Boa noite"
+        return f"{saudacao_resposta}, {nome}! 👋 Como posso ajudar com a organização da festa?"
     
     # Agradecimentos
-    if any(palavra in pergunta_l for palavra in ["obrigado", "obrigada", "thanks", "obg"]):
+    if any(palavra in pergunta_normalizada for palavra in ["obrigado", "obrigada", "thanks", "obg", "valeu"]):
         return "De nada! 😊 Estou aqui para ajudar!"
     
     # Como está / tudo bem
-    if any(frase in pergunta_l for frase in ["tudo bem", "como esta", "como está", "how are you"]):
+    if any(frase in pergunta_normalizada for frase in ["tudo bem", "como esta", "como estas", "how are you"]):
         return "Tudo ótimo por aqui! 🎉 E contigo? Precisas de ajuda com a festa?"
     
     # ====================================================================

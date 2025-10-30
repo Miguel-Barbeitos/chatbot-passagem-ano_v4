@@ -142,9 +142,22 @@ def pessoa_confirmou(nome):
 def get_quinta_prereservada():
     """Retorna informações da quinta pré-reservada"""
     evento = get_evento()
-    nome_quinta = evento.get('quinta_prereservada', 'Monte da Galega')
     
-    # Busca info completa da quinta
+    # Verifica se tem info completa no event.json
+    if 'quinta_prereservada_info' in evento:
+        info = evento['quinta_prereservada_info']
+        return {
+            "nome": info.get('nome'),
+            "zona": info.get('zona'),
+            "status": "Pré-reservada",
+            "website": info.get('website'),
+            "telefone": info.get('telefone'),
+            "capacidade": info.get('capacidade'),
+            "custo": info.get('custo_estimado')
+        }
+    
+    # Fallback: busca no Qdrant
+    nome_quinta = evento.get('quinta_prereservada', 'Monte da Galega')
     quinta = get_info_quinta(nome_quinta)
     
     if quinta:
@@ -158,6 +171,7 @@ def get_quinta_prereservada():
             "custo": quinta.get('custo_total')
         }
     
+    # Fallback final
     return {
         "nome": nome_quinta,
         "status": "Pré-reservada",
@@ -469,6 +483,28 @@ def responder_pergunta_organizacao(pergunta):
         resposta = f"""🎨 **Cor/Tema deste ano: {tema['cor']}**
 
 {tema['tema']}"""
+        
+        return resposta
+    
+    # ===== INFORMAÇÕES DA QUINTA PRÉ-RESERVADA =====
+    if 'monte' in p and 'galega' in p:
+        # Pergunta específica sobre Monte da Galega
+        quinta_pre = get_quinta_prereservada()
+        
+        resposta = f"""🏡 **{quinta_pre['nome']}**
+
+📍 Status: {quinta_pre['status']}"""
+        
+        if quinta_pre.get('zona'):
+            resposta += f"\n🗺️ Zona: {quinta_pre['zona']}"
+        if quinta_pre.get('telefone'):
+            resposta += f"\n📞 Telefone: {quinta_pre['telefone']}"
+        if quinta_pre.get('website'):
+            resposta += f"\n🌐 Website: {quinta_pre['website']}"
+        if quinta_pre.get('capacidade'):
+            resposta += f"\n👥 Capacidade: {quinta_pre['capacidade']} pessoas"
+        if quinta_pre.get('custo'):
+            resposta += f"\n💰 Custo: €{quinta_pre['custo']}"
         
         return resposta
     
