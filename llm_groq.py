@@ -170,11 +170,43 @@ def calcular_parametros_llm(perfil_completo):
 # =====================================================
 # 🧹 PÓS-PROCESSAMENTO DE RESPOSTAS (NOVO)
 # =====================================================
-def processar_resposta(resposta, perfil_completo):
+def extrair_e_guardar_lista_quintas(resposta, dados_quintas=None):
+    """
+    Extrai nomes de quintas da resposta e guarda no session_state
+    para permitir referências como "website da 1"
+    """
+    try:
+        import streamlit as st
+        
+        # Se dados_quintas foi fornecido, usa isso
+        if dados_quintas and isinstance(dados_quintas, list):
+            nomes = [q.get('nome', '') for q in dados_quintas if q.get('nome')]
+            if nomes:
+                st.session_state.ultima_lista_quintas = nomes
+                print(f"✅ Guardadas {len(nomes)} quintas no session_state")
+                return
+        
+        # Caso contrário, tenta extrair da resposta
+        # Procura por linhas que começam com • seguido de nome
+        import re
+        matches = re.findall(r'•\s*\*?\*?([^(]+?)(?:\s*\(|$)', resposta, re.MULTILINE)
+        if matches:
+            nomes = [m.strip().rstrip('*').strip() for m in matches if m.strip()]
+            if nomes:
+                st.session_state.ultima_lista_quintas = nomes
+                print(f"✅ Extraídas e guardadas {len(nomes)} quintas da resposta")
+    except Exception as e:
+        print(f"⚠️ Erro ao guardar lista de quintas: {e}")
+
+def processar_resposta(resposta, perfil_completo, dados_quintas=None):
     """
     Processa a resposta do LLM baseado nas preferências do utilizador.
     NOVO: Remoção inteligente de emojis, ajuste de pontuação.
     """
+    # Guardar lista de quintas se houver
+    if dados_quintas or ('•' in resposta and 'quinta' in resposta.lower()):
+        extrair_e_guardar_lista_quintas(resposta, dados_quintas)
+    
     if not perfil_completo:
         return resposta
     
@@ -779,7 +811,7 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                                 resposta += f"  ↳ {q['resposta'][:80]}...\n"
                         if len(dados) > 10:
                             resposta += f"\n...e mais {len(dados)-10} quintas"
-                        return processar_resposta(resposta, perfil_completo)
+                        return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
                     resposta = "Ainda não há quintas marcadas como indisponíveis 😊"
                     return processar_resposta(resposta, perfil_completo)
             except Exception as e:
@@ -804,7 +836,7 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                                 resposta += f"  ↳ {q['resposta'][:80]}...\n"
                         if len(dados) > 10:
                             resposta += f"\n...e mais {len(dados)-10} quintas"
-                        return processar_resposta(resposta, perfil_completo)
+                        return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
                     resposta = "Ainda não há quintas marcadas como disponíveis 😅"
                     return processar_resposta(resposta, perfil_completo)
             except Exception as e:
@@ -830,7 +862,7 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     total = executar_sql(sql2)
                     t = total[0]['total'] if total else len(dados)
                     resposta = f"Já contactámos {t} quintas:\n{nomes}\n{'...e mais!' if t > 8 else ''}"
-                    return processar_resposta(resposta, perfil_completo)
+                    return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
             
             # ZONAS
             if "zona" in p and "que" in p:
