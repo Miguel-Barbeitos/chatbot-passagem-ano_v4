@@ -556,6 +556,9 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                             quinta = buscar_quinta_por_nome(nome_quinta)
                             
                             if quinta:
+                                # Guardar no session_state
+                                st.session_state.ultima_quinta_mostrada = quinta.get('nome', 'N/A')
+                                
                                 resposta = f"🏡 **{quinta.get('nome', 'N/A')}**\n\n"
                                 
                                 # Verificar se pediu algo específico
@@ -617,10 +620,34 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
             
             # Busca por nome (lógica original)
             match = re.search(r'(?:resposta|website|telefone|email|preço|preco)\s+(?:da|de|do)\s+(.+?)(?:\?|$)', pergunta, re.IGNORECASE)
+            
+            # Guardar tipo de pergunta no session_state
+            tipo_pergunta_anterior = None
+            if match and 'ultima_pergunta_tipo' not in st.session_state:
+                # Detectar tipo
+                if 'website' in p:
+                    st.session_state.ultima_pergunta_tipo = 'website'
+                elif 'telefone' in p:
+                    st.session_state.ultima_pergunta_tipo = 'telefone'
+                elif 'email' in p:
+                    st.session_state.ultima_pergunta_tipo = 'email'
+                elif 'resposta' in p:
+                    st.session_state.ultima_pergunta_tipo = 'resposta'
+            
+            # Se não encontrou, tenta perguntas de seguimento: "e da X", "e de X"
+            if not match:
+                match = re.search(r'^e\s+(?:da|de|do)\s+(.+?)(?:\?|$)', pergunta, re.IGNORECASE)
+                if match:
+                    # Inferir o que está a perguntar do contexto anterior
+                    tipo_pergunta_anterior = st.session_state.get('ultima_pergunta_tipo', 'website')
+                    print(f"🔄 Pergunta de seguimento detectada: '{match.group(1)}' (tipo: {tipo_pergunta_anterior})")
+                    # Adicionar o tipo à pergunta processada
+                    p = f"{tipo_pergunta_anterior} {p}"
+            
             if match:
                 nome_quinta = match.group(1).strip()
                 
-                # Buscar no Qdrant se existe
+                # Buscar no Qdrant se existe (com aproximação automática)
                 try:
                     from modules.quintas_qdrant import buscar_quinta_por_nome
                     quinta = buscar_quinta_por_nome(nome_quinta)
@@ -629,6 +656,9 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                         # QUINTA ENCONTRADA! Mostrar info
                         nome = quinta.get('nome', 'N/A')
                         resposta_quinta = quinta.get('resposta', '')
+                        
+                        # Guardar no session_state para uso posterior
+                        st.session_state.ultima_quinta_mostrada = nome
                         
                         resposta = f"🏡 **{nome}**\n\n"
                         
@@ -925,6 +955,101 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     if len(dados) > limite:
                         resposta += f"\n\n_(Mostradas {limite} de {len(dados)})_"
                     return processar_resposta(resposta, perfil_completo, dados_quintas=dados[:limite])
+            
+            # QUINTA MAIS BARATA
+            if "mais barata" in p or "mais barato" in p or "menor preco" in p or "menor preço" in p or "mais economica" in p:
+                sql = "SELECT nome, zona, preco_estimado FROM quintas WHERE preco_estimado IS NOT NULL AND preco_estimado != '' AND preco_estimado != 'N/A' ORDER BY CAST(REPLACE(REPLACE(preco_estimado, '€', ''), ' ', '') AS INTEGER) ASC LIMIT 5"
+                dados = executar_sql(sql)
+                if dados and len(dados) > 0:
+                    resposta = f"💰 **Quintas mais baratas** (preço estimado):\n\n"
+                    for i, q in enumerate(dados, 1):
+                        resposta += f"{i}. **{q['nome']}** ({q.get('zona', 'N/A')})\n"
+                        resposta += f"   💰 {q.get('preco_estimado', 'N/A')}\n"
+                    return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
+                return processar_resposta("Ainda não temos preços confirmados para comparar 😅", perfil_completo)
+            
+            # QUINTA MAIS CARA
+            if "mais cara" in p or "mais caro" in p or "maior preco" in p or "maior preço" in p:
+                sql = "SELECT nome, zona, preco_estimado FROM quintas WHERE preco_estimado IS NOT NULL AND preco_estimado != '' AND preco_estimado != 'N/A' ORDER BY CAST(REPLACE(REPLACE(preco_estimado, '€', ''), ' ', '') AS INTEGER) DESC LIMIT 5"
+                dados = executar_sql(sql)
+                if dados and len(dados) > 0:
+                    resposta = f"💎 **Quintas mais caras** (preço estimado):\n\n"
+                    for i, q in enumerate(dados, 1):
+                        resposta += f"{i}. **{q['nome']}** ({q.get('zona', 'N/A')})\n"
+                        resposta += f"   💰 {q.get('preco_estimado', 'N/A')}\n"
+                    return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
+                return processar_resposta("Ainda não temos preços confirmados para comparar 😅", perfil_completo)
+            
+            # PERTO DE LISBOA / PRÓXIMO A LISBOA
+            if any(frase in p for frase in ["perto de lisboa", "proximo de lisboa", "próximo de lisboa", "proximas de lisboa", "próximas de lisboa", "perto lisboa"]):
+                # Zonas consideradas perto de Lisboa (<100km)
+                zonas_perto = ['Alenquer', 'Azambuja', 'Coruche', 'Salvaterra de Magos', 'Santarém', 'Torres Vedras', 'Vila Franca de Xira']
+                zonas_str = "', '".join(zonas_perto)
+                sql = f"SELECT nome, zona FROM quintas WHERE zona IN ('{zonas_str}')"
+                dados = executar_sql(sql)
+                if dados and len(dados) > 0:
+                    resposta = f"📍 **Quintas perto de Lisboa** (<100km, {len(dados)} quintas):\n\n"
+                    for q in dados:
+                        resposta += f"• **{q['nome']}** ({q.get('zona', 'N/A')})\n"
+                    return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
+                return processar_resposta("Ainda não encontrámos quintas muito perto de Lisboa 😅\nMas temos várias no distrito de Santarém!", perfil_completo)
+            
+            # DISTÂNCIA / QUANTOS KM
+            if any(frase in p for frase in ["quantos km", "distancia", "distância", "fica a quantos", "longe"]):
+                # Verificar se há contexto de quinta anterior
+                if 'ultima_quinta_mostrada' in st.session_state:
+                    quinta_nome = st.session_state.ultima_quinta_mostrada
+                    
+                    # Distâncias aproximadas de Lisboa (dados fictícios - idealmente viria de API)
+                    distancias_lisboa = {
+                        'Minas de São Domingos': 250,
+                        'Valdeobispo (Cáceres, ES)': 320,
+                        'Mira': 200,
+                        'Brotas (Mora)': 80,
+                        'Gouveia': 280,
+                        'Casas del Monte (Cáceres, ES)': 230,
+                        'Esposende': 350,
+                        'Brovales (Badajoz, ES)': 280,
+                        'Reguengos de Monsaraz': 180,
+                        'Vila Viçosa': 180,
+                        'Vila Velha de Ródão': 200,
+                        'Coruche': 90,
+                    }
+                    
+                    # Buscar zona da quinta
+                    sql = f"SELECT zona FROM quintas WHERE nome = ?"
+                    dados = executar_sql(sql, (quinta_nome,))
+                    
+                    if dados and len(dados) > 0:
+                        zona = dados[0].get('zona', '')
+                        distancia = distancias_lisboa.get(zona, None)
+                        
+                        if distancia:
+                            resposta = f"📍 **{quinta_nome}**\n\n"
+                            resposta += f"🚗 Distância de Lisboa: ~{distancia}km\n"
+                            resposta += f"⏱️ Tempo estimado: ~{int(distancia / 80)}h{int((distancia % 80) / 80 * 60)}min"
+                            return processar_resposta(resposta, perfil_completo)
+                
+                return processar_resposta("Ainda não tenho informação exata da distância 😅\nQue quinta queres saber?", perfil_completo)
+            
+            # QUAL É O PREÇO (contextual)
+            if any(frase in p for frase in ["qual o preco", "qual é o preco", "qual o preço", "qual é o preço", "quanto custa", "preço"]) and len(pergunta.split()) <= 5:
+                # Verificar se há quinta no contexto
+                if 'ultima_quinta_mostrada' in st.session_state:
+                    quinta_nome = st.session_state.ultima_quinta_mostrada
+                    
+                    # Buscar preço
+                    from modules.quintas_qdrant import buscar_quinta_por_nome
+                    quinta = buscar_quinta_por_nome(quinta_nome)
+                    
+                    if quinta and quinta.get('preco_estimado'):
+                        resposta = f"💰 **{quinta_nome}**\n\n"
+                        resposta += f"Preço estimado: €{quinta['preco_estimado']}"
+                        return processar_resposta(resposta, perfil_completo)
+                    elif quinta:
+                        return processar_resposta(f"Ainda não temos preço confirmado para **{quinta_nome}** 😅", perfil_completo)
+                
+                return processar_resposta("De que quinta queres saber o preço? 🤔", perfil_completo)
             
             # ZONAS
             if "zona" in p and "que" in p:
