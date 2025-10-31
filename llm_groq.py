@@ -255,6 +255,19 @@ def normalizar_zona(texto: str) -> str:
 def e_pergunta_de_quintas(pergunta: str) -> bool:
     """Deteta se a pergunta é sobre quintas / base de dados."""
     p = pergunta.lower()
+    
+    # Excluir perguntas obviamente fora do contexto
+    exclusoes = [
+        "capital", "frança", "franca", "mundial", "futebol", "bolo", "chocolate",
+        "chover", "tempo", "receita", "presidente", "iphone", "fevereiro",
+        "bacalhau", "noruega", "everest", "festival", "óscar", "oscar", "piada",
+        "animal", "maratona", "quilómetros tem", "quilometros tem", "poema", "significa",
+        "cantar", "música", "musica", "natal"
+    ]
+    
+    if any(exc in p for exc in exclusoes):
+        return False
+    
     tem_nome_quinta = (
         re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or
         'c.r.' in p or 'quinta' in p or 'casa' in p or 'monte' in p or 'herdade' in p
@@ -266,8 +279,8 @@ def e_pergunta_de_quintas(pergunta: str) -> bool:
         "email", "telefone", "piscina", "capacidade", "custo", "barata", "animais", 
         "resposta", "zona", "opcoes", "opções", "disponivel", "disponível",
         "preco", "preço", "churrasqueira", "snooker", "estado", "procura",
-        "quantas", "quais", "lista", "nomes", "em ", "mais perto", "proxima", 
-        "próxima", "onde e", "onde fica"
+        "quantas", "quais", "lista", "nomes", "mais perto", "proxima", 
+        "próxima", "onde fica"
     ]
     return tem_nome_quinta or any(c in p for c in chaves)
 
