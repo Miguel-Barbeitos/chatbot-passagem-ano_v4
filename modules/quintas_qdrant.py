@@ -355,7 +355,7 @@ def buscar_quinta_por_nome(nome: str):
         
         # 4. Busca por palavras-chave principais
         # Remove palavras comuns e busca pelas principais
-        palavras_comuns = ['quinta', 'casa', 'casas', 'monte', 'herdade', 'centro', 'rural', 'turismo', 'de', 'da', 'do', 'das', 'dos']
+        palavras_comuns = ['quinta', 'casa', 'casas', 'monte', 'herdade', 'centro', 'festa','rural', 'turismo', 'de', 'da', 'do', 'das', 'dos']
         palavras_busca = [p for p in nome_lower.split() if p not in palavras_comuns and len(p) > 3]
         
         if palavras_busca:
