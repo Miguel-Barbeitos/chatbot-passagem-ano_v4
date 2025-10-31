@@ -704,8 +704,8 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                         if candidatos and candidatos[0][1] >= 2:  # Pelo menos 2 palavras em comum
                             # Sugerir a quinta mais próxima
                             quinta_sugerida = candidatos[0][0]
-                            resposta = f"🤔 Não encontrei **{nome_quinta}** exatamente.\n\n"
-                            resposta += f"Estavas-te a referir a **{quinta_sugerida.get('nome', 'N/A')}**?\n\n"
+                            resposta = f"❌ **'{nome_quinta}'** não existe na nossa lista.\n\n"
+                            resposta += f"💡 Estavas-te a referir a **{quinta_sugerida.get('nome', 'N/A')}**?\n\n"
                             
                             # Mostrar info da quinta sugerida
                             resposta_q = quinta_sugerida.get('resposta', '')
@@ -720,24 +720,15 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                             return processar_resposta(resposta, perfil_completo)
                         
                         # Não encontrou nada próximo - mostrar lista
-                        resposta = f"🤔 Não encontrei **{nome_quinta}** na nossa lista de quintas contactadas.\n\n"
-                        resposta += f"📋 **Quintas que já contactámos** ({len(quintas)}):\n\n"
+                        resposta = f"❌ **'{nome_quinta}'** não existe na nossa lista de quintas.\n\n"
+                        resposta += f"💡 Podes perguntar por uma destas {len(quintas)} quintas que já contactámos:\n\n"
                         
-                        # Agrupar por zona
-                        zonas = {}
-                        for q in quintas[:20]:  # Limitar a 20
-                            zona = q.get('zona', 'Sem zona')
-                            if zona not in zonas:
-                                zonas[zona] = []
-                            zonas[zona].append(q.get('nome', 'Sem nome'))
+                        # Mostrar primeiras 15 quintas em formato compacto
+                        for i, q in enumerate(quintas[:15], 1):
+                            resposta += f"{i}. {q.get('nome', 'N/A')}\n"
                         
-                        for zona, nomes in sorted(zonas.items())[:5]:  # Top 5 zonas
-                            resposta += f"**{zona}** ({len(nomes)}):\n"
-                            for nome in nomes[:3]:  # Max 3 por zona
-                                resposta += f"• {nome}\n"
-                            if len(nomes) > 3:
-                                resposta += f"• ... e mais {len(nomes)-3}\n"
-                            resposta += "\n"
+                        if len(quintas) > 15:
+                            resposta += f"\n...e mais {len(quintas)-15} quintas. Pergunta 'lista de quintas' para ver todas!"
                         
                         return processar_resposta(resposta, perfil_completo)
                 except Exception as e:
