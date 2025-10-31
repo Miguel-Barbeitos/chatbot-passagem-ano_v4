@@ -1189,24 +1189,20 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
             return processar_resposta(resposta, perfil_completo)
 
     # ✅ FESTA (ou perguntas fora do contexto)
-    if not contexto_base:
-        try:
-            with open(DATA_PATH, "r", encoding="utf-8") as f:
-                contexto_base = json.load(f)
-        except:
-            contexto_base = {}
+    # Se NÃO for sobre quintas, usa o LLM geral
+    if not e_pergunta_de_quintas(pergunta):
+        if not contexto_base:
+            try:
+                with open(DATA_PATH, "r", encoding="utf-8") as f:
+                    contexto_base = json.load(f)
+            except:
+                contexto_base = {}
 
-    # Se não for sobre quintas, usa o LLM para responder com personalidade
-    perguntas_casuais = ["porque", "porquê", "como", "quando", "será", "achas", "pensas", "dirias"]
-    if any(palavra in pergunta.lower() for palavra in perguntas_casuais):
         # Instruções de personalidade
         personalidade_instrucoes = construir_personalidade_prompt(perfil_completo)
         
         prompt = f"""
-És um assistente simpático da festa de passagem de ano.
-Responde de forma natural em Português de Portugal.
-
-Se a pergunta for pessoal ou fora do tema da festa, responde mas mantém o foco na festa.
+És um assistente simpático que responde perguntas em Português de Portugal.
 
 PERGUNTA: {pergunta}
 
@@ -1218,7 +1214,7 @@ PERSONALIZAÇÃO (como o {nome} prefere):
         data = {
             "model": MODEL,
             "messages": [
-                {"role": "system", "content": "És um assistente de festas que adapta as respostas à personalidade de cada pessoa."},
+                {"role": "system", "content": "És um assistente útil que responde perguntas em português de forma clara e objetiva."},
                 {"role": "user", "content": prompt}
             ],
             "temperature": params["temperature"],
