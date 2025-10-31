@@ -972,40 +972,84 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                 return processar_resposta("Ainda não temos preços confirmados para comparar 😅", perfil_completo)
             
             # PERTO DE LISBOA / PRÓXIMO A LISBOA
-            if any(frase in p for frase in ["perto de lisboa", "proximo de lisboa", "próximo de lisboa", "proximas de lisboa", "próximas de lisboa", "perto lisboa"]):
-                # Zonas consideradas perto de Lisboa (<100km)
-                zonas_perto = ['Alenquer', 'Azambuja', 'Coruche', 'Salvaterra de Magos', 'Santarém', 'Torres Vedras', 'Vila Franca de Xira']
-                zonas_str = "', '".join(zonas_perto)
-                sql = f"SELECT nome, zona FROM quintas WHERE zona IN ('{zonas_str}')"
+            if any(frase in p for frase in ["perto de lisboa", "proximo de lisboa", "próximo de lisboa", "proximas de lisboa", "próximas de lisboa", "perto lisboa", "perto de lx"]):
+                # Usar dicionário de distâncias para filtrar
+                from modules.utils import estimar_distancia_por_zona
+                
+                sql = "SELECT nome, zona FROM quintas"
                 dados = executar_sql(sql)
-                if dados and len(dados) > 0:
-                    resposta = f"📍 **Quintas perto de Lisboa** (<100km, {len(dados)} quintas):\n\n"
-                    for q in dados:
-                        resposta += f"• **{q['nome']}** ({q.get('zona', 'N/A')})\n"
-                    return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
+                
+                quintas_perto = []
+                for q in dados:
+                    zona = q.get('zona', '')
+                    dist_info = estimar_distancia_por_zona(zona)
+                    if dist_info and dist_info['km'] < 100 and dist_info['km'] > 0:
+                        quintas_perto.append({
+                            'nome': q['nome'],
+                            'zona': zona,
+                            'km': dist_info['km']
+                        })
+                
+                if quintas_perto:
+                    # Ordenar por distância
+                    quintas_perto.sort(key=lambda x: x['km'])
+                    resposta = f"📍 **Quintas perto de Lisboa** (<100km, {len(quintas_perto)} quintas):\n\n"
+                    for q in quintas_perto:
+                        resposta += f"• **{q['nome']}** ({q['zona']}) - {q['km']}km\n"
+                    return processar_resposta(resposta, perfil_completo)
                 return processar_resposta("Ainda não encontrámos quintas muito perto de Lisboa 😅\nMas temos várias no distrito de Santarém!", perfil_completo)
             
+            # QUINTA COM MAIOR CAPACIDADE
+            if any(frase in p for frase in ["maior capacidade", "mais pessoas", "maior quinta", "comporta mais"]):
+                sql = "SELECT nome, zona, capacidade_43 FROM quintas WHERE capacidade_43 IS NOT NULL ORDER BY capacidade_43 DESC LIMIT 5"
+                dados = executar_sql(sql)
+                if dados and len(dados) > 0:
+                    resposta = f"👥 **Quintas com maior capacidade**:\n\n"
+                    for i, q in enumerate(dados, 1):
+                        cap = q.get('capacidade_43', 'N/A')
+                        resposta += f"{i}. **{q['nome']}** ({q.get('zona', 'N/A')})\n"
+                        resposta += f"   👥 Capacidade: {cap}\n"
+                    return processar_resposta(resposta, perfil_completo, dados_quintas=dados)
+                return processar_resposta("Ainda não temos informação de capacidade confirmada 😅", perfil_completo)
+            
+            # QUINTA MAIS PRÓXIMA DE SETÚBAL
+            if any(frase in p for frase in ["proxima de setubal", "próxima de setúbal", "perto de setubal", "perto de setúbal"]):
+                # Zonas próximas a Setúbal
+                zonas_setubal = {
+                    'Alcácer do Sal': 30,
+                    'Grândola': 50,
+                    'Santiago do Cacém': 80,
+                    'Sines': 90,
+                    'Torrão': 60,
+                    'Palmela': 15,
+                }
+                
+                sql = "SELECT nome, zona FROM quintas"
+                dados = executar_sql(sql)
+                
+                quintas_proximas = []
+                for q in dados:
+                    zona = q.get('zona', '')
+                    if zona in zonas_setubal:
+                        quintas_proximas.append({
+                            'nome': q['nome'],
+                            'zona': zona,
+                            'km': zonas_setubal[zona]
+                        })
+                
+                if quintas_proximas:
+                    quintas_proximas.sort(key=lambda x: x['km'])
+                    resposta = f"📍 **Quintas próximas de Setúbal**:\n\n"
+                    for i, q in enumerate(quintas_proximas[:5], 1):
+                        resposta += f"{i}. **{q['nome']}** ({q['zona']}) - {q['km']}km de Setúbal\n"
+                    return processar_resposta(resposta, perfil_completo)
+                return processar_resposta("Não encontrei quintas muito próximas de Setúbal na nossa lista 😅", perfil_completo)
+            
             # DISTÂNCIA / QUANTOS KM
-            if any(frase in p for frase in ["quantos km", "quantos kms", "quantos quilometros", "quantos quilómetros", "distancia", "distância", "fica a quantos", "longe"]):
+            if any(frase in p for frase in ["quantos km", "quantos kms", "quantos quilometros", "quantos quilómetros", "distancia", "distância", "fica a quantos", "longe", "fica a quanto"]):
                 # Verificar se há contexto de quinta anterior
                 if 'ultima_quinta_mostrada' in st.session_state:
                     quinta_nome = st.session_state.ultima_quinta_mostrada
-                    
-                    # Distâncias aproximadas de Lisboa (dados fictícios - idealmente viria de API)
-                    distancias_lisboa = {
-                        'Minas de São Domingos': 250,
-                        'Valdeobispo (Cáceres, ES)': 320,
-                        'Mira': 200,
-                        'Brotas (Mora)': 80,
-                        'Gouveia': 280,
-                        'Casas del Monte (Cáceres, ES)': 230,
-                        'Esposende': 350,
-                        'Brovales (Badajoz, ES)': 280,
-                        'Reguengos de Monsaraz': 180,
-                        'Vila Viçosa': 180,
-                        'Vila Velha de Ródão': 200,
-                        'Coruche': 90,
-                    }
                     
                     # Buscar zona da quinta
                     sql = f"SELECT zona FROM quintas WHERE nome = ?"
@@ -1013,15 +1057,24 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                     
                     if dados and len(dados) > 0:
                         zona = dados[0].get('zona', '')
-                        distancia = distancias_lisboa.get(zona, None)
                         
-                        if distancia:
-                            resposta = f"📍 **{quinta_nome}**\n\n"
-                            resposta += f"🚗 Distância de Lisboa: ~{distancia}km\n"
-                            resposta += f"⏱️ Tempo estimado: ~{int(distancia / 80)}h{int((distancia % 80) / 80 * 60)}min"
+                        # Usar função de distância
+                        from modules.utils import estimar_distancia_por_zona
+                        dist_info = estimar_distancia_por_zona(zona)
+                        
+                        if dist_info and dist_info['km'] > 0:
+                            km = dist_info['km']
+                            tempo = dist_info['tempo']
+                            pais = dist_info.get('pais', '')
+                            
+                            resposta = f"📍 **{quinta_nome}** ({zona})\n\n"
+                            resposta += f"🚗 Distância de Lisboa: **~{km}km**\n"
+                            resposta += f"⏱️ Tempo estimado: **{tempo}**"
+                            if pais and pais != "Portugal":
+                                resposta += f"\n🌍 {pais}"
                             return processar_resposta(resposta, perfil_completo)
                 
-                return processar_resposta("Ainda não tenho informação exata da distância 😅\nQue quinta queres saber?", perfil_completo)
+                return processar_resposta("De que quinta queres saber a distância? 😊", perfil_completo)
             
             # QUAL É O PREÇO (contextual)
             if any(frase in p for frase in ["qual o preco", "qual é o preco", "qual o preço", "qual é o preço", "quanto custa", "preço", "preco"]) and len(pergunta.split()) <= 6:
