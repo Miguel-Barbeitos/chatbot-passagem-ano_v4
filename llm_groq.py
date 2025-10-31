@@ -995,7 +995,7 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                 return processar_resposta("Ainda não encontrámos quintas muito perto de Lisboa 😅\nMas temos várias no distrito de Santarém!", perfil_completo)
             
             # DISTÂNCIA / QUANTOS KM
-            if any(frase in p for frase in ["quantos km", "distancia", "distância", "fica a quantos", "longe"]):
+            if any(frase in p for frase in ["quantos km", "quantos kms", "quantos quilometros", "quantos quilómetros", "distancia", "distância", "fica a quantos", "longe"]):
                 # Verificar se há contexto de quinta anterior
                 if 'ultima_quinta_mostrada' in st.session_state:
                     quinta_nome = st.session_state.ultima_quinta_mostrada
@@ -1033,10 +1033,37 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                 return processar_resposta("Ainda não tenho informação exata da distância 😅\nQue quinta queres saber?", perfil_completo)
             
             # QUAL É O PREÇO (contextual)
-            if any(frase in p for frase in ["qual o preco", "qual é o preco", "qual o preço", "qual é o preço", "quanto custa", "preço"]) and len(pergunta.split()) <= 5:
-                # Verificar se há quinta no contexto
-                if 'ultima_quinta_mostrada' in st.session_state:
+            if any(frase in p for frase in ["qual o preco", "qual é o preco", "qual o preço", "qual é o preço", "quanto custa", "preço", "preco"]) and len(pergunta.split()) <= 6:
+                quinta_nome = None
+                
+                # Verificar se está a pedir de um número ("preço da 5", "da 5")
+                import re
+                match_numero = re.search(r'(?:preco|preço|da|de)\s+(primeira|1ª?|segunda|2ª?|terceira|3ª?|quarta|4ª?|quinta|5ª?|[0-9]+)', pergunta, re.IGNORECASE)
+                
+                if match_numero:
+                    texto_num = match_numero.group(1).lower()
+                    mapa_num = {
+                        'primeira': 0, '1': 0, '1ª': 0,
+                        'segunda': 1, '2': 1, '2ª': 1,
+                        'terceira': 2, '3': 2, '3ª': 2,
+                        'quarta': 3, '4': 3, '4ª': 3,
+                        'quinta': 4, '5': 4, '5ª': 4,
+                    }
+                    
+                    indice = mapa_num.get(texto_num.replace('ª', ''))
+                    if indice is None and texto_num.isdigit():
+                        indice = int(texto_num) - 1
+                    
+                    if indice is not None and 'ultima_lista_quintas' in st.session_state:
+                        lista = st.session_state.ultima_lista_quintas
+                        if 0 <= indice < len(lista):
+                            quinta_nome = lista[indice]
+                
+                # Se não encontrou por número, usa contexto
+                if not quinta_nome and 'ultima_quinta_mostrada' in st.session_state:
                     quinta_nome = st.session_state.ultima_quinta_mostrada
+                
+                if quinta_nome:
                     
                     # Buscar preço
                     from modules.quintas_qdrant import buscar_quinta_por_nome
@@ -1050,6 +1077,20 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
                         return processar_resposta(f"Ainda não temos preço confirmado para **{quinta_nome}** 😅", perfil_completo)
                 
                 return processar_resposta("De que quinta queres saber o preço? 🤔", perfil_completo)
+            
+            # JÁ TEMOS SÍTIO / JÁ SABEMOS O SÍTIO
+            if any(frase in p for frase in ["ja temos sitio", "já temos sítio", "ja sabemos o sitio", "já sabemos o sítio", "ja escolhemos", "já escolhemos", "ja decidimos", "já decidimos"]):
+                if 'ultima_quinta_mostrada' in st.session_state:
+                    quinta_nome = st.session_state.ultima_quinta_mostrada
+                    resposta = f"🎉 Ótimo! Então vamos com **{quinta_nome}**!\n\n"
+                    resposta += "O que precisas agora:\n"
+                    resposta += "1. Confirmar disponibilidade definitiva\n"
+                    resposta += "2. Assinar contrato\n"
+                    resposta += "3. Pagar sinal\n\n"
+                    resposta += "Quer que te ajude com mais alguma coisa?"
+                    return processar_resposta(resposta, perfil_completo)
+                
+                return processar_resposta("Que fixe! 🎉 Qual quinta escolheram?", perfil_completo)
             
             # ZONAS
             if "zona" in p and "que" in p:
