@@ -28,7 +28,7 @@ try:
     print("✅ Quintas: Usando Qdrant (quintas_info)")
 except ImportError as e:
     USAR_QDRANT = False
-    print(f"⚠️ Quinta s: Qdrant não disponível, usando SQLite fallback ({e})")
+    print(f"⚠️ Quintas: Qdrant não disponível, usando SQLite fallback ({e})")
 
 
 # =====================================================
