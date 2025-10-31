@@ -9,3 +9,6 @@ env/
 # Dados e segredos
 .streamlit/secrets.toml
 .vs/
+
+# Ferramentas
+tools/
