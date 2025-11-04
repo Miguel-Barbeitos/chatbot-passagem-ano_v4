@@ -221,17 +221,22 @@ st.title("🎆 Assistente da Festa 2025/2026")
 st.markdown(f"_{saudacao_inicial}_")
 
 # =====================================================
-# 🤖 SISTEMA DE RESPOSTA
+# 🤖 SISTEMA DE RESPOSTA (SIMPLIFICADO v4.13)
 # =====================================================
 def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
-    """Gera resposta baseada em regras ou LLM"""
+    """
+    Gera resposta baseada em regras ou LLM
+    
+    v4.13: Removida TODA a lógica de quintas duplicada.
+           O llm_groq.py v4.12 já faz tudo!
+    """
     
     # Extrair nome do perfil
     nome = perfil_completo.get("nome", "amigo")
     
     pergunta_l = pergunta.lower().strip()
     
-    # 🔑 CORREÇÃO CRÍTICA: Passar histórico como contexto_conversa
+    # 🔑 Passar histórico completo como contexto
     contexto_conversa = st.session_state.historico if "historico" in st.session_state else []
     contexto_base = get_contexto_base()
     
@@ -239,7 +244,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     # PRIORIDADE 0: SAUDAÇÕES E MENSAGENS CASUAIS
     # ====================================================================
     
-    # Normalizar pergunta (minúsculas + sem acentos) - FORA da função interna
     def remover_acentos(texto):
         """Remove acentos de um texto"""
         return ''.join(
@@ -247,11 +251,10 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
             if unicodedata.category(c) != 'Mn'
         )
     
-    # Aplicar normalização
     try:
         pergunta_norm = remover_acentos(pergunta)
     except:
-        pergunta_norm = pergunta_l  # Fallback
+        pergunta_norm = pergunta_l
     
     # Detectar hora para saudação apropriada
     try:
@@ -263,13 +266,12 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
         else:
             saudacao_uso = "Boa noite"
     except:
-        saudacao_uso = "Olá"  # Fallback
+        saudacao_uso = "Olá"
     
-    # Saudações simples - detecção robusta
+    # Saudações simples
     palavras_saudacao = ["ola", "oi", "hey", "hi", "hello", "eai", "e ai"]
     frases_saudacao = ["bom dia", "boa tarde", "boa noite"]
     
-    # Verifica se é saudação
     eh_saudacao = False
     if any(palavra == pergunta_norm.strip() for palavra in palavras_saudacao):
         eh_saudacao = True
@@ -299,7 +301,6 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     # PRIORIDADE 2: CONFIRMAÇÕES
     # ====================================================================
     
-    # Detecção de intenção de confirmação
     if any(palavra in pergunta_l for palavra in ["confirmo", "vou", "eu vou", "conta comigo", "posso confirmar"]):
         intencao = detectar_intencao_confirmacao(pergunta)
         
@@ -328,227 +329,46 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
                 return f"❌ {resultado['mensagem']}"
     
     # ====================================================================
-    # PRIORIDADE 3: INFORMAÇÕES DE QUINTAS
+    # PRIORIDADE 3: LLM (FAZ TUDO O RESTO!)
+    # ====================================================================
+    # 
+    # 🎯 v4.13 MUDANÇA CRÍTICA:
+    # ───────────────────────────
+    # REMOVIDA toda a lógica de quintas hard-coded!
+    # 
+    # ANTES (v4.12): app.py tinha ~200 linhas de lógica para:
+    #   - Listar quintas
+    #   - Contar respostas
+    #   - Mostrar websites
+    #   - Etc...
+    # 
+    # DEPOIS (v4.13): O llm_groq.py v4.12 JÁ FAZ TUDO!
+    #   - Detecção inteligente (51 keywords)
+    #   - Exclusões (26 keywords)
+    #   - Contexto de conversa
+    #   - Fuzzy matching
+    #   - etc...
+    # 
+    # RESULTADO: Código mais limpo, sem duplicação, sem bugs!
     # ====================================================================
     
-    # 1. Website/Telefone de quinta específica
-    if any(palavra in pergunta_l for palavra in ["website", "site", "telefone", "contacto", "email"]):
-        try:
-            from modules.quintas_qdrant import listar_quintas
-            
-            # Tenta detectar nome da quinta
-            quinta_nome = st.session_state.get("ultima_quinta_mencionada")
-            
-            # Busca padrões de nomes próprios
-            match_nome = re.search(r'(Casa|Monte|Quinta|Herdade)\s+[A-Z][a-z]+', pergunta, re.IGNORECASE)
-            if match_nome:
-                quinta_nome = match_nome.group(0)
-            
-            if quinta_nome:
-                quintas = listar_quintas()
-                quinta = next((q for q in quintas if quinta_nome.lower() in q.get('nome', '').lower()), None)
-                
-                if quinta:
-                    info = []
-                    
-                    if "website" in pergunta_l or "site" in pergunta_l:
-                        if quinta.get('website'):
-                            info.append(f"🌐 **Website:** {quinta['website']}")
-                    
-                    if "telefone" in pergunta_l or "contacto" in pergunta_l:
-                        if quinta.get('telefone'):
-                            info.append(f"📞 **Telefone:** {quinta['telefone']}")
-                    
-                    if "email" in pergunta_l:
-                        if quinta.get('email'):
-                            info.append(f"📧 **Email:** {quinta['email']}")
-                    
-                    if not info:
-                        info.append(f"🌐 {quinta.get('website', 'N/A')}")
-                        info.append(f"📞 {quinta.get('telefone', 'N/A')}")
-                    
-                    return f"**{quinta['nome']}**\n\n" + "\n".join(info)
-        except Exception as e:
-            print(f"Erro ao buscar info quinta: {e}")
-    
-    # 2. Lista de quintas
-    if any(palavra in pergunta_l for palavra in ["quais quintas", "lista de quintas", "que quintas"]):
-        try:
-            from modules.quintas_qdrant import listar_quintas
-            quintas = listar_quintas()  # Buscar TODAS
-            
-            if quintas:
-                resposta = f"**Quintas contactadas ({len(quintas)}):**\n\n"
-                
-                # Mostrar até 20 (em vez de 10)
-                limite_exibicao = min(20, len(quintas))
-                
-                for i, q in enumerate(quintas[:limite_exibicao], 1):
-                    nome = q.get('nome', 'N/A')
-                    zona = q.get('zona', 'N/A')
-                    resposta += f"{i}. **{nome}** ({zona})\n"
-                
-                if len(quintas) > limite_exibicao:
-                    resposta += f"\n...e mais {len(quintas) - limite_exibicao} quintas!"
-                
-                # Guarda lista no session state
-                st.session_state.ultima_lista_quintas = [q['nome'] for q in quintas[:limite_exibicao]]
-                
-                return resposta
-            else:
-                return "Ainda não temos quintas registadas. 😕"
-        except Exception as e:
-            print(f"Erro ao listar quintas: {e}")
-            return "Erro ao carregar quintas. Tenta novamente!"
-    
-    # 3. Quantas quintas responderam (CORRIGIDO!)
-    if any(palavra in pergunta_l for palavra in ["quantas responderam", "quantas quintas responderam", "quintas que responderam", "respostas de quintas"]):
-        try:
-            from modules.quintas_qdrant import listar_quintas
-            quintas = listar_quintas()
-            
-            # CORREÇÃO: Verificar campos corretos do Qdrant
-            com_resposta = [q for q in quintas if q.get('resposta') and q.get('resposta') not in ['', None, 'Sem resposta']]
-            
-            total = len(quintas)
-            responderam = len(com_resposta)
-            percentagem = (responderam / total * 100) if total > 0 else 0
-            
-            resposta = f"📧 **Respostas:** {responderam} de {total} quintas ({percentagem:.0f}%)\n\n"
-            
-            if responderam > 0:
-                resposta += "✅ **Quintas que responderam:**\n"
-                for q in com_resposta[:5]:  # Primeiras 5
-                    nome = q.get('nome', 'N/A')
-                    resposta_quinta = q.get('resposta', 'N/A')
-                    resposta += f"• {nome} - {resposta_quinta}\n"
-                
-                if responderam > 5:
-                    resposta += f"\n...e mais {responderam - 5}!"
-            else:
-                resposta += "Ainda nenhuma quinta respondeu. 😔"
-            
-            return resposta
-        except Exception as e:
-            print(f"Erro ao contar respostas: {e}")
-            import traceback
-            traceback.print_exc()
-            return "Ainda estamos a processar as respostas dos emails! 📧"
-    
-    # 3.9 Quantas quintas (geral - contactadas)
-    if any(palavra in pergunta_l for palavra in ["quantas quintas", "numero de quintas", "total de quintas"]):
-        try:
-            from modules.quintas_qdrant import listar_quintas
-            quintas = listar_quintas()
-            return f"Já contactámos **{len(quintas)} quintas**! 🎉\n\nQueres ver a lista? Pergunta 'quais quintas?'"
-        except:
-            return "Já contactámos **35 quintas**! 🎉"
-    
-    # 3.5 Quantas pessoas confirmaram / Total confirmados
-    if any(palavra in pergunta_l for palavra in ["quantas pessoas", "quantos confirmaram", "total de confirmados", "numero de confirmados"]):
-        try:
-            confirmados_data = get_confirmados()
-            confirmados = confirmados_data.get('confirmados', [])
-            total = len(confirmados)
-            
-            if total > 0:
-                return f"**{total} pessoas** já confirmaram! 🎉\n\nQueres ver quem são? Pergunta 'quem vai?'"
-            else:
-                return "Ainda **ninguém** confirmou. 😔\n\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
-        except:
-            return "Ainda estamos a recolher confirmações! 📝"
-    
-    # 5. Quem vai / Confirmações
-    if any(palavra in pergunta_l for palavra in ["quem vai", "quem confirmou", "lista de confirmados", "ver confirmados"]) or pergunta_l in ["confirmacoes", "confirmações"]:
-        try:
-            confirmados_data = get_confirmados()
-            
-            print(f"🔍 Debug confirmações: {confirmados_data}")  # Debug
-            
-            # Tenta diferentes estruturas de dados
-            if isinstance(confirmados_data, dict):
-                confirmados = confirmados_data.get('confirmados', [])
-            elif isinstance(confirmados_data, list):
-                confirmados = confirmados_data
-            else:
-                confirmados = []
-            
-            print(f"✅ Confirmados processados: {confirmados}")  # Debug
-            
-            if confirmados and len(confirmados) > 0:
-                resposta = f"**Confirmados ({len(confirmados)}):**\n\n"
-                for nome_c in confirmados:
-                    resposta += f"✅ {nome_c}\n"
-                return resposta
-            else:
-                return "Ainda ninguém confirmou. 😔\n\nSê o primeiro! Diz 'confirmo' ou 'vou'!"
-        except Exception as e:
-            print(f"❌ Erro ao buscar confirmações: {e}")
-            import traceback
-            traceback.print_exc()
-            return "Erro ao carregar confirmações. Tenta novamente! 😕"
-    
-    # 6. X vai? (verificar pessoa específica)
-    match_vai = re.search(r'(?:o|a)?\s*(\w+)\s+vai', pergunta_l)
-    if match_vai:
-        nome_busca = match_vai.group(1)
-        try:
-            confirmados_data = get_confirmados()
-            confirmados = confirmados_data.get('confirmados', [])
-            
-            # Normaliza e procura
-            confirmado = any(nome_busca.lower() in c.lower() for c in confirmados)
-            
-            if confirmado:
-                return f"✅ **Sim!** {nome_busca.title()} já confirmou presença! 🎉"
-            else:
-                return f"❌ **Ainda não.** {nome_busca.title()} ainda não confirmou."
-        except:
-            pass
-    
-    # ====================================================================
-    # Se não matchou nenhuma pergunta específica, usa LLM
-    # ====================================================================
-    
-    # Detecção de nome de quinta na pergunta
-    quinta_na_pergunta = re.search(
-        r'(C\.R\.|Casa|Monte|Herdade|Quinta)\s+([A-Z][^\?]+?)(?:\s+é|\s+fica|\s+tem|\?|$)', 
-        pergunta, 
-        re.IGNORECASE
-    )
-    
-    if quinta_na_pergunta:
-        nome_detectado = quinta_na_pergunta.group(0).strip().rstrip('?').strip()
-        nome_detectado = re.sub(r'\s+(é|fica|tem|onde|como|quando).*$', '', nome_detectado, flags=re.IGNORECASE).strip()
-        st.session_state.ultima_quinta_mencionada = nome_detectado
-        print(f"🔍 Quinta detectada na pergunta: {nome_detectado}")
-    
-    # Verifica se tem nome de quinta
-    tem_nome_quinta = (
-        re.search(r'[A-Z][a-z]+\s+[A-Z]', pergunta) or
-        re.search(r'C\.R\.|quinta|casa|monte|herdade', pergunta_l) or
-        any(len(palavra) > 3 and palavra[0].isupper() for palavra in pergunta.split())
-    )
-    
-    # Perguntas específicas sobre quintas (website, morada, etc.)
-    if any(p in pergunta_l for p in ["website", "link", "site", "endereco", "endereço", "morada", "contacto", "email", "telefone", "onde e", "onde fica"]) and tem_nome_quinta:
-        resposta_llm = gerar_resposta_llm(
-            pergunta=pergunta,
-            perfil_completo=perfil_completo,
-            contexto_base=contexto_base,
-            contexto_conversa=contexto_conversa  # ← CORRIGIDO!
-        )
-        guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
-        return resposta_llm
-    
-    # Resposta genérica por LLM
+    # Passa TUDO para o LLM
     resposta_llm = gerar_resposta_llm(
         pergunta=pergunta,
         perfil_completo=perfil_completo,
         contexto_base=contexto_base,
-        contexto_conversa=contexto_conversa  # ← CORRIGIDO!
+        contexto_conversa=contexto_conversa  # ← Histórico completo
     )
-    guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil_completo)
+    
+    # Guardar na memória
+    guardar_mensagem(
+        perfil_completo["nome"], 
+        pergunta, 
+        resposta_llm, 
+        contexto="geral", 
+        perfil=perfil_completo
+    )
+    
     return resposta_llm
 
 # =====================================================
