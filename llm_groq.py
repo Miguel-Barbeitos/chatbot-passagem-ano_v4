@@ -338,7 +338,19 @@ Gera apenas o SQL, sem explicações.
 
     try:
         resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
-        query = resp.json()["choices"][0]["message"]["content"].strip()
+        resp_json = resp.json()
+        
+        # v4.15: Verificação robusta da resposta
+        if "choices" not in resp_json:
+            print(f"⚠️ Erro API Groq: resposta sem 'choices'. Status: {resp.status_code}")
+            print(f"⚠️ Resposta: {resp_json}")
+            return None
+        
+        if not resp_json["choices"] or len(resp_json["choices"]) == 0:
+            print(f"⚠️ Erro API Groq: 'choices' vazio")
+            return None
+        
+        query = resp_json["choices"][0]["message"]["content"].strip()
         if "```sql" in query:
             query = query.split("```sql")[1].split("```")[0].strip()
         elif "```" in query:
@@ -349,8 +361,14 @@ Gera apenas o SQL, sem explicações.
             return query
         else:
             print(f"⚠️ SQL inválido: {query}")
+    except requests.exceptions.Timeout:
+        print(f"⚠️ Timeout ao gerar SQL (>20s)")
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Erro de rede ao gerar SQL: {e}")
+    except KeyError as e:
+        print(f"⚠️ Erro ao parsear resposta da API: {e}")
     except Exception as e:
-        print(f"⚠️ Erro a gerar SQL: {e}")
+        print(f"⚠️ Erro inesperado a gerar SQL: {e}")
     return None
 
 # =====================================================
@@ -422,15 +440,37 @@ PERSONALIZAÇÃO (como o {nome} prefere):
     
     try:
         resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
-        resposta = resp.json()["choices"][0]["message"]["content"].strip()
+        resp_json = resp.json()
+        
+        # v4.15: Verificação robusta da resposta
+        if "choices" not in resp_json:
+            print(f"⚠️ Erro API Groq: resposta sem 'choices'. Status: {resp.status_code}")
+            if "error" in resp_json:
+                print(f"⚠️ Erro da API: {resp_json['error']}")
+            return "Desculpa, tive um problema técnico momentâneo. Podes tentar novamente? 🔧"
+        
+        if not resp_json["choices"] or len(resp_json["choices"]) == 0:
+            print(f"⚠️ Erro API Groq: 'choices' vazio")
+            return "Desculpa, não consegui processar a resposta. Tenta reformular a pergunta? 🤔"
+        
+        resposta = resp_json["choices"][0]["message"]["content"].strip()
         
         # Pós-processamento
         resposta = processar_resposta(resposta, perfil_completo)
         
         return resposta
-    except Exception as e:
-        print(f"⚠️ Erro: {e}")
+    except requests.exceptions.Timeout:
+        print(f"⚠️ Timeout ao formatar resposta (>20s)")
+        return "A resposta está a demorar muito... Podes tentar uma pergunta mais simples? ⏱️"
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Erro de rede: {e}")
+        return "Tive um problema de conexão. Tenta novamente em alguns segundos? 🌐"
+    except KeyError as e:
+        print(f"⚠️ Erro ao parsear resposta da API: {e}")
         return "Não consegui interpretar os dados 😅"
+    except Exception as e:
+        print(f"⚠️ Erro inesperado: {e}")
+        return "Ups, algo correu mal. Podes tentar de novo? 🔧"
 
 # =====================================================
 # 📍 CÁLCULO DE DISTÂNCIAS
@@ -1232,14 +1272,44 @@ PERSONALIZAÇÃO (como o {nome} prefere):
         
         try:
             resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=20)
-            resposta = resp.json()["choices"][0]["message"]["content"].strip()
+            resp_json = resp.json()
+            
+            # v4.15: Verificação robusta da resposta
+            if "choices" not in resp_json:
+                print(f"⚠️ Erro API Groq (LLM geral): resposta sem 'choices'. Status: {resp.status_code}")
+                if "error" in resp_json:
+                    print(f"⚠️ Erro da API: {resp_json['error']}")
+                # Fallback: tentar usar contexto do Qdrant
+                resposta_alternativa = procurar_resposta_semelhante(pergunta, k=3, threshold=0.7)
+                if resposta_alternativa:
+                    return resposta_alternativa
+                return "Desculpa, tive um problema técnico momentâneo. Podes tentar novamente? 🔧"
+            
+            if not resp_json["choices"] or len(resp_json["choices"]) == 0:
+                print(f"⚠️ Erro API Groq (LLM geral): 'choices' vazio")
+                return "Desculpa, não consegui processar. Tenta reformular a pergunta? 🤔"
+            
+            resposta = resp_json["choices"][0]["message"]["content"].strip()
             
             # Pós-processamento
             resposta = processar_resposta(resposta, perfil_completo)
             
             return resposta
+        except requests.exceptions.Timeout:
+            print(f"⚠️ Timeout ao gerar resposta geral (>20s)")
+            # Fallback: tentar Qdrant
+            resposta_alternativa = procurar_resposta_semelhante(pergunta, k=3, threshold=0.7)
+            if resposta_alternativa:
+                return resposta_alternativa
+            return "A resposta está a demorar muito... Podes tentar uma pergunta mais simples? ⏱️"
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ Erro de rede (LLM geral): {e}")
+            return "Tive um problema de conexão. Tenta novamente em alguns segundos? 🌐"
+        except KeyError as e:
+            print(f"⚠️ Erro ao parsear resposta (LLM geral): {e}")
+            return "Não consegui interpretar. Tenta reformular? 😅"
         except Exception as e:
-            print(f"❌ Erro ao gerar resposta: {e}")
+            print(f"❌ Erro inesperado ao gerar resposta: {e}")
             pass
     
     resposta = "Ainda estamos a organizar os detalhes 🎆 Pergunta-me sobre as quintas!"
