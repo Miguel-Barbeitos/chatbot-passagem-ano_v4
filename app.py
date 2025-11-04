@@ -568,7 +568,7 @@ for mensagem in st.session_state.mensagens:
         st.markdown(mensagem["content"])
 
 # Input do utilizador
-if prompt := st.chat_input("Escreve a tua mensagemm..."):
+if prompt := st.chat_input("Escreve a tua mensagem..."):
     # Mostra mensagem do user
     with st.chat_message("user"):
         st.markdown(prompt)
