@@ -280,7 +280,8 @@ def e_pergunta_de_quintas(pergunta: str) -> bool:
         "resposta", "zona", "opcoes", "opções", "disponivel", "disponível",
         "preco", "preço", "churrasqueira", "snooker", "estado", "procura",
         "quantas", "quais", "lista", "nomes", "mais perto", "proxima", 
-        "próxima", "onde fica"
+        "próxima", "onde fica", "mostra", "todas", "sitio", "sítio", "lugar",
+        "pre-reserva", "pré-reserva", "reservada"
     ]
     return tem_nome_quinta or any(c in p for c in chaves)
 
@@ -520,11 +521,15 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
             
             contexto_str_lower = contexto_str.lower()
             
-            if "quinta" in contexto_str_lower or "contacta" in contexto_str_lower:
-                if p in ["diz-me", "mostra", "quais", "lista", "as quintas", "essas"]:
-                    pergunta = "que quintas já contactámos"
-                    p = pergunta.lower()
-                    print(f"🔄 Contexto aplicado: '{pergunta}'")
+            # Se contexto fala de quintas E pergunta é curta/ambígua, assume que é sobre quintas
+            if "quinta" in contexto_str_lower or "contacta" in contexto_str_lower or "disponível" in contexto_str_lower:
+                # Perguntas curtas que precisam de contexto
+                if any(palavra in p for palavra in ["mostra", "diz-me", "quais", "lista", "todas", "essas", "opções", "opcoes"]):
+                    # Se não tiver já palavra específica de quintas, adiciona contexto
+                    if "quinta" not in p:
+                        pergunta = "mostra todas as quintas"
+                        p = pergunta.lower()
+                        print(f"🔄 Contexto aplicado: '{pergunta}'")
         except Exception as e:
             print(f"⚠️ Erro ao processar contexto: {e}")
             # Continua sem usar contexto

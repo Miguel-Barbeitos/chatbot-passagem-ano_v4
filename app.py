@@ -230,7 +230,9 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     nome = perfil_completo.get("nome", "amigo")
     
     pergunta_l = pergunta.lower().strip()
-    contexto_anterior = st.session_state.historico[-10:] if "historico" in st.session_state else []
+    
+    # 🔑 CORREÇÃO CRÍTICA: Passar histórico como contexto_conversa
+    contexto_conversa = st.session_state.historico if "historico" in st.session_state else []
     contexto_base = get_contexto_base()
     
     # ====================================================================
@@ -534,7 +536,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
             pergunta=pergunta,
             perfil_completo=perfil_completo,
             contexto_base=contexto_base,
-            contexto_conversa=contexto_anterior
+            contexto_conversa=contexto_conversa  # ← CORRIGIDO!
         )
         guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="quintas", perfil=perfil_completo)
         return resposta_llm
@@ -544,7 +546,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
         pergunta=pergunta,
         perfil_completo=perfil_completo,
         contexto_base=contexto_base,
-        contexto_conversa=contexto_anterior
+        contexto_conversa=contexto_conversa  # ← CORRIGIDO!
     )
     guardar_mensagem(perfil_completo["nome"], pergunta, resposta_llm, contexto="geral", perfil=perfil_completo)
     return resposta_llm
