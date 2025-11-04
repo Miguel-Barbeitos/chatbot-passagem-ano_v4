@@ -394,7 +394,9 @@ if prompt := st.chat_input("Escreve a tua mensagem..."):
         st.markdown(prompt)
     
     # Guarda no histórico
-
+    st.session_state.mensagens.append({"role": "user", "content": prompt})
+    st.session_state.historico.append({"role": "user", "content": prompt})
+    
     # Gera resposta
     resposta = gerar_resposta(prompt, perfil_completo)
     
