@@ -7,14 +7,8 @@ Autor: Miguel + GPT
 import unicodedata
 import re
 from datetime import datetime
-from qdrant_client.models import Filter, FieldCondition, MatchValue, PointStruct
+from modules import perfis_manager as pm
 
-from modules.perfis_manager import (
-    client,
-    COLLECTION_PERFIS,
-    buscar_perfil,
-    listar_familia,
-)
 
 # ======================================================
 # 🔧 Funções auxiliares
@@ -36,15 +30,7 @@ def normalizar_nome(nome: str) -> str:
 def get_confirmados():
     """Retorna lista de nomes confirmados a partir do Qdrant."""
     try:
-        resultados, _ = client.scroll(
-            collection_name=COLLECTION_PERFIS,
-            scroll_filter=Filter(
-                must=[FieldCondition(key="confirmado", match=MatchValue(value=True))]
-            ),
-            limit=500
-        )
-        confirmados = [r.payload.get("nome") for r in resultados if r.payload.get("confirmado")]
-        return sorted(confirmados)
+        return sorted(pm.get_confirmacoes_qdrant())
     except Exception as e:
         print(f"❌ Erro ao ler confirmados do Qdrant: {e}")
         return []
@@ -57,11 +43,10 @@ def get_estatisticas():
         total_confirmados = len(confirmados)
         familias = {}
 
-        # Agrupar por família
-        resultados, _ = client.scroll(collection_name=COLLECTION_PERFIS, limit=500)
-        for r in resultados:
-            familia_id = r.payload.get("familia_id")
-            nome = r.payload.get("nome")
+        todos = pm.listar_todos_perfis()
+        for p in todos:
+            familia_id = p.get("familia_id")
+            nome = p.get("nome")
             if not familia_id:
                 continue
             if familia_id not in familias:
@@ -92,7 +77,7 @@ def get_estatisticas():
 def confirmar_pessoa(nome: str, confirmado_por=None):
     """Confirma um convidado individual."""
     try:
-        perfil = buscar_perfil(nome)
+        perfil = pm.buscar_perfil(nome)
         if not perfil:
             return {
                 "sucesso": False,
@@ -111,26 +96,18 @@ def confirmar_pessoa(nome: str, confirmado_por=None):
                 "familia_sugerida": []
             }
 
-        # Atualiza no Qdrant
-        client.upsert(
-            collection_name=COLLECTION_PERFIS,
-            points=[
-                PointStruct(
-                    id=perfil["id"],
-                    vector=perfil.get("vector"),
-                    payload={
-                        **perfil,
-                        "confirmado": True,
-                        "confirmado_por": confirmado_por or nome_real,
-                        "data_confirmacao": datetime.now().isoformat(),
-                    }
-                )
-            ]
-        )
+        novos_dados = {
+            "confirmado": True,
+            "confirmado_por": confirmado_por or nome_real,
+            "data_confirmacao": datetime.now().isoformat(),
+        }
 
-        # Obter membros da família não confirmados
-        familia = listar_familia(familia_id)
-        confirmados = get_confirmados()
+        atualizado = pm.atualizar_perfil(nome_real, novos_dados)
+        if not atualizado:
+            return {"sucesso": False, "mensagem": f"Erro ao confirmar {nome_real}", "familia_sugerida": []}
+
+        familia = pm.listar_familia(familia_id)
+        confirmados = pm.get_confirmacoes_qdrant()
         familia_nao_confirmada = [
             p["nome"] for p in familia
             if p["nome"] != nome_real and p["nome"] not in confirmados
@@ -144,36 +121,31 @@ def confirmar_pessoa(nome: str, confirmado_por=None):
 
     except Exception as e:
         print(f"❌ Erro ao confirmar pessoa: {e}")
-        return {"sucesso": False, "mensagem": "Erro ao confirmar", "familia_sugerida": []}
+        return {"sucesso": False, "mensagem": f"Erro ao confirmar: {e}", "familia_sugerida": []}
 
 
 def remover_confirmacao(nome: str):
     """Remove confirmação de um convidado."""
     try:
-        perfil = buscar_perfil(nome)
+        perfil = pm.buscar_perfil(nome)
         if not perfil:
             return {"sucesso": False, "mensagem": f"{nome} não encontrado."}
 
-        client.upsert(
-            collection_name=COLLECTION_PERFIS,
-            points=[
-                PointStruct(
-                    id=perfil["id"],
-                    vector=perfil.get("vector"),
-                    payload={
-                        **perfil,
-                        "confirmado": False,
-                        "confirmado_por": None,
-                        "data_confirmacao": None
-                    }
-                )
-            ]
-        )
+        novos_dados = {
+            "confirmado": False,
+            "confirmado_por": None,
+            "data_confirmacao": None,
+        }
 
-        return {"sucesso": True, "mensagem": f"{nome} removido da lista de confirmados."}
+        atualizado = pm.atualizar_perfil(nome, novos_dados)
+        if atualizado:
+            return {"sucesso": True, "mensagem": f"{nome} removido da lista de confirmados."}
+        else:
+            return {"sucesso": False, "mensagem": f"Erro ao atualizar {nome}."}
+
     except Exception as e:
         print(f"❌ Erro ao remover confirmação: {e}")
-        return {"sucesso": False, "mensagem": "Erro ao remover confirmação."}
+        return {"sucesso": False, "mensagem": f"Erro ao remover confirmação: {e}"}
 
 
 # ======================================================
