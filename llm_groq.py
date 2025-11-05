@@ -284,7 +284,7 @@ def e_pergunta_de_quintas(pergunta: str) -> bool:
         "pre-reserva", "pré-reserva", "reservada",
         # Keywords de confirmações (v4.14)
         "vai", "vao", "vão", "confirmou", "confirmaram", "confirmados", 
-        "confirmadas", "quem vai", "quem vem", "presença", "presenca","filha", "filho","marido","mulher","esposa","esposo", "familia"
+        "confirmadas", "quem vai", "quem vem", "presença", "presenca","filha", "filho","filhas","filhos", "marido","mulher","esposa","esposo", "familia"
     ]
     return tem_nome_quinta or any(c in p for c in chaves)
 
