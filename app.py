@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 """
-App principal do Chatbot de Passagem de Ano
+App principal do Chatbot de Passagem de Ano 🎉
+Integra confirmações, quintas e respostas gerais via LLM.
 """
 
 import streamlit as st
@@ -92,18 +93,27 @@ def gerar_resposta(pergunta: str):
                 return "😅 Ainda ninguém confirmou presença."
 
         # Procurar nome específico na pergunta
-        match_nome = re.search(r"\b([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)\b", pergunta)
-        if match_nome:
-            nome_mencionado = match_nome.group(1).strip()
+        # Ignora palavras comuns (artigos, verbos, etc.)
+        palavras_ignoradas = {"o", "a", "os", "as", "vai", "vem", "foi", "irá", "comparece", "confirmou"}
+        tokens = [w.capitalize() for w in re.findall(r"[A-Za-zÀ-ÿ]+", pergunta) if w.lower() not in palavras_ignoradas]
 
-            perfil = buscar_perfil(nome_mencionado)
-            if perfil:
-                if perfil.get("confirmado"):
-                    return f"✅ Sim! {perfil['nome']} já confirmou presença."
-                else:
-                    return f"❌ {perfil['nome']} ainda não confirmou presença."
+        if not tokens:
+            return "🤔 Podes repetir quem queres confirmar?"
+
+        # Considera nomes compostos (2 palavras, ex: João Paulo)
+        if len(tokens) >= 2:
+            nome_mencionado = " ".join(tokens[:2])
+        else:
+            nome_mencionado = tokens[0]
+
+        perfil = buscar_perfil(nome_mencionado)
+        if perfil:
+            if perfil.get("confirmado"):
+                return f"✅ Sim! {perfil['nome']} já confirmou presença."
             else:
-                return f"🤔 Não encontrei ninguém chamado '{nome_mencionado}' na lista de convidados."
+                return f"❌ {perfil['nome']} ainda não confirmou presença."
+        else:
+            return f"🤔 Não encontrei ninguém chamado '{nome_mencionado}' na lista de convidados."
 
     # PRIORIDADE 3: ESTATÍSTICAS
     if "quantos" in pergunta_l and any(p in pergunta_l for p in ["confirmados", "confirmou", "vão", "presentes"]):
