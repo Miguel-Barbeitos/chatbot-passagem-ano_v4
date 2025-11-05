@@ -559,6 +559,37 @@ def responder_pergunta_organizacao(pergunta):
             resposta += f"\n📊 Total estimado ({get_evento()['total_convidados']} pessoas): €{orcamento['total_estimado']}"
             
             return resposta
+
+
+        # ===== QUAIS AS QUINTAS CONTACTADAS? =====
+    if any(palavra in p for palavra in ['quais', 'lista', 'mostra', 'que']) and 'quinta' in p and ('contactad' in p or 'envia' in p or 'contactámos' in p):
+        try:
+            from modules.quintas_qdrant import listar_quintas
+            quintas = listar_quintas()
+
+            if not quintas:
+                return "😅 Ainda não tenho nenhuma quinta registada como contactada."
+
+            resposta = "📋 **Lista de quintas contactadas:**\n"
+            for q in quintas[:15]:
+                nome = q.get('nome', 'Sem nome')
+                zona = q.get('zona', '')
+                resposta_q = q.get('resposta', 'Sem resposta')
+                resposta += f"• {nome}"
+                if zona:
+                    resposta += f" ({zona})"
+                resposta += f" — {resposta_q}\n"
+
+            if len(quintas) > 15:
+                resposta += f"\n... e mais {len(quintas) - 15} quintas."
+
+            return resposta
+        except Exception as e:
+            import traceback
+            print(f"❌ Erro ao listar quintas contactadas: {e}")
+            traceback.print_exc()
+            return "Desculpa, tive um problema ao aceder à lista de quintas."
+
     
     # Não sabe responder
     return None
