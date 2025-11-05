@@ -46,7 +46,7 @@ def normalizar(txt: str) -> str:
 # =====================================================
 from modules.perfis_manager import listar_todos_perfis, buscar_perfil
 perfis_lista = listar_todos_perfis()
-nomes = sorted([p["nome"] for p in perfis_lista])
+nomes = sorted(set(p["nome"] for p in perfis_lista if p.get("nome")))
 
 # =====================================================
 # 🧍 UTILIZADOR ATUAL
