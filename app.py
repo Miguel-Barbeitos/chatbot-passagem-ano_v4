@@ -20,7 +20,8 @@ from modules.confirmacoes import (
     get_confirmados,
     get_estatisticas,
     detectar_intencao_confirmacao,
-    confirmar_familia_completa
+    confirmar_familia_completa,
+    verificar_confirmacao_pessoa
 )
 from modules.perfis_manager import buscar_perfil, listar_familia
 from modules.organizacao import (
