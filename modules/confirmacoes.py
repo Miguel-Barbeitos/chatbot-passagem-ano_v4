@@ -9,7 +9,6 @@ import re
 from datetime import datetime
 from modules import perfis_manager as pm
 
-
 # ======================================================
 # 🔧 Funções auxiliares
 # ======================================================
@@ -22,7 +21,6 @@ def normalizar_nome(nome: str) -> str:
     nome = ''.join(c for c in nome if not unicodedata.combining(c))
     return nome.lower().strip()
 
-
 # ======================================================
 # 🔍 Ler e guardar confirmacoes diretamente no Qdrant
 # ======================================================
@@ -34,7 +32,6 @@ def get_confirmados():
     except Exception as e:
         print(f"❌ Erro ao ler confirmados do Qdrant: {e}")
         return []
-
 
 def get_estatisticas():
     """Gera estatísticas de confirmações (total, famílias completas, etc)."""
@@ -69,32 +66,27 @@ def get_estatisticas():
         print(f"❌ Erro ao gerar estatísticas: {e}")
         return {}
 
-
 # ======================================================
 # ✅ Confirmações
 # ======================================================
 
 def confirmar_pessoa(nome: str, confirmado_por=None):
-    """Confirma um convidado individual."""
+    """Confirma um convidado individual ou a família inteira se indicado."""
     try:
+        # Deteção automática de intenção familiar
+        if isinstance(nome, str) and any(p in nome.lower() for p in ["família", "familia", "todos", "nós", "nos"]):
+            return confirmar_familia_completa(confirmado_por or "Desconhecido")
+
         perfil = pm.buscar_perfil(nome)
         if not perfil:
-            return {
-                "sucesso": False,
-                "mensagem": f"'{nome}' não está na lista de convidados.",
-                "familia_sugerida": []
-            }
+            return {"sucesso": False, "mensagem": f"'{nome}' não está na lista de convidados.", "familia_sugerida": []}
 
         nome_real = perfil.get("nome")
         familia_id = perfil.get("familia_id")
 
         # Já confirmado?
         if perfil.get("confirmado"):
-            return {
-                "sucesso": True,
-                "mensagem": f"{nome_real} já está confirmado.",
-                "familia_sugerida": []
-            }
+            return {"sucesso": True, "mensagem": f"{nome_real} já está confirmado.", "familia_sugerida": []}
 
         novos_dados = {
             "confirmado": True,
@@ -108,72 +100,46 @@ def confirmar_pessoa(nome: str, confirmado_por=None):
 
         familia = pm.listar_familia(familia_id)
         confirmados = pm.get_confirmacoes_qdrant()
-        familia_nao_confirmada = [
-            p["nome"] for p in familia
-            if p["nome"] != nome_real and p["nome"] not in confirmados
-        ]
+        familia_nao_confirmada = [p["nome"] for p in familia if p["nome"] != nome_real and p["nome"] not in confirmados]
 
-        return {
-            "sucesso": True,
-            "mensagem": f"🎉 {nome_real} confirmado com sucesso!",
-            "familia_sugerida": familia_nao_confirmada
-        }
+        return {"sucesso": True, "mensagem": f"🎉 {nome_real} confirmado com sucesso!", "familia_sugerida": familia_nao_confirmada}
 
     except Exception as e:
         print(f"❌ Erro ao confirmar pessoa: {e}")
         return {"sucesso": False, "mensagem": f"Erro ao confirmar: {e}", "familia_sugerida": []}
 
-
-def remover_confirmacao(nome: str):
-    """Remove confirmação de um convidado."""
+def confirmar_familia_completa(nome_representante: str):
+    """Confirma todos os membros da família do representante."""
     try:
-        perfil = pm.buscar_perfil(nome)
+        perfil = pm.buscar_perfil(nome_representante)
         if not perfil:
-            return {"sucesso": False, "mensagem": f"{nome} não encontrado."}
+            return {"sucesso": False, "mensagem": f"Não encontrei '{nome_representante}'."}
 
-        novos_dados = {
-            "confirmado": False,
-            "confirmado_por": None,
-            "data_confirmacao": None,
-        }
+        familia_id = perfil.get("familia_id")
+        if not familia_id:
+            return {"sucesso": False, "mensagem": f"{nome_representante} não pertence a uma família registada."}
 
-        atualizado = pm.atualizar_perfil(nome, novos_dados)
-        if atualizado:
-            return {"sucesso": True, "mensagem": f"{nome} removido da lista de confirmados."}
-        else:
-            return {"sucesso": False, "mensagem": f"Erro ao atualizar {nome}."}
+        membros = pm.listar_familia(familia_id)
+        confirmados = []
+        erros = []
+
+        for membro in membros:
+            nome_m = membro.get("nome")
+            ok = pm.atualizar_confirmacao_qdrant(nome_m, confirmado=True)
+            if ok:
+                confirmados.append(nome_m)
+            else:
+                erros.append(nome_m)
+
+        msg = f"🎉 Família '{familia_id}' confirmada: " + ", ".join(confirmados)
+        if erros:
+            msg += f"\n⚠️ Falha ao confirmar: {', '.join(erros)}"
+
+        return {"sucesso": True, "mensagem": msg, "confirmados": confirmados}
 
     except Exception as e:
-        print(f"❌ Erro ao remover confirmação: {e}")
-        return {"sucesso": False, "mensagem": f"Erro ao remover confirmação: {e}"}
-
-
-# ======================================================
-# 🤖 Deteção de intenção
-# ======================================================
-
-def detectar_intencao_confirmacao(texto: str):
-    """Analisa texto e deteta se o utilizador quer confirmar."""
-    texto_lower = texto.lower()
-
-    if any(p in texto_lower for p in ["nós", "familia", "todos", "toda a familia"]):
-        return {"tipo": "familia", "explicito": True, "nomes_mencionados": []}
-
-    if any(p in texto_lower for p in ["miudos", "filhos", "crianças"]):
-        return {"tipo": "filhos", "explicito": True, "nomes_mencionados": []}
-
-    if any(p in texto_lower for p in ["só eu", "apenas eu", "eu sozinho"]):
-        return {"tipo": "individual", "explicito": True, "nomes_mencionados": []}
-
-    possiveis_nomes = re.findall(r'\b[A-Z][a-z]+\b', texto)
-    if possiveis_nomes:
-        return {"tipo": "especificos", "explicito": True, "nomes_mencionados": possiveis_nomes}
-
-    if any(p in texto_lower for p in ["eu vou", "confirmo", "vou"]):
-        return {"tipo": "individual", "explicito": False, "nomes_mencionados": []}
-
-    return {"tipo": "desconhecido", "explicito": False, "nomes_mencionados": []}
-
+        print(f"❌ Erro ao confirmar família: {e}")
+        return {"sucesso": False, "mensagem": f"Erro ao confirmar família: {e}", "confirmados": []}
 
 # ======================================================
 # 🔎 Execução direta para teste

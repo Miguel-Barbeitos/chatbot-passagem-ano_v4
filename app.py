@@ -57,7 +57,6 @@ pergunta = st.text_input(
 )
 botao = st.button("Enviar")
 
-
 # ======================================================
 # FUNÇÃO PRINCIPAL DE RESPOSTA
 # ======================================================
@@ -75,7 +74,7 @@ def gerar_resposta(pergunta: str):
     if resposta_org:
         return resposta_org
 
-    # PRIORIDADE 2: CONFIRMAÇÕES DE PESSOAS
+    # PRIORIDADE 2: CONFIRMAÇÕES DE PESSOAS OU FAMÍLIAS
     tem_quinta = any(p in pergunta_l for p in ["quinta", "quintas", "reserva", "local", "evento", "sítio", "sitio"])
 
     if not tem_quinta and any(p in pergunta_l for p in ["vai", "vem", "comparece", "presente", "confirmou"]):
@@ -84,7 +83,6 @@ def gerar_resposta(pergunta: str):
         if pergunta_l.startswith("quem "):
             confirmados = get_confirmados()
             if confirmados:
-                # Corrigido: confirmados já é lista de strings
                 nomes_confirmados = confirmados
                 if len(nomes_confirmados) > 10:
                     return (
@@ -104,9 +102,7 @@ def gerar_resposta(pergunta: str):
         if not tokens:
             return "🤔 Podes repetir quem queres confirmar?"
 
-        # Considera nomes compostos (ex: João Paulo)
         nome_mencionado = " ".join(tokens[:2]) if len(tokens) >= 2 else tokens[0]
-
         perfil = buscar_perfil(nome_mencionado)
         if perfil:
             if perfil.get("confirmado"):
@@ -127,15 +123,14 @@ def gerar_resposta(pergunta: str):
         )
 
     # PRIORIDADE 4: INTENÇÕES DE CONFIRMAÇÃO
-    if any(p in pergunta_l for p in ["confirmo", "vou", "conta comigo", "podes confirmar", "marca-me"]):
-        resultado = confirmar_pessoa(nome_sel)
+    if any(p in pergunta_l for p in ["confirmo", "vou", "conta comigo", "podes confirmar", "marca-me", "nós vamos", "a familia vai", "toda a familia"]):
+        resultado = confirmar_pessoa(f"família {nome_sel}", confirmado_por=nome_sel)
         return resultado["mensagem"]
 
     # PRIORIDADE 5: FALLBACK — LLM
     perfil_selecionado = next((p for p in perfis_lista if p.get("nome") == nome_sel), {})
     resposta_llm = gerar_resposta_llm(pergunta, perfil_completo=perfil_selecionado)
     return resposta_llm
-
 
 # ======================================================
 # EXECUÇÃO DO CHAT
