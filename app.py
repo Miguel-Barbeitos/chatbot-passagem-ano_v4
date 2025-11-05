@@ -13,10 +13,15 @@ from llm_groq import gerar_resposta_llm
 from modules.organizacao import responder_pergunta_organizacao
 from modules.confirmacoes import (
     confirmar_pessoa,
+    confirmar_familia_completa,
     get_confirmados,
     get_estatisticas,
 )
-from modules.perfis_manager import listar_todos_perfis, buscar_perfil
+from modules.perfis_manager import (
+    listar_todos_perfis,
+    buscar_perfil,
+    listar_familia,
+)
 
 # ==============================
 # CONFIGURAÇÃO DA APP
@@ -41,7 +46,10 @@ nome_sel = st.selectbox(
     help="Escolhe o teu nome para o chatbot saber quem está a falar."
 )
 
-st.info(f"Olá, **{nome_sel}** 👋! Podes escrever, por exemplo: *eu vou*, *nós vamos*, *quem vai?*, *já temos quinta?*")
+st.info(
+    f"Olá, **{nome_sel}** 👋! Exemplos: *eu vou*, *nós vamos*, "
+    "*vai a família?*, *quem vai?*, *já temos quinta?*, *e a Isabel, posso levar?*"
+)
 
 # ==============================
 # SECÇÃO: CHAT PRINCIPAL
@@ -56,54 +64,129 @@ pergunta = st.text_input(
 )
 botao = st.button("Enviar")
 
+
+# ======================================================
+# HELPERS
+# ======================================================
+
+PALAVRAS_IGNORADAS_NOME = {
+    "o", "a", "os", "as", "vai", "vem", "foi", "irá", "comparece", "confirmou",
+    "família", "familia", "nós", "nos", "todos", "toda"
+}
+
+FRASES_FAMILIA = {"família", "familia", "nós", "nos", "todos", "toda a familia", "toda a família"}
+
+def extrair_nome(pergunta: str) -> str | None:
+    """Extrai um possível nome próprio da pergunta, ignorando palavras comuns e 'família'."""
+    tokens = [
+        w.capitalize()
+        for w in re.findall(r"[A-Za-zÀ-ÿ]+", pergunta)
+        if w.lower() not in PALAVRAS_IGNORADAS_NOME
+    ]
+    if not tokens:
+        return None
+    # Preferir nomes compostos (ex: João Paulo)
+    return " ".join(tokens[:2]) if len(tokens) >= 2 else tokens[0]
+
+def intencao_familia_confirmar(p: str) -> bool:
+    """Deteta frases do tipo 'nós vamos', 'confirmo a família', etc."""
+    p = p.lower()
+    return (
+        ("nós" in p or "nos" in p or "família" in p or "familia" in p or "todos" in p)
+        and any(v in p for v in ["vamos", "confirmo", "marca", "marcar", "regista", "registar"])
+    )
+
+def pergunta_sobre_familia_ir(p: str) -> bool:
+    """Deteta perguntas do tipo 'vai a família?', 'quem da família vai?' (não confirma)."""
+    p = p.lower()
+    return (
+        ("família" in p or "familia" in p)
+        and any(v in p for v in ["vai", "vão", "quem", "está", "esta", "confirmado", "confirmados"])
+        and not intencao_familia_confirmar(p)
+    )
+
+def intencao_posso_levar(p: str) -> bool:
+    p = p.lower()
+    return any(k in p for k in ["posso levar", "posso trazer", "levo", "trago"])
+
+
 # ======================================================
 # FUNÇÃO PRINCIPAL DE RESPOSTA
 # ======================================================
 
 def gerar_resposta(pergunta: str):
     """Centraliza a lógica de decisão da resposta."""
-
     if not pergunta:
         return "😅 Podes repetir a pergunta?"
 
     pergunta_l = pergunta.lower().strip()
+
+    # Contexto do utilizador atual
+    perfil_util = buscar_perfil(nome_sel) or {}
+    familia_id = perfil_util.get("familia_id")
+    membros_familia = listar_familia(familia_id) if familia_id else []
+    nomes_membros_familia = [m.get("nome") for m in membros_familia] if membros_familia else []
 
     # PRIORIDADE 1: Organização / Quintas
     resposta_org = responder_pergunta_organizacao(pergunta)
     if resposta_org:
         return resposta_org
 
-    # PRIORIDADE 2: CONSULTAR CONFIRMAÇÕES (quem vai?)
+    # PRIORIDADE 2A: Ações sobre FAMÍLIA (confirmar toda a família)
+    if intencao_familia_confirmar(pergunta_l):
+        resultado = confirmar_familia_completa(nome_sel)
+        return resultado["mensagem"]
+
+    # PRIORIDADE 2B: Perguntas sobre FAMÍLIA (sem confirmar)
+    if pergunta_sobre_familia_ir(pergunta_l):
+        confirmados = set(get_confirmados())
+        if not nomes_membros_familia:
+            return f"🤔 {nome_sel}, não encontrei a tua família registada."
+
+        ja_vao = [n for n in nomes_membros_familia if n in confirmados]
+        por_confirmar = [n for n in nomes_membros_familia if n not in confirmados]
+
+        if ja_vao and por_confirmar:
+            return (
+                "👨‍👩‍👧‍👦 Estado da tua família:\n"
+                + "✅ Confirmados: " + ", ".join(ja_vao)
+                + "\n⏳ Por confirmar: " + ", ".join(por_confirmar)
+            )
+        elif ja_vao:
+            return "🎉 Toda a tua família já está confirmada: " + ", ".join(ja_vao)
+        else:
+            return "🙃 Ainda ninguém da tua família confirmou."
+
+    # PRIORIDADE 2C: 'Posso levar...'
+    if intencao_posso_levar(pergunta_l):
+        if "família" in pergunta_l or "familia" in pergunta_l:
+            return f"Claro que sim, {nome_sel}! 🏡 A tua família faz parte da lista de convidados."
+        # tentar identificar um nome referido (cônjuge/filhos)
+        possivel = extrair_nome(pergunta)
+        if possivel and (possivel in nomes_membros_familia):
+            return f"Sim, **{possivel}** é da tua família e está incluíd{ 'o' if possivel not in ['Isabel','Sandra','Filipa','Inês'] else 'a' }."
+        return f"Desculpa, {nome_sel}, não tenho essa pessoa como tua família direta. Queres que verifique na lista?"
+
+    # PRIORIDADE 3: CONSULTAR CONFIRMAÇÕES (quem vai? / pessoa específica)
     tem_quinta = any(p in pergunta_l for p in ["quinta", "quintas", "reserva", "local", "evento", "sítio", "sitio"])
 
     if not tem_quinta and any(p in pergunta_l for p in ["vai", "vem", "comparece", "presente", "confirmou"]):
-
         # Caso genérico: "quem vai?"
         if pergunta_l.startswith("quem "):
             confirmados = get_confirmados()
             if confirmados:
-                nomes_confirmados = confirmados
-                if len(nomes_confirmados) > 10:
-                    return (
-                        "🎉 Até agora confirmaram: "
-                        + ", ".join(nomes_confirmados[:10])
-                        + f" ... e mais {len(nomes_confirmados) - 10}!"
-                    )
-                else:
-                    return "🎉 Confirmaram: " + ", ".join(nomes_confirmados)
+                if len(confirmados) > 10:
+                    return "🎉 Até agora confirmaram: " + ", ".join(confirmados[:10]) + f" ... e mais {len(confirmados) - 10}!"
+                return "🎉 Confirmaram: " + ", ".join(confirmados)
             else:
                 return "😅 Ainda ninguém confirmou presença."
 
         # Nome específico (ex: "O João Paulo vai?")
-        palavras_ignoradas = {"o", "a", "os", "as", "vai", "vem", "foi", "irá", "comparece", "confirmou"}
-        tokens = [w.capitalize() for w in re.findall(r"[A-Za-zÀ-ÿ]+", pergunta) if w.lower() not in palavras_ignoradas]
-
-        if not tokens:
+        nome_mencionado = extrair_nome(pergunta)
+        if not nome_mencionado:
             return "🤔 Podes repetir quem queres confirmar?"
 
-        nome_mencionado = " ".join(tokens[:2]) if len(tokens) >= 2 else tokens[0]
         perfil = buscar_perfil(nome_mencionado)
-
         if perfil:
             if perfil.get("confirmado"):
                 return f"✅ Sim! {perfil['nome']} já confirmou presença."
@@ -112,7 +195,7 @@ def gerar_resposta(pergunta: str):
         else:
             return f"🤔 Não encontrei ninguém chamado '{nome_mencionado}' na lista de convidados."
 
-    # PRIORIDADE 3: ESTATÍSTICAS
+    # PRIORIDADE 4: ESTATÍSTICAS
     if "quantos" in pergunta_l and any(p in pergunta_l for p in ["confirmados", "confirmou", "vão", "presentes"]):
         stats = get_estatisticas()
         return (
@@ -122,15 +205,16 @@ def gerar_resposta(pergunta: str):
             f"🕒 Última atualização: {stats.get('ultima_atualizacao', '—')}"
         )
 
-    # PRIORIDADE 4: INTENÇÕES DE CONFIRMAÇÃO
-    if any(p in pergunta_l for p in ["confirmo", "vou", "conta comigo", "podes confirmar", "marca-me", "nós vamos", "a familia vai", "toda a familia"]):
-        resultado = confirmar_pessoa(f"família {nome_sel}" if "nós" in pergunta_l or "fam" in pergunta_l else nome_sel, confirmado_por=nome_sel)
+    # PRIORIDADE 5: INTENÇÕES DE CONFIRMAÇÃO INDIVIDUAL
+    if any(p in pergunta_l for p in ["confirmo", "vou", "conta comigo", "podes confirmar", "marca-me"]):
+        resultado = confirmar_pessoa(nome_sel, confirmado_por=nome_sel)
         return resultado["mensagem"]
 
-    # PRIORIDADE 5: FALLBACK — LLM
+    # PRIORIDADE 6: FALLBACK — LLM
     perfil_selecionado = next((p for p in perfis_lista if p.get("nome") == nome_sel), {})
     resposta_llm = gerar_resposta_llm(pergunta, perfil_completo=perfil_selecionado)
     return resposta_llm
+
 
 # ======================================================
 # EXECUÇÃO DO CHAT
