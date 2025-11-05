@@ -54,19 +54,24 @@ def listar_todos_perfis():
 def buscar_perfil(nome):
     """Procura um perfil pelo nome"""
     try:
+        nome_normalizado = nome.strip().title().replace("  ", " ")
         resultados, _ = client.scroll(
             collection_name=COLLECTION_PERFIS,
-            nome_normalizado = nome.strip().title().replace("  ", " ")
-            scroll_filter={"must": [{"key": "nome", "match": {"value": nome_normalizado}}]}
+            scroll_filter={
+                "must": [
+                    {"key": "nome", "match": {"value": nome_normalizado}}
+                ]
+            },
             limit=1
         )
+
         if resultados:
             return resultados[0].payload
         return None
     except Exception as e:
         print(f"❌ Erro ao procurar perfil: {e}")
         return None
-
+    
 def listar_familia(familia_id):
     """Lista todos os membros de uma família"""
     try:
