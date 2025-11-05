@@ -51,26 +51,44 @@ def listar_todos_perfis():
         print(f"❌ Erro ao listar perfis: {e}")
         return []
 
+import unicodedata
+
+def normalizar_texto(txt):
+    """Remove acentos e normaliza capitalização"""
+    if not isinstance(txt, str):
+        return ""
+    txt = unicodedata.normalize("NFKD", txt)
+    txt = "".join(c for c in txt if not unicodedata.combining(c))
+    return txt.strip().title()
+
 def buscar_perfil(nome):
-    """Procura um perfil pelo nome"""
+    """Procura um perfil pelo nome (tolerante a acentos e capitalização)"""
     try:
-        nome_normalizado = nome.strip().title().replace("  ", " ")
+        nome_normalizado = normalizar_texto(nome)
+
+        # 1️⃣ — Tentativa direta
         resultados, _ = client.scroll(
             collection_name=COLLECTION_PERFIS,
-            scroll_filter={
-                "must": [
-                    {"key": "nome", "match": {"value": nome_normalizado}}
-                ]
-            },
+            scroll_filter={"must": [{"key": "nome", "match": {"value": nome_normalizado}}]},
             limit=1
         )
 
         if resultados:
             return resultados[0].payload
+
+        # 2️⃣ — Fallback: remover acentos e comparar manualmente
+        todos = listar_todos_perfis()
+        nome_simplificado = normalizar_texto(nome).lower()
+        for p in todos:
+            n = normalizar_texto(p.get("nome", "")).lower()
+            if n == nome_simplificado:
+                return p
+
         return None
     except Exception as e:
         print(f"❌ Erro ao procurar perfil: {e}")
         return None
+
     
 def listar_familia(familia_id):
     """Lista todos os membros de uma família"""
