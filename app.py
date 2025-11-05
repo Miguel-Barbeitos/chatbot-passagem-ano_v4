@@ -121,7 +121,12 @@ def gerar_resposta(pergunta: str):
     # ======================================================
     # PRIORIDADE 5: FALLBACK — LLM
     # ======================================================
-    resposta_llm = gerar_resposta_llm(pergunta)
+    perfil_selecionado = None
+    for p in perfis_lista:
+     if p.get("nome") == nome_sel:
+      perfil_selecionado = p
+      break
+    resposta_llm = gerar_resposta_llm(pergunta, perfil_completo=perfil_selecionado)
     return resposta_llm
 
 
