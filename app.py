@@ -71,13 +71,11 @@ botao = st.button("Enviar")
 
 PALAVRAS_IGNORADAS_NOME = {
     "o", "a", "os", "as", "vai", "vem", "foi", "irá", "comparece", "confirmou",
-    "família", "familia", "nós", "nos", "todos", "toda"
+    "família", "familia", "nós", "nos", "todos", "toda", "eu", "vou", "vamos"
 }
 
-FRASES_FAMILIA = {"família", "familia", "nós", "nos", "todos", "toda a familia", "toda a família"}
-
 def extrair_nome(pergunta: str) -> str | None:
-    """Extrai um possível nome próprio da pergunta, ignorando palavras comuns e 'família'."""
+    """Extrai nome próprio, ignorando expressões como 'eu vou'."""
     tokens = [
         w.capitalize()
         for w in re.findall(r"[A-Za-zÀ-ÿ]+", pergunta)
@@ -85,11 +83,9 @@ def extrair_nome(pergunta: str) -> str | None:
     ]
     if not tokens:
         return None
-    # Preferir nomes compostos (ex: João Paulo)
     return " ".join(tokens[:2]) if len(tokens) >= 2 else tokens[0]
 
 def intencao_familia_confirmar(p: str) -> bool:
-    """Deteta frases do tipo 'nós vamos', 'confirmo a família', etc."""
     p = p.lower()
     return (
         ("nós" in p or "nos" in p or "família" in p or "familia" in p or "todos" in p)
@@ -97,7 +93,6 @@ def intencao_familia_confirmar(p: str) -> bool:
     )
 
 def pergunta_sobre_familia_ir(p: str) -> bool:
-    """Deteta perguntas do tipo 'vai a família?', 'quem da família vai?' (não confirma)."""
     p = p.lower()
     return (
         ("família" in p or "familia" in p)
@@ -121,6 +116,19 @@ def gerar_resposta(pergunta: str):
 
     pergunta_l = pergunta.lower().strip()
 
+    # MULTI-INTENÇÕES: "eu vou, o Tiago vai?"
+    partes = re.split(r"[,.!?]", pergunta)
+    if len(partes) > 1:
+        respostas = []
+        for parte in partes:
+            parte = parte.strip()
+            if not parte:
+                continue
+            resposta_parcial = gerar_resposta(parte)
+            if resposta_parcial:
+                respostas.append(resposta_parcial)
+        return "\n\n".join(respostas)
+
     # Contexto do utilizador atual
     perfil_util = buscar_perfil(nome_sel) or {}
     familia_id = perfil_util.get("familia_id")
@@ -132,7 +140,7 @@ def gerar_resposta(pergunta: str):
     if resposta_org:
         return resposta_org
 
-    # PRIORIDADE 2A: Ações sobre FAMÍLIA (confirmar toda a família)
+    # PRIORIDADE 2A: Confirmar toda a família
     if intencao_familia_confirmar(pergunta_l):
         resultado = confirmar_familia_completa(nome_sel)
         return resultado["mensagem"]
@@ -161,7 +169,6 @@ def gerar_resposta(pergunta: str):
     if intencao_posso_levar(pergunta_l):
         if "família" in pergunta_l or "familia" in pergunta_l:
             return f"Claro que sim, {nome_sel}! 🏡 A tua família faz parte da lista de convidados."
-        # tentar identificar um nome referido (cônjuge/filhos)
         possivel = extrair_nome(pergunta)
         if possivel and (possivel in nomes_membros_familia):
             return f"Sim, **{possivel}** é da tua família e está incluíd{ 'o' if possivel not in ['Isabel','Sandra','Filipa','Inês'] else 'a' }."
@@ -181,7 +188,7 @@ def gerar_resposta(pergunta: str):
             else:
                 return "😅 Ainda ninguém confirmou presença."
 
-        # Nome específico (ex: "O João Paulo vai?")
+        # Nome específico
         nome_mencionado = extrair_nome(pergunta)
         if not nome_mencionado:
             return "🤔 Podes repetir quem queres confirmar?"
@@ -205,7 +212,7 @@ def gerar_resposta(pergunta: str):
             f"🕒 Última atualização: {stats.get('ultima_atualizacao', '—')}"
         )
 
-    # PRIORIDADE 5: INTENÇÕES DE CONFIRMAÇÃO INDIVIDUAL
+    # PRIORIDADE 5: CONFIRMAÇÃO INDIVIDUAL
     if any(p in pergunta_l for p in ["confirmo", "vou", "conta comigo", "podes confirmar", "marca-me"]):
         resultado = confirmar_pessoa(nome_sel, confirmado_por=nome_sel)
         return resultado["mensagem"]
