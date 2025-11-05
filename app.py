@@ -14,7 +14,7 @@ from modules.confirmacoes import (
     confirmar_pessoa,
     get_confirmados,
     get_estatisticas,
-    verificar_confirmacao_pessoa,
+  
 )
 from modules.perfis_manager import listar_todos_perfis, normalizar_texto
 
