@@ -91,10 +91,20 @@ def get_contexto_base(raw=False):
     Carrega o contexto base da festa.
     Se raw=True devolve o dicionário original (para uso interno no código).
     Caso contrário, devolve um texto formatado legível.
+    
+    v4.16: FIX encoding - tenta UTF-8, fallback para ISO-8859-1
     """
     try:
-        with open(DATA_PATH, "r", encoding="utf-8") as f:
-            dados = json.load(f)
+        # v4.16: Tenta UTF-8 primeiro
+        try:
+            with open(DATA_PATH, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+        except UnicodeDecodeError:
+            # Fallback: ISO-8859-1 (Windows Portuguese)
+            print(f"⚠️ Ficheiro não é UTF-8, a tentar ISO-8859-1...")
+            with open(DATA_PATH, "r", encoding="iso-8859-1") as f:
+                dados = json.load(f)
+            print(f"✅ Ficheiro lido com ISO-8859-1")
 
         if raw:
             return dados  # devolve o dicionário real
