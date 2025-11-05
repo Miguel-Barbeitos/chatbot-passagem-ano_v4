@@ -56,7 +56,8 @@ def buscar_perfil(nome):
     try:
         resultados, _ = client.scroll(
             collection_name=COLLECTION_PERFIS,
-            scroll_filter={"must": [{"key": "nome", "match": {"value": nome}}]},
+            nome_normalizado = nome.strip().title().replace("  ", " ")
+            scroll_filter={"must": [{"key": "nome", "match": {"value": nome_normalizado}}]}
             limit=1
         )
         if resultados:
