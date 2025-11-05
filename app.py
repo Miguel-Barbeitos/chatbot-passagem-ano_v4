@@ -131,9 +131,12 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     # PRIORIDADE 2.1: CONSULTAR QUEM VAI / CONFIRMOU
     tem_quinta = any(p in pergunta_l for p in ["quinta", "quintas", "sitio", "local", "reserva"])
     if not tem_quinta and any(p in pergunta_l for p in ["vai", "vem", "comparece", "presente", "confirmou"]):
-        match_nome = re.search(r"\b[A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõç]+\b", pergunta)
+        match_nome = re.search(
+            r"\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõç]+(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõç]+)*)\b",
+            pergunta
+        )
         if match_nome:
-            nome_mencionado = match_nome.group(0)
+            nome_mencionado = match_nome.group(1).strip()
             return verificar_confirmacao_pessoa(nome_mencionado)
 
     # PRIORIDADE 3: LLM (GERAL)
