@@ -137,6 +137,8 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
         )
         if match_nome:
             nome_mencionado = match_nome.group(1).strip()
+            from modules.perfis_manager import normalizar_texto
+            nome_mencionado = normalizar_texto(nome_mencionado)
             return verificar_confirmacao_pessoa(nome_mencionado)
 
     # PRIORIDADE 3: LLM (GERAL)
