@@ -133,7 +133,7 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
     if not tem_quinta and any(p in pergunta_l for p in ["vai", "vem", "comparece", "presente", "confirmou"]):
         match_nome = re.search(
             r"\b([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)\b",
-            pergunta
+            pergunta,
             flags=re.IGNORECASE
         )
         if match_nome:
