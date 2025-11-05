@@ -328,7 +328,23 @@ def gerar_resposta(pergunta: str, perfil_completo: dict) -> str:
             else:
                 return f"❌ {resultado['mensagem']}"
     
+    
+        # ====================================================================
+    # PRIORIDADE 2.1: VERIFICAR SE ALGUÉM VAI / CONFIRMOU
     # ====================================================================
+    from modules.confirmacoes import verificar_confirmacao_pessoa
+
+    # Regex para capturar nomes (evita conflito com 'quinta')
+    match_nome = re.search(r"\b[A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõç]+\b", pergunta)
+    tem_quinta = any(p in pergunta_l for p in ["quinta", "quintas", "sitio", "local", "reserva"])
+
+    if not tem_quinta and any(p in pergunta_l for p in ["vai", "vem", "comparece", "presente", "confirmou"]) and match_nome:
+        nome_mencionado = match_nome.group(0)
+        return verificar_confirmacao_pessoa(nome_mencionado)
+            
+                
+                
+                # ====================================================================
     # PRIORIDADE 3: LLM (FAZ TUDO O RESTO!)
     # ====================================================================
     # 
