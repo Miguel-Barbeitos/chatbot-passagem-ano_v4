@@ -142,6 +142,26 @@ def confirmar_familia_completa(nome_representante: str):
         return {"sucesso": False, "mensagem": f"Erro ao confirmar família: {e}", "confirmados": []}
 
 # ======================================================
+# 🔍 Verificar confirmação individual
+# ======================================================
+
+def verificar_confirmacao_pessoa(nome: str):
+    """Verifica se uma pessoa específica está confirmada no Qdrant."""
+    try:
+        perfil = pm.buscar_perfil(nome)
+        if not perfil:
+            return f"❌ Não encontrei ninguém chamado '{nome}' na lista de convidados."
+
+        if perfil.get("confirmado"):
+            return f"✅ {perfil.get('nome')} já confirmou presença!"
+        else:
+            return f"🙃 {perfil.get('nome')} ainda não confirmou presença."
+
+    except Exception as e:
+        print(f"❌ Erro ao verificar confirmação: {e}")
+        return f"⚠️ Erro ao verificar confirmação de {nome}."
+
+# ======================================================
 # 🔎 Execução direta para teste
 # ======================================================
 
