@@ -157,11 +157,10 @@ def gerar_resposta(pergunta: str):
         if ja_vao and por_confirmar:
             return (
                 "👨‍👩‍👧‍👦 Estado da tua família:\n"
-                + "✅ Confirmados: " + ", ".join(ja_vao)
-                + "\n⏳ Por confirmar: " + ", ".join(por_confirmar)
+                + "✅ Confirmados: " + ", ".join(sorted(set(ja_vao)))
+                + "\n⏳ Por confirmar: " + ", ".join(sorted(set(por_confirmar)))
             )
         elif ja_vao:
-            return 
             ja_vao_unicos = list(dict.fromkeys(ja_vao))
             return "🎉 Toda a tua família já está confirmada: " + ", ".join(ja_vao_unicos)
         else:
