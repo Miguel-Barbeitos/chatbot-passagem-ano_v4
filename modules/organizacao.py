@@ -421,7 +421,7 @@ def responder_pergunta_organizacao(pergunta):
     p = pergunta.lower().strip()
     
     # ===== JÁ TEMOS QUINTA? =====
-    if any(frase in p for frase in ['já temos', 'temos quinta', 'temos alguma quinta', 'há quinta']):
+    if any(frase in p for frase in ['já temos', 'temos quinta', 'temos alguma quinta', 'há quinta', 'já temos sitio']):
         quinta_pre = get_quinta_prereservada()
         stats = get_stats_quintas()
         
