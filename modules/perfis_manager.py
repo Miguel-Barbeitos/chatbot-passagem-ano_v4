@@ -1,192 +1,226 @@
 # -*- coding: utf-8 -*-
 """
-Gestor de perfis e confirmações centralizado no Qdrant Cloud
+Gestão de perfis e confirmações no Qdrant Cloud
+Versão corrigida e centralizada — compatível com Streamlit + execução local
 """
-
 import os
-import json
+import unicodedata
 from datetime import datetime
 from qdrant_client import QdrantClient
-from qdrant_client.http import models
-import streamlit as st
+from qdrant_client.models import (
+    PointStruct, Filter, FieldCondition, MatchValue, MatchText
+)
+
 
 # ============================================================
-# 🔧 CONFIGURAÇÃO DO QDRANT CLOUD
+# 🔧 CONFIGURAÇÃO BASE
 # ============================================================
 
-def inicializar_qdrant():
-    """Inicializa o cliente Qdrant com prioridade: Streamlit Secrets → Env Vars → Local"""
-    try:
-        QDRANT_URL = st.secrets["QDRANT_URL"]
-        QDRANT_API_KEY = st.secrets["QDRANT_API_KEY"]
-        client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-        print(f"☁️  Conectado ao Qdrant Cloud: {QDRANT_URL}")
-        return client
-    except Exception:
-        # fallback: variáveis de ambiente
-        QDRANT_URL = os.getenv("QDRANT_URL")
-        QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-        if QDRANT_URL and QDRANT_API_KEY:
-            client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-            print(f"☁️  Conectado ao Qdrant Cloud (env): {QDRANT_URL}")
-            return client
-        else:
-            # fallback local apenas em dev
-            print("⚠️  Sem credenciais — a usar Qdrant local (data/qdrant)")
-            return QdrantClient(path="data/qdrant")
-
-client = inicializar_qdrant()
 COLLECTION_PERFIS = "perfis_convidados"
 
+
+def log(msg):
+    """Logger simples"""
+    print(f"[perfis_manager] {msg}")
+
+
 # ============================================================
-# 📋 FUNÇÕES BASE
+# 🔌 CONEXÃO AO QDRANT
+# ============================================================
+
+def get_qdrant_client():
+    """Cria cliente Qdrant — usa secrets (Streamlit) ou variáveis de ambiente."""
+    try:
+        import streamlit as st
+        qdrant_url = st.secrets.get("QDRANT_URL")
+        qdrant_key = st.secrets.get("QDRANT_API_KEY")
+        if qdrant_url and qdrant_key:
+            log(f"☁️  Conectado ao Qdrant Cloud (Streamlit): {qdrant_url}")
+            return QdrantClient(url=qdrant_url, api_key=qdrant_key, timeout=10.0)
+    except Exception:
+        pass
+
+    qdrant_url = os.getenv("QDRANT_URL")
+    qdrant_key = os.getenv("QDRANT_API_KEY")
+
+    if not qdrant_url or not qdrant_key:
+        raise RuntimeError("❌ Qdrant Cloud não configurado. Define QDRANT_URL e QDRANT_API_KEY.")
+
+    log(f"☁️  Conectado ao Qdrant Cloud (env): {qdrant_url}")
+    return QdrantClient(url=qdrant_url, api_key=qdrant_key, timeout=10.0)
+
+
+client = get_qdrant_client()
+
+
+# ============================================================
+# 🧠 FUNÇÕES DE APOIO
+# ============================================================
+
+def normalizar_texto(texto: str) -> str:
+    """Remove acentos e converte para minúsculas"""
+    if not texto:
+        return ""
+    texto = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in texto if not unicodedata.combining(c)).lower().strip()
+
+
+# ============================================================
+# 👤 PERFIS — BUSCA E LISTAGEM
 # ============================================================
 
 def listar_todos_perfis():
-    """Obtém todos os perfis da coleção perfis_convidados"""
+    """Obtém todos os perfis da coleção"""
     try:
         resultados, _ = client.scroll(collection_name=COLLECTION_PERFIS, limit=500)
         return [r.payload for r in resultados]
     except Exception as e:
-        print(f"❌ Erro ao listar perfis: {e}")
+        log(f"❌ Erro ao listar perfis: {e}")
         return []
 
-import unicodedata
 
-def normalizar_texto(txt):
-    """Remove acentos e normaliza capitalização"""
-    if not isinstance(txt, str):
-        return ""
-    txt = unicodedata.normalize("NFKD", txt)
-    txt = "".join(c for c in txt if not unicodedata.combining(c))
-    return txt.strip().title()
-
-def buscar_perfil(nome):
-    """Procura um perfil pelo nome (tolerante a acentos e capitalização)"""
+def buscar_perfil(nome: str):
+    """Procura um perfil pelo nome (busca normalizada)"""
+    nome_norm = normalizar_texto(nome)
     try:
-        nome_normalizado = normalizar_texto(nome)
-
-        # 1️⃣ — Tentativa direta
-        resultados, _ = client.scroll(
-            collection_name=COLLECTION_PERFIS,
-            scroll_filter={"must": [{"key": "nome", "match": {"value": nome_normalizado}}]},
-            limit=1
-        )
-
-        if resultados:
-            return resultados[0].payload
-
-        # 2️⃣ — Fallback: remover acentos e comparar manualmente
-        todos = listar_todos_perfis()
-        nome_simplificado = normalizar_texto(nome).lower()
-        for p in todos:
-            n = normalizar_texto(p.get("nome", "")).lower()
-            if n == nome_simplificado:
-                return p
-
-        return None
+        resultados, _ = client.scroll(collection_name=COLLECTION_PERFIS, limit=500)
+        for r in resultados:
+            if normalizar_texto(r.payload.get("nome", "")) == nome_norm:
+                return {**r.payload, "id_qdrant": r.id}
     except Exception as e:
-        print(f"❌ Erro ao procurar perfil: {e}")
-        return None
+        log(f"❌ Erro ao procurar perfil: {e}")
+    return None
 
-    
-def listar_familia(familia_id):
+
+# ============================================================
+# 🏡 FAMÍLIAS
+# ============================================================
+
+def listar_familia(familia_id: str):
     """Lista todos os membros de uma família"""
     try:
-        resultados, _ = client.scroll(
-            collection_name=COLLECTION_PERFIS,
-            scroll_filter={"must": [{"key": "familia_id", "match": {"value": familia_id}}]},
-            limit=50
+        filtro = Filter(
+            must=[FieldCondition(key="familia_id", match=MatchValue(value=familia_id))]
         )
+        resultados, _ = client.scroll(collection_name=COLLECTION_PERFIS, scroll_filter=filtro, limit=100)
         return [r.payload for r in resultados]
     except Exception as e:
-        print(f"❌ Erro ao listar família: {e}")
+        log(f"❌ Erro ao listar família {familia_id}: {e}")
         return []
 
-def atualizar_perfil(nome, payload):
-    """Atualiza os dados de um perfil no Qdrant"""
-    try:
-        pontos, _ = client.scroll(
-            collection_name=COLLECTION_PERFIS,
-            scroll_filter={"must": [{"key": "nome", "match": {"value": nome}}]},
-            limit=1
-        )
-
-        if pontos:
-            point_id = pontos[0][0].id
-            client.set_payload(collection_name=COLLECTION_PERFIS, payload=payload, points=[point_id])
-            print(f"✅ Perfil '{nome}' atualizado no Qdrant Cloud.")
-            return True
-
-        print(f"⚠️ Perfil '{nome}' não encontrado para atualização.")
-        return False
-    except Exception as e:
-        print(f"❌ Erro ao atualizar perfil: {e}")
-        return False
 
 # ============================================================
-# ✅ FUNÇÕES DE CONFIRMAÇÕES (Qdrant central)
+# ✏️ ATUALIZAÇÕES DE PERFIS
 # ============================================================
 
-def get_confirmacoes_qdrant():
-    """Lê confirmações diretamente da coleção perfis_convidados"""
+def atualizar_perfil(nome: str, dados: dict):
+    """Atualiza dados de um perfil existente"""
     try:
-        res = client.scroll(
+        perfil = buscar_perfil(nome)
+        if not perfil:
+            log(f"⚠️  Perfil '{nome}' não encontrado para atualização.")
+            return False
+
+        point_id = perfil.get("id_qdrant")
+        if not point_id:
+            log(f"⚠️  ID Qdrant ausente para '{nome}'.")
+            return False
+
+        novo_payload = {**perfil, **dados}
+        client.upsert(
             collection_name=COLLECTION_PERFIS,
-            scroll_filter={"must": [{"key": "confirmado", "match": {"value": True}}]},
-            limit=200
+            points=[PointStruct(id=point_id, vector=None, payload=novo_payload)],
         )
-        return [hit.payload for hit in res[0]] if res and res[0] else []
+        log(f"✅ Perfil '{nome}' atualizado com sucesso.")
+        return True
+
     except Exception as e:
-        print(f"❌ Erro ao ler confirmações: {e}")
+        log(f"❌ Erro ao atualizar perfil '{nome}': {e}")
+        return False
+
+
+# ============================================================
+# ✅ CONFIRMAÇÕES
+# ============================================================
+
+def get_confirmados():
+    """Obtém todos os convidados confirmados"""
+    try:
+        filtro = Filter(
+            must=[FieldCondition(key="confirmado", match=MatchValue(value=True))]
+        )
+        resultados, _ = client.scroll(collection_name=COLLECTION_PERFIS, scroll_filter=filtro, limit=500)
+        return [r.payload for r in resultados]
+    except Exception as e:
+        log(f"❌ Erro ao ler confirmados do Qdrant: {e}")
         return []
 
-def atualizar_confirmacao_qdrant(nome, confirmado=True, acompanhantes=None):
-    """Atualiza o campo 'confirmado' no Qdrant Cloud"""
-    try:
-        if acompanhantes is None:
-            acompanhantes = []
 
-        pontos, _ = client.scroll(
+def atualizar_confirmacao_qdrant(nome: str, confirmado: bool, confirmado_por=None):
+    """Atualiza o estado de confirmação de uma pessoa"""
+    try:
+        perfil = buscar_perfil(nome)
+        if not perfil:
+            log(f"⚠️  Perfil '{nome}' não encontrado para confirmação.")
+            return False
+
+        perfil["confirmado"] = confirmado
+        perfil["confirmado_por"] = confirmado_por
+        perfil["data_confirmacao"] = datetime.now().isoformat() if confirmado else None
+
+        point_id = perfil.get("id_qdrant")
+        if not point_id:
+            log(f"⚠️  ID Qdrant ausente para '{nome}'.")
+            return False
+
+        client.upsert(
             collection_name=COLLECTION_PERFIS,
-            scroll_filter={"must": [{"key": "nome", "match": {"value": nome}}]},
-            limit=1
+            points=[PointStruct(id=point_id, vector=None, payload=perfil)],
         )
 
-        if pontos and pontos:
-            point_id = pontos[0][0].id
-            client.set_payload(
-                collection_name=COLLECTION_PERFIS,
-                payload={
-                    "confirmado": confirmado,
-                    "acompanhantes": acompanhantes,
-                    "data_confirmacao": datetime.now().isoformat() if confirmado else None
-                },
-                points=[point_id],
-            )
-            print(f"✅ Atualizado '{nome}' no Qdrant Cloud → confirmado={confirmado}")
-            return True
-
-        print(f"⚠️ Perfil '{nome}' não encontrado para atualização")
-        return False
-
+        estado = "✅ Confirmado" if confirmado else "❌ Removido"
+        log(f"{estado}: {nome}")
+        return True
     except Exception as e:
-        print(f"❌ Erro ao atualizar confirmação: {e}")
+        log(f"❌ Erro ao atualizar confirmação no Qdrant: {e}")
         return False
+
+
+def get_estatisticas():
+    """Gera estatísticas básicas de confirmações"""
+    try:
+        confirmados = get_confirmados()
+        familias = {}
+        for p in confirmados:
+            fam = p.get("familia_id", "desconhecida")
+            familias.setdefault(fam, []).append(p["nome"])
+
+        return {
+            "total_confirmados": len(confirmados),
+            "familias": len(familias),
+            "ultima_atualizacao": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        log(f"❌ Erro ao gerar estatísticas: {e}")
+        return {}
+
 
 # ============================================================
 # 🧪 TESTE LOCAL
 # ============================================================
 
 if __name__ == "__main__":
-    print("🔧 Teste rápido ao gestor de perfis (Qdrant Cloud)\n")
+    log("🔧 Teste rápido do gestor de perfis...")
+    print("\nTodos os perfis (limite 5):")
+    for p in listar_todos_perfis()[:5]:
+        print(" •", p.get("nome"))
 
-    todos = listar_todos_perfis()
-    print(f"Total de perfis: {len(todos)}")
+    print("\nConfirmando Barbeitos...")
+    atualizar_confirmacao_qdrant("Barbeitos", True, confirmado_por="Miguel")
 
-    exemplo = todos[0]["nome"] if todos else "João Paulo"
-    perfil = buscar_perfil(exemplo)
-    print(f"Perfil exemplo: {perfil}")
+    print("\nConfirmados:")
+    for p in get_confirmados():
+        print(" •", p.get("nome"))
 
-    confirmados = get_confirmacoes_qdrant()
-    print(f"Confirmados no Qdrant: {len(confirmados)}")
+    print("\nEstatísticas:")
+    print(get_estatisticas())
