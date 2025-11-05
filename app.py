@@ -84,27 +84,28 @@ def gerar_resposta(pergunta: str):
         if pergunta_l.startswith("quem "):
             confirmados = get_confirmados()
             if confirmados:
-                nomes_confirmados = [p["nome"] for p in confirmados]
+                # Corrigido: confirmados já é lista de strings
+                nomes_confirmados = confirmados
                 if len(nomes_confirmados) > 10:
-                    return "🎉 Até agora confirmaram: " + ", ".join(nomes_confirmados[:10]) + f" ... e mais {len(nomes_confirmados) - 10}!"
+                    return (
+                        "🎉 Até agora confirmaram: "
+                        + ", ".join(nomes_confirmados[:10])
+                        + f" ... e mais {len(nomes_confirmados) - 10}!"
+                    )
                 else:
                     return "🎉 Confirmaram: " + ", ".join(nomes_confirmados)
             else:
                 return "😅 Ainda ninguém confirmou presença."
 
         # Procurar nome específico na pergunta
-        # Ignora palavras comuns (artigos, verbos, etc.)
         palavras_ignoradas = {"o", "a", "os", "as", "vai", "vem", "foi", "irá", "comparece", "confirmou"}
         tokens = [w.capitalize() for w in re.findall(r"[A-Za-zÀ-ÿ]+", pergunta) if w.lower() not in palavras_ignoradas]
 
         if not tokens:
             return "🤔 Podes repetir quem queres confirmar?"
 
-        # Considera nomes compostos (2 palavras, ex: João Paulo)
-        if len(tokens) >= 2:
-            nome_mencionado = " ".join(tokens[:2])
-        else:
-            nome_mencionado = tokens[0]
+        # Considera nomes compostos (ex: João Paulo)
+        nome_mencionado = " ".join(tokens[:2]) if len(tokens) >= 2 else tokens[0]
 
         perfil = buscar_perfil(nome_mencionado)
         if perfil:
@@ -120,7 +121,8 @@ def gerar_resposta(pergunta: str):
         stats = get_estatisticas()
         return (
             f"📊 Confirmados: {stats.get('total_confirmados', 0)} pessoas\n"
-            f"👨‍👩‍👧‍👦 Famílias registadas: {stats.get('familias', 0)}\n"
+            f"👨‍👩‍👧‍👦 Famílias completas: {stats.get('familias_completas', 0)}\n"
+            f"👨‍👩‍👧 Famílias parciais: {stats.get('familias_parciais', 0)}\n"
             f"🕒 Última atualização: {stats.get('ultima_atualizacao', '—')}"
         )
 
