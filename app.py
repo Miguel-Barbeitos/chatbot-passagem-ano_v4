@@ -14,9 +14,8 @@ from modules.confirmacoes import (
     confirmar_pessoa,
     get_confirmados,
     get_estatisticas,
-  
 )
-from modules.perfis_manager import listar_todos_perfis, normalizar_texto
+from modules.perfis_manager import listar_todos_perfis, buscar_perfil
 
 # ==============================
 # CONFIGURAÇÃO DA APP
@@ -32,8 +31,6 @@ st.title("🎉 Chatbot Passagem de Ano")
 st.markdown("### 👤 Quem és tu?")
 
 perfis_lista = listar_todos_perfis()
-
-# Evita nomes repetidos e perfis sem nome
 nomes = sorted(set(p["nome"] for p in perfis_lista if p.get("nome")))
 
 col1, col2 = st.columns([3, 1])
@@ -53,8 +50,16 @@ if confirmar:
 st.markdown("---")
 st.markdown("### 💬 Fala comigo!")
 
-pergunta = st.text_input("Escreve a tua pergunta:", placeholder="Ex: Já temos quinta? ou O João Paulo vai?")
+pergunta = st.text_input(
+    "Escreve a tua pergunta:",
+    placeholder="Ex: Já temos quinta? ou O João Paulo vai?"
+)
 botao = st.button("Enviar")
+
+
+# ======================================================
+# FUNÇÃO PRINCIPAL DE RESPOSTA
+# ======================================================
 
 def gerar_resposta(pergunta: str):
     """Centraliza a lógica de decisão da resposta."""
@@ -64,75 +69,65 @@ def gerar_resposta(pergunta: str):
 
     pergunta_l = pergunta.lower().strip()
 
-    # ======================================================
-    # PRIORIDADE 1: ORGANIZAÇÃO / QUINTAS
-    # ======================================================
+    # PRIORIDADE 1: Organização / Quintas
     resposta_org = responder_pergunta_organizacao(pergunta)
     if resposta_org:
         return resposta_org
 
-    # ======================================================
-    # PRIORIDADE 2: CONFIRMAÇÕES
-    # ======================================================
+    # PRIORIDADE 2: CONFIRMAÇÕES DE PESSOAS
     tem_quinta = any(p in pergunta_l for p in ["quinta", "quintas", "reserva", "local", "evento", "sítio", "sitio"])
 
     if not tem_quinta and any(p in pergunta_l for p in ["vai", "vem", "comparece", "presente", "confirmou"]):
 
-        # Ignorar perguntas genéricas como "quem vai?" ou "quem confirmou?"
+        # Caso seja pergunta genérica (quem vai?)
         if pergunta_l.startswith("quem "):
             confirmados = get_confirmados()
             if confirmados:
-                lista = ", ".join(confirmados[:10])
-                extra = f" ... e mais {len(confirmados) - 10}" if len(confirmados) > 10 else ""
-                return f"🎉 Até agora confirmaram: {lista}{extra}."
+                nomes_confirmados = [p["nome"] for p in confirmados]
+                if len(nomes_confirmados) > 10:
+                    return "🎉 Até agora confirmaram: " + ", ".join(nomes_confirmados[:10]) + f" ... e mais {len(nomes_confirmados) - 10}!"
+                else:
+                    return "🎉 Confirmaram: " + ", ".join(nomes_confirmados)
             else:
                 return "😅 Ainda ninguém confirmou presença."
 
-        # Caso haja um nome na pergunta
-        match_nome = re.search(
-            r"\b([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)\b",
-            pergunta,
-            flags=re.IGNORECASE
-        )
-
+        # Procurar nome específico na pergunta
+        match_nome = re.search(r"\b([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)\b", pergunta)
         if match_nome:
             nome_mencionado = match_nome.group(1).strip()
-            nome_mencionado = normalizar_texto(nome_mencionado)
-            return verificar_confirmacao_pessoa(nome_mencionado)
 
-    # ======================================================
-    # PRIORIDADE 3: ESTATÍSTICAS DE CONFIRMAÇÕES
-    # ======================================================
+            perfil = buscar_perfil(nome_mencionado)
+            if perfil:
+                if perfil.get("confirmado"):
+                    return f"✅ Sim! {perfil['nome']} já confirmou presença."
+                else:
+                    return f"❌ {perfil['nome']} ainda não confirmou presença."
+            else:
+                return f"🤔 Não encontrei ninguém chamado '{nome_mencionado}' na lista de convidados."
+
+    # PRIORIDADE 3: ESTATÍSTICAS
     if "quantos" in pergunta_l and any(p in pergunta_l for p in ["confirmados", "confirmou", "vão", "presentes"]):
         stats = get_estatisticas()
         return (
-            f"📊 Confirmados: {stats['total_confirmados']} pessoas\n"
-            f"👨‍👩‍👧‍👦 Famílias completas: {stats['familias_completas']}\n"
-            f"🏡 Famílias parciais: {stats['familias_parciais']}"
+            f"📊 Confirmados: {stats.get('total_confirmados', 0)} pessoas\n"
+            f"👨‍👩‍👧‍👦 Famílias registadas: {stats.get('familias', 0)}\n"
+            f"🕒 Última atualização: {stats.get('ultima_atualizacao', '—')}"
         )
 
-    # ======================================================
     # PRIORIDADE 4: INTENÇÕES DE CONFIRMAÇÃO
-    # ======================================================
     if any(p in pergunta_l for p in ["confirmo", "vou", "conta comigo", "podes confirmar", "marca-me"]):
         resultado = confirmar_pessoa(nome_sel)
         return resultado["mensagem"]
 
-    # ======================================================
     # PRIORIDADE 5: FALLBACK — LLM
-    # ======================================================
-    perfil_selecionado = None
-    for p in perfis_lista:
-        if p.get("nome") == nome_sel:
-            perfil_selecionado = p
-            break
-
-    if not perfil_selecionado:
-        perfil_selecionado = {}
-
+    perfil_selecionado = next((p for p in perfis_lista if p.get("nome") == nome_sel), {})
     resposta_llm = gerar_resposta_llm(pergunta, perfil_completo=perfil_selecionado)
     return resposta_llm
 
+
+# ======================================================
+# EXECUÇÃO DO CHAT
+# ======================================================
 
 if botao and pergunta:
     resposta = gerar_resposta(pergunta)
