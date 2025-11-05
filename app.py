@@ -26,23 +26,22 @@ st.set_page_config(page_title="Chatbot Passagem de Ano", layout="centered")
 st.title("🎉 Chatbot Passagem de Ano")
 
 # ==============================
-# SECÇÃO: PERFIL DO UTILIZADOR
+# SECÇÃO: IDENTIDADE DO UTILIZADOR
 # ==============================
 
-st.markdown("### 👤 Quem és tu?")
+st.markdown("### 👤 Escolhe quem és")
 
 perfis_lista = listar_todos_perfis()
 nomes = sorted(set(p["nome"] for p in perfis_lista if p.get("nome")))
 
-col1, col2 = st.columns([3, 1])
-with col1:
-    nome_sel = st.selectbox("Quem és tu?", nomes, index=0)
-with col2:
-    confirmar = st.button("Confirmar Presença 🎟️")
+nome_sel = st.selectbox(
+    "Quem és tu?",
+    nomes,
+    index=0,
+    help="Escolhe o teu nome para o chatbot saber quem está a falar."
+)
 
-if confirmar:
-    resultado = confirmar_pessoa(nome_sel)
-    st.success(resultado["mensagem"])
+st.info(f"Olá, **{nome_sel}** 👋! Podes escrever, por exemplo: *eu vou*, *nós vamos*, *quem vai?*, *já temos quinta?*")
 
 # ==============================
 # SECÇÃO: CHAT PRINCIPAL
@@ -74,12 +73,12 @@ def gerar_resposta(pergunta: str):
     if resposta_org:
         return resposta_org
 
-    # PRIORIDADE 2: CONFIRMAÇÕES DE PESSOAS OU FAMÍLIAS
+    # PRIORIDADE 2: CONSULTAR CONFIRMAÇÕES (quem vai?)
     tem_quinta = any(p in pergunta_l for p in ["quinta", "quintas", "reserva", "local", "evento", "sítio", "sitio"])
 
     if not tem_quinta and any(p in pergunta_l for p in ["vai", "vem", "comparece", "presente", "confirmou"]):
 
-        # Caso seja pergunta genérica (quem vai?)
+        # Caso genérico: "quem vai?"
         if pergunta_l.startswith("quem "):
             confirmados = get_confirmados()
             if confirmados:
@@ -95,7 +94,7 @@ def gerar_resposta(pergunta: str):
             else:
                 return "😅 Ainda ninguém confirmou presença."
 
-        # Procurar nome específico na pergunta
+        # Nome específico (ex: "O João Paulo vai?")
         palavras_ignoradas = {"o", "a", "os", "as", "vai", "vem", "foi", "irá", "comparece", "confirmou"}
         tokens = [w.capitalize() for w in re.findall(r"[A-Za-zÀ-ÿ]+", pergunta) if w.lower() not in palavras_ignoradas]
 
@@ -104,6 +103,7 @@ def gerar_resposta(pergunta: str):
 
         nome_mencionado = " ".join(tokens[:2]) if len(tokens) >= 2 else tokens[0]
         perfil = buscar_perfil(nome_mencionado)
+
         if perfil:
             if perfil.get("confirmado"):
                 return f"✅ Sim! {perfil['nome']} já confirmou presença."
@@ -124,7 +124,7 @@ def gerar_resposta(pergunta: str):
 
     # PRIORIDADE 4: INTENÇÕES DE CONFIRMAÇÃO
     if any(p in pergunta_l for p in ["confirmo", "vou", "conta comigo", "podes confirmar", "marca-me", "nós vamos", "a familia vai", "toda a familia"]):
-        resultado = confirmar_pessoa(f"família {nome_sel}", confirmado_por=nome_sel)
+        resultado = confirmar_pessoa(f"família {nome_sel}" if "nós" in pergunta_l or "fam" in pergunta_l else nome_sel, confirmado_por=nome_sel)
         return resultado["mensagem"]
 
     # PRIORIDADE 5: FALLBACK — LLM
