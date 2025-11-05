@@ -202,3 +202,21 @@ if __name__ == "__main__":
 
     print("\nEstatísticas:")
     print(get_estatisticas())
+
+
+
+def verificar_confirmacao_pessoa(nome):
+    """Verifica se uma pessoa está confirmada no Qdrant"""
+    from modules.perfis_manager import buscar_perfil
+    try:
+        perfil = buscar_perfil(nome)
+        if not perfil:
+            return f"❓ Não encontrei ninguém chamado {nome} na lista de convidados."
+
+        if perfil.get("confirmado"):
+            return f"✅ Sim, {perfil['nome']} já confirmou presença!"
+        else:
+            return f"❌ {perfil['nome']} ainda não confirmou."
+    except Exception as e:
+        print(f"[ERRO] verificar_confirmacao_pessoa: {e}")
+        return "⚠️ Erro ao verificar confirmação."
