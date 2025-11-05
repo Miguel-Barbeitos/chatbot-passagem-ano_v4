@@ -281,12 +281,66 @@ def e_pergunta_de_quintas(pergunta: str) -> bool:
         "preco", "preço", "churrasqueira", "snooker", "estado", "procura",
         "quantas", "quais", "lista", "nomes", "mais perto", "proxima", 
         "próxima", "onde fica", "mostra", "todas", "sitio", "sítio", "lugar",
-        "pre-reserva", "pré-reserva", "reservada",
-        # Keywords de confirmações (v4.14)
-        "vai", "vao", "vão", "confirmou", "confirmaram", "confirmados", 
-        "confirmadas", "quem vai", "quem vem", "presença", "presenca","filha", "filho","filhas","filhos", "marido","mulher","esposa","esposo", "familia"
+        "pre-reserva", "pré-reserva", "reservada"
     ]
     return tem_nome_quinta or any(c in p for c in chaves)
+
+# =====================================================
+# 🎯 DETEÇÃO DE PERGUNTAS SOBRE CONFIRMAÇÕES (v4.17)
+# =====================================================
+def e_pergunta_de_confirmacoes(pergunta: str) -> bool:
+    """
+    Deteta se a pergunta é sobre confirmações de presença.
+    v4.17: Sistema separado de confirmações para evitar ambiguidade.
+    """
+    p = pergunta.lower()
+    
+    # 🚫 EXCLUSÕES: Perguntas que parecem confirmações mas são sobre quintas
+    exclusoes = [
+        "quinta confirmou", "quinta respondeu", "quinta vai",
+        "quinta disponivel", "disponibilidade da quinta",
+        "hotel confirmou", "hotel vai"
+    ]
+    
+    for exc in exclusoes:
+        if exc in p:
+            return False  # É sobre quintas, não confirmações de pessoas!
+    
+    # ✅ KEYWORDS de confirmações de presença
+    keywords_confirmacoes = [
+        # Perguntas diretas sobre quem vai
+        "quem vai", "quem vem", "quem confirmou", "quem vão",
+        
+        # Família e relações
+        "familia", "família", "filhas", "filhos", "filha", "filho",
+        "marido", "mulher", "esposa", "esposo", "casal",
+        "pai", "mãe", "mae", "irmao", "irmã", "irmão",
+        
+        # Contagens de pessoas
+        "quantas pessoas", "total de pessoas", "quantos vão",
+        "quantos confirmaram", "total confirmados",
+        
+        # Perguntas sobre quem falta
+        "quem não", "quem ainda não", "falta confirmar",
+        "não respondeu ao convite", "não confirmou",
+        
+        # Status de presença
+        "presença", "presenca", "vai levar", "vem com",
+        "confirmou presença", "confirmaram presença"
+    ]
+    
+    # Verifica se tem alguma keyword de confirmações
+    tem_keyword = any(kw in p for kw in keywords_confirmacoes)
+    
+    # Se tem "vai" ou "confirmou" isolado, verifica se não é sobre quintas
+    if ("vai" in p or "confirmou" in p) and not tem_keyword:
+        # Verifica se tem nome de pessoa (começa com maiúscula)
+        # Ex: "A Isabel vai?" → detecta "Isabel" como nome
+        palavras = pergunta.split()
+        tem_nome_pessoa = any(palavra[0].isupper() and len(palavra) > 2 for palavra in palavras[1:])
+        return tem_nome_pessoa
+    
+    return tem_keyword
 
 def e_pergunta_estado(pergunta: str) -> bool:
     """Deteta perguntas sobre o estado das quintas."""
@@ -531,13 +585,134 @@ def estimar_distancia_por_zona(zona: str) -> dict:
     return None
 
 # =====================================================
+# 👥 RESPONDER PERGUNTAS SOBRE CONFIRMAÇÕES (v4.17)
+# =====================================================
+def responder_confirmacoes(pergunta: str, nome: str, perfil_completo: dict):
+    """
+    Responde perguntas sobre confirmações de presença.
+    v4.17: Integração com Qdrant para buscar confirmados reais.
+    """
+    try:
+        from learning_qdrant import get_confirmacoes
+        confirmados = get_confirmacoes()
+    except Exception as e:
+        print(f"⚠️ Erro ao buscar confirmações do Qdrant: {e}")
+        confirmados = []
+    
+    p = pergunta.lower()
+    total = len(confirmados)
+    
+    # Personalização baseada no perfil
+    personalidade = perfil_completo.get("personalidade", {}) if perfil_completo else {}
+    emojis = personalidade.get("emojis", 5) >= 5
+    detalhismo = personalidade.get("detalhismo", 5)
+    
+    # 1. PERGUNTA: "Quem vai?" / "Quem confirmou?" / "Quem vem?"
+    if any(x in p for x in ["quem vai", "quem confirmou", "quem vem", "quem vão"]):
+        if not confirmados:
+            return "Ainda não há confirmações 😅"
+        
+        emoji = " 🎉" if emojis else ""
+        
+        if detalhismo >= 6:
+            # Resposta detalhada
+            lista = "\n".join([f"✅ {c}" for c in confirmados])
+            resposta = f"**Confirmados até agora ({total}):**{emoji}\n\n{lista}"
+            if total > 5:
+                resposta += f"\n\nTemos {total} pessoas confirmadas! 🎊"
+        else:
+            # Resposta concisa
+            if total <= 3:
+                lista = ", ".join(confirmados)
+                resposta = f"Confirmados: {lista}{emoji}"
+            else:
+                resposta = f"{total} pessoas confirmadas{emoji}"
+        
+        return resposta
+    
+    # 2. PERGUNTA: "Quantas pessoas?" / "Total de pessoas?" / "Quantos vão?"
+    if any(x in p for x in ["quantas pessoas", "quantos", "total"]):
+        emoji = " 🎊" if emojis else ""
+        
+        if detalhismo >= 6:
+            if total == 0:
+                return "Ainda não temos confirmações 😅"
+            elif total == 1:
+                return f"**1 pessoa confirmada!**{emoji}"
+            else:
+                resposta = f"**{total} pessoas confirmadas!**{emoji}"
+                if total > 10:
+                    resposta += "\n\nJá temos um grupo fixe! 🎉"
+                return resposta
+        else:
+            return f"{total} confirmados{emoji}" if total > 0 else "Sem confirmações ainda"
+    
+    # 3. PERGUNTA: "[Nome] vai?" / "[Nome] confirmou?" / "A [Nome] vai levar as filhas?"
+    # Verificar se algum nome confirmado aparece na pergunta
+    for confirmado in confirmados:
+        nome_parts = confirmado.lower().split()
+        # Verifica nome completo ou primeiro nome
+        if any(part in p for part in nome_parts if len(part) > 2):
+            emoji = " ✅" if emojis else ""
+            if detalhismo >= 6:
+                return f"Sim, **{confirmado}** confirmou presença!{emoji}"
+            else:
+                return f"{confirmado} confirmou{emoji}"
+    
+    # Se mencionou nome mas não está confirmado
+    # Detecta nomes com maiúscula na pergunta (ex: "Isabel", "João")
+    import re
+    nomes_na_pergunta = re.findall(r'\b[A-Z][a-záéíóúâêôãõç]+\b', pergunta)
+    if nomes_na_pergunta:
+        nome_mencionado = nomes_na_pergunta[0]
+        if detalhismo >= 6:
+            return f"**{nome_mencionado}** ainda não confirmou presença 🤔"
+        else:
+            return f"{nome_mencionado} não confirmou ainda"
+    
+    # 4. PERGUNTA: "Quem não confirmou?" / "Quem falta?" / "Quem ainda não respondeu?"
+    if any(x in p for x in ["não confirmou", "ainda não", "falta", "não respondeu"]):
+        if detalhismo >= 6:
+            return "Não tenho a lista completa de convidados para comparar. Queres confirmar alguém específico? 😊"
+        else:
+            return "Não sei quem falta confirmar 😅"
+    
+    # 5. PERGUNTA sobre FAMÍLIA: "família", "filhas", "filhos"
+    if any(x in p for x in ["familia", "família", "filhas", "filhos", "filha", "filho"]):
+        # Procura se mencionou alguém específico
+        for confirmado in confirmados:
+            if confirmado.lower() in p:
+                emoji = " 👨‍👩‍👧‍👦" if emojis else ""
+                if detalhismo >= 6:
+                    return f"**{confirmado}** confirmou presença!{emoji} Para detalhes sobre acompanhantes, verifica diretamente."
+                else:
+                    return f"{confirmado} confirmou{emoji}"
+        
+        # Genérico sobre famílias
+        if confirmados:
+            return f"Temos {total} confirmações. Para detalhes de acompanhantes de cada família, melhor confirmar individualmente 😊"
+        else:
+            return "Ainda não há confirmações de famílias 😅"
+    
+    # 6. FALLBACK: Resposta genérica sobre confirmações
+    if confirmados:
+        emoji = " 🎉" if emojis else ""
+        if detalhismo >= 6:
+            return f"Temos **{total} pessoas confirmadas** até agora!{emoji}\n\nQueres ver a lista completa? Pergunta 'quem vai?'"
+        else:
+            return f"{total} confirmados{emoji}"
+    else:
+        return "Ainda não há confirmações 😅 Queres ser o primeiro?"
+
+# =====================================================
 # 🎯 FUNÇÃO PRINCIPAL - GERAR RESPOSTA LLM (VERSÃO 2.0)
 # =====================================================
 def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, contexto_conversa="", ultima_quinta=None):
     """
     Gera resposta sobre festa ou quintas com PERSONALIZAÇÃO COMPLETA.
     
-    VERSÃO 2.0 - MELHORIAS:
+    VERSÃO 4.17 - MELHORIAS:
+    ✅ Sistema de confirmações separado (evita ambiguidade)
     ✅ Parâmetros LLM ajustados dinamicamente
     ✅ Pós-processamento inteligente
     ✅ Contexto de conversa melhorado
@@ -576,6 +751,10 @@ def gerar_resposta_llm(pergunta, perfil_completo=None, contexto_base=None, conte
         except Exception as e:
             print(f"⚠️ Erro ao processar contexto: {e}")
             # Continua sem usar contexto
+
+    # ✅ v4.17: VERIFICAR CONFIRMAÇÕES PRIMEIRO (antes de quintas!)
+    if e_pergunta_de_confirmacoes(pergunta):
+        return responder_confirmacoes(pergunta, nome, perfil_completo)
 
     # ✅ CONSULTAS SOBRE QUINTAS
     if e_pergunta_de_quintas(pergunta):
