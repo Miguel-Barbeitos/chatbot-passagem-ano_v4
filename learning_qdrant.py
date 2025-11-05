@@ -2,6 +2,7 @@
 import json
 import random
 import numpy as np
+import unicodedata
 from qdrant_client import QdrantClient, models
 
 # =====================================================

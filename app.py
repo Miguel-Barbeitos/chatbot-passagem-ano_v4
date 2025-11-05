@@ -123,9 +123,13 @@ def gerar_resposta(pergunta: str):
     # ======================================================
     perfil_selecionado = None
     for p in perfis_lista:
-     if p.get("nome") == nome_sel:
-      perfil_selecionado = p
-      break
+        if p.get("nome") == nome_sel:
+            perfil_selecionado = p
+            break
+
+    if not perfil_selecionado:
+        perfil_selecionado = {}
+
     resposta_llm = gerar_resposta_llm(pergunta, perfil_completo=perfil_selecionado)
     return resposta_llm
 
