@@ -183,7 +183,21 @@ def detectar_intencao_confirmacao(texto):
         return {"tipo": "individual", "explicito": False, "nomes_mencionados": []}
 
     return {"tipo": "desconhecido", "explicito": False, "nomes_mencionados": []}
+def verificar_confirmacao_pessoa(nome):
+    """Verifica se uma pessoa está confirmada no Qdrant"""
+    from modules.perfis_manager import buscar_perfil
+    try:
+        perfil = buscar_perfil(nome)
+        if not perfil:
+            return f"❓ Não encontrei ninguém chamado {nome} na lista de convidados."
 
+        if perfil.get("confirmado"):
+            return f"✅ Sim, {perfil['nome']} já confirmou presença!"
+        else:
+            return f"❌ {perfil['nome']} ainda não confirmou."
+    except Exception as e:
+        print(f"[ERRO] verificar_confirmacao_pessoa: {e}")
+        return "⚠️ Erro ao verificar confirmação."
 
 # ============================================================
 # 🔍 TESTE LOCAL
@@ -205,18 +219,4 @@ if __name__ == "__main__":
 
 
 
-def verificar_confirmacao_pessoa(nome):
-    """Verifica se uma pessoa está confirmada no Qdrant"""
-    from modules.perfis_manager import buscar_perfil
-    try:
-        perfil = buscar_perfil(nome)
-        if not perfil:
-            return f"❓ Não encontrei ninguém chamado {nome} na lista de convidados."
 
-        if perfil.get("confirmado"):
-            return f"✅ Sim, {perfil['nome']} já confirmou presença!"
-        else:
-            return f"❌ {perfil['nome']} ainda não confirmou."
-    except Exception as e:
-        print(f"[ERRO] verificar_confirmacao_pessoa: {e}")
-        return "⚠️ Erro ao verificar confirmação."
