@@ -1,11 +1,12 @@
 ﻿"""
 🎉 Módulo de Organização da Passagem de Ano
-Centraliza informações sobre: evento, quintas, confirmações, distâncias
+Centraliza informações sobre: evento, quintas, confirmações e respostas por email.
 """
 
 import os
 import json
 import sqlite3
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -25,85 +26,26 @@ def get_evento():
     try:
         with open(EVENT_JSON, 'r', encoding='utf-8') as f:
             return json.load(f)
-    except UnicodeDecodeError:
-        # Tenta com encoding diferente
-        try:
-            with open(EVENT_JSON, 'r', encoding='latin-1') as f:
-                return json.load(f)
-        except:
-            pass
-    except FileNotFoundError:
-        pass
     except Exception as e:
         print(f"⚠️ Erro ao ler event.json: {e}")
-    
-    # Dados padrão se ficheiro não existir ou tiver erro
-    return {
-        "nome": "Passagem de Ano 2024/2025",
-        "data_inicio": "2025-12-30",
-        "data_fim": "2026-01-04",
-        "check_in": "15:00",
-        "check_out": "12:00",
-        "cor": "Amarelo",
-        "orcamento_pessoa": 300,  # JÁ INCLUI: dormidas + refeições + compras
-        "quinta_prereservada": "Monte da Galega",
-        "quinta_prereservada_info": {
-            "nome": "Monte da Galega",
-            "zona": "Penafiel",
-            "telefone": "+351 255 000 000",
-            "website": "https://www.montedagalega.pt",
-            "capacidade": 40,
-            "custo_estimado": 4500
-        },
-        "total_convidados": 35,
-        "capacidade_minima": 35,
-        "capacidade_ideal": 40
-    }
+        return {
+            "nome": "Passagem de Ano 2024/2025",
+            "data_inicio": "2025-12-30",
+            "data_fim": "2026-01-04",
+            "cor": "Amarelo",
+            "orcamento_pessoa": 300,
+            "total_convidados": 35
+        }
 
 def get_datas_evento():
-    """Retorna datas formatadas do evento"""
+    """Retorna datas formatadas"""
     evento = get_evento()
-    
-    # Parse datas
-    from datetime import datetime
-    data_inicio = datetime.strptime(evento['data_inicio'], '%Y-%m-%d')
-    data_fim = datetime.strptime(evento['data_fim'], '%Y-%m-%d')
-    
-    # Calcula duração
-    duracao = (data_fim - data_inicio).days
-    
+    di = datetime.strptime(evento["data_inicio"], "%Y-%m-%d")
+    df = datetime.strptime(evento["data_fim"], "%Y-%m-%d")
     return {
-        "inicio": data_inicio.strftime('%d/%m/%Y'),
-        "fim": data_fim.strftime('%d/%m/%Y'),
-        "check_in": evento['check_in'],
-        "check_out": evento['check_out'],
-        "duracao_dias": duracao,
-        "ano_novo": "31/12/2024"  # Dia específico da passagem de ano
-    }
-
-def get_tema_cor():
-    """Retorna tema e cor do evento"""
-    evento = get_evento()
-    return {
-        "cor": evento.get('cor', 'Amarelo'),
-        "tema": f"Passagem de Ano - Tema {evento.get('cor', 'Amarelo')}"
-    }
-
-def get_orcamento():
-    """Retorna informação sobre orçamento"""
-    evento = get_evento()
-    orcamento_pessoa = evento.get('orcamento_pessoa', 300)
-    total_convidados = evento.get('total_convidados', 35)
-    
-    return {
-        "por_pessoa": orcamento_pessoa,
-        "total_estimado": orcamento_pessoa * total_convidados,
-        "inclui": [
-            "Alojamento (todas as noites)",
-            "Refeições completas",
-            "Compras e extras"
-        ],
-        "observacao": f"€{orcamento_pessoa}/pessoa - tudo incluído"
+        "inicio": di.strftime("%d/%m/%Y"),
+        "fim": df.strftime("%d/%m/%Y"),
+        "duracao_dias": (df - di).days
     }
 
 # =====================================================
@@ -111,523 +53,115 @@ def get_orcamento():
 # =====================================================
 
 def get_confirmacoes():
-    """Carrega confirmações dos convidados"""
     try:
-        with open(CONFIRMADOS_JSON, 'r', encoding='utf-8') as f:
+        with open(CONFIRMADOS_JSON, "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
-        return {"total_confirmados": 0, "confirmados": []}
+        return {"confirmados": []}
 
 def get_stats_confirmacoes():
-    """Estatísticas de confirmações"""
     confirmacoes = get_confirmacoes()
     evento = get_evento()
-    
-    total_confirmados = confirmacoes.get('total_confirmados', 0)
-    total_convidados = evento.get('total_convidados', 35)
-    
-    # Calcula taxa
-    taxa = (total_confirmados / total_convidados * 100) if total_convidados > 0 else 0
-    
-    # Lista de confirmados
-    lista_confirmados = confirmacoes.get('confirmados', [])
-    
+    total = len(confirmacoes.get("confirmados", []))
+    total_convidados = evento.get("total_convidados", 35)
+    taxa = round(total / total_convidados * 100, 1) if total_convidados else 0
     return {
-        "total_confirmados": total_confirmados,
+        "total_confirmados": total,
         "total_convidados": total_convidados,
-        "taxa_confirmacao": round(taxa, 1),
-        "faltam_confirmar": total_convidados - total_confirmados,
-        "confirmados": lista_confirmados
+        "taxa_confirmacao": taxa
     }
-
-def pessoa_confirmou(nome):
-    """Verifica se uma pessoa confirmou presença"""
-    confirmacoes = get_confirmacoes()
-    lista = confirmacoes.get('confirmados', [])
-    
-    # Normaliza nome para comparação
-    nome_norm = nome.lower().strip()
-    
-    for confirmado in lista:
-        if confirmado.lower().strip() == nome_norm:
-            return True
-    
-    return False
 
 # =====================================================
-# 🏡 QUINTAS
+# 🏡 QUINTAS E RESPOSTAS
 # =====================================================
 
-def get_quinta_prereservada():
-    """Retorna informações da quinta pré-reservada"""
-    evento = get_evento()
-    
-    # Verifica se tem info completa no event.json
-    if 'quinta_prereservada_info' in evento:
-        info = evento['quinta_prereservada_info']
-        return {
-            "nome": info.get('nome'),
-            "zona": info.get('zona'),
-            "status": "Pré-reservada",
-            "website": info.get('website'),
-            "telefone": info.get('telefone'),
-            "capacidade": info.get('capacidade'),
-            "custo": info.get('custo_estimado')
-        }
-    
-    # Fallback: busca no Qdrant
-    nome_quinta = evento.get('quinta_prereservada', 'Monte da Galega')
-    quinta = get_info_quinta(nome_quinta)
-    
-    if quinta:
-        return {
-            "nome": quinta.get('nome'),
-            "zona": quinta.get('zona'),
-            "status": "Pré-reservada",
-            "website": quinta.get('website'),
-            "telefone": quinta.get('telefone'),
-            "capacidade": quinta.get('capacidade_confirmada'),
-            "custo": quinta.get('custo_total')
-        }
-    
-    # Fallback final
-    return {
-        "nome": nome_quinta,
-        "status": "Pré-reservada",
-        "observacao": "Dados completos não disponíveis na BD"
-    }
-
-def get_stats_quintas():
-    """Estatísticas das quintas contactadas"""
-    try:
-        # Tenta usar Qdrant primeiro
-        try:
-            from modules.quintas_qdrant import listar_quintas
-            quintas = listar_quintas()
-            
-            # Conta quintas com resposta válida (qualquer resposta que não seja erro/vazia)
-            com_resposta = [q for q in quintas if q.get('resposta') 
-                          and q.get('resposta') not in ['', None, 'Sem resposta', 'Erro email']]
-            
-            # Conta disponíveis (respostas positivas)
-            disponiveis = len([q for q in com_resposta 
-                             if any(palavra in str(q.get('resposta', '')).lower() 
-                                  for palavra in ['sim', 'disponível', 'disponivel', 'temos'])])
-            
-            # Conta indisponíveis (respostas negativas)
-            indisponiveis = len([q for q in com_resposta 
-                               if any(palavra in str(q.get('resposta', '')).lower() 
-                                    for palavra in ['não', 'nao', 'indisponível', 'indisponivel', 'esgotado', 'lotado'])])
-            
-            # Outras respostas (talvez, a verificar, etc)
-            outras_respostas = len(com_resposta) - disponiveis - indisponiveis
-            
-            return {
-                "total_contactadas": len(quintas),
-                "responderam": len(com_resposta),
-                "disponiveis": disponiveis,
-                "indisponiveis": indisponiveis,
-                "outras_respostas": outras_respostas,  # NOVO campo
-                "sem_resposta": len(quintas) - len(com_resposta)
-            }
-        except Exception as e_qdrant:
-            print(f"⚠️ Qdrant não disponível, tentando SQLite: {e_qdrant}")
-        
-        # Fallback: SQLite
-        conn = sqlite3.connect(QUINTAS_DB)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # Conta por estado
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN resposta = 'Sim' THEN 1 ELSE 0 END) as disponiveis,
-                SUM(CASE WHEN resposta = 'Não' THEN 1 ELSE 0 END) as indisponiveis,
-                SUM(CASE WHEN resposta IS NULL OR resposta = '' THEN 1 ELSE 0 END) as sem_resposta
-            FROM quintas
-        """)
-        
-        stats = cursor.fetchone()
-        conn.close()
-        
-        return {
-            "total_contactadas": stats['total'],
-            "responderam": stats['disponiveis'] + stats['indisponiveis'],
-            "disponiveis": stats['disponiveis'],
-            "indisponiveis": stats['indisponiveis'],
-            "sem_resposta": stats['sem_resposta']
-        }
-    
-    except Exception as e:
-        print(f"❌ Erro ao buscar stats quintas: {e}")
-        # Retorna valores do Qdrant se disponível
-        return {
-            "total_contactadas": 35,  # Valor conhecido
-            "responderam": 0,
-            "disponiveis": 0,
-            "indisponiveis": 0,
-            "sem_resposta": 35
-        }
-
-def get_info_quinta(nome):
-    """Busca informação completa de uma quinta por nome"""
-    try:
-        conn = sqlite3.connect(QUINTAS_DB)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT * FROM quintas WHERE nome = ?", (nome,))
-        quinta = cursor.fetchone()
-        conn.close()
-        
-        if quinta:
-            return dict(quinta)
-        return None
-    
-    except Exception as e:
-        print(f"❌ Erro ao buscar quinta: {e}")
-        return None
-
-def get_resposta_quinta(nome):
-    """Busca resposta específica de uma quinta"""
-    quinta = get_info_quinta(nome)
-    
-    if not quinta:
-        return None
-    
-    return {
-        "nome": quinta.get('nome'),
-        "resposta": quinta.get('resposta'),
-        "estado": quinta.get('estado'),
-        "resumo": quinta.get('resumo_resposta'),
-        "data_resposta": quinta.get('ultima_resposta'),
-        "disponivel": quinta.get('resposta') == 'Sim',
-        "preco": quinta.get('custo_total'),
-        "capacidade": quinta.get('capacidade_confirmada')
-    }
-
-def listar_quintas_disponiveis():
-    """Lista quintas que confirmaram disponibilidade"""
-    try:
-        conn = sqlite3.connect(QUINTAS_DB)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT nome, zona, custo_total, capacidade_confirmada, 
-                   website, telefone, resumo_resposta
-            FROM quintas 
-            WHERE resposta = 'Sim'
-            ORDER BY custo_total ASC
-        """)
-        
-        quintas = cursor.fetchall()
-        conn.close()
-        
-        return [dict(q) for q in quintas]
-    
-    except Exception as e:
-        print(f"❌ Erro ao listar quintas disponíveis: {e}")
-        return []
-
-def listar_quintas_por_preco(limite=5):
-    """Lista quintas mais baratas que responderam"""
-    quintas = listar_quintas_disponiveis()
-    
-    # Ordena por preço
-    quintas_ordenadas = sorted(
-        quintas, 
-        key=lambda q: q.get('custo_total', 999999)
+def extrair_nome_quinta(pergunta: str) -> str | None:
+    """Extrai o nome provável de uma quinta da pergunta"""
+    match = re.search(
+        r"(quinta|hotel|herdade|pousada|estalagem|centro)\s+[a-zà-ÿ\s\(\)]+",
+        pergunta, re.IGNORECASE
     )
-    
-    return quintas_ordenadas[:limite]
+    if match:
+        return match.group(0).strip().title()
+    return None
 
-# =====================================================
-# 📍 DISTÂNCIAS
-# =====================================================
-
-def calcular_distancia(zona):
+def responder_pergunta_organizacao(pergunta: str):
     """
-    Calcula distância de Lisboa baseado na zona
-    NOTA: Usa função existente em llm_groq.py (estimar_distancia_por_zona)
-    Mas pode ser melhorada no futuro com coordenadas GPS reais
+    Responde perguntas sobre quintas, emails e organização.
     """
-    
-    # Import da função existente
-    from llm_groq import estimar_distancia_por_zona
-    
-    distancia_info = estimar_distancia_por_zona(zona)
-    
-    if distancia_info:
-        return {
-            "km": distancia_info.get('km'),
-            "tempo": distancia_info.get('tempo'),
-            "pais": distancia_info.get('pais'),
-            "de": "Lisboa (ponto de partida)"
-        }
-    
-    return {
-        "km": None,
-        "tempo": "Desconhecido",
-        "pais": "Desconhecido",
-        "observacao": "Distância não disponível para esta zona"
-    }
-
-def get_info_quinta_com_distancia(nome):
-    """Busca quinta com cálculo de distância"""
-    quinta = get_info_quinta(nome)
-    
-    if not quinta:
-        return None
-    
-    zona = quinta.get('zona', '')
-    distancia = calcular_distancia(zona)
-    
-    return {
-        **quinta,
-        "distancia": distancia
-    }
-
-# =====================================================
-# 🎯 FUNÇÕES DE CONSULTA RÁPIDA
-# =====================================================
-
-def get_resumo_organizacao():
-    """Resumo completo da organização"""
-    evento = get_evento()
-    stats_quintas = get_stats_quintas()
-    stats_confirmacoes = get_stats_confirmacoes()
-    quinta_pre = get_quinta_prereservada()
-    
-    return {
-        "evento": {
-            "nome": evento.get('nome'),
-            "datas": f"{evento.get('data_inicio')} a {evento.get('data_fim')}",
-            "cor_tema": evento.get('cor')
-        },
-        "quinta_prereservada": quinta_pre,
-        "quintas": stats_quintas,
-        "confirmacoes": stats_confirmacoes,
-        "orcamento_pessoa": evento.get('orcamento_pessoa')
-    }
-
-def responder_pergunta_organizacao(pergunta):
-    """
-    Responde perguntas comuns sobre a organização
-    Retorna string formatada ou None se não souber responder
-    """
-    
     p = pergunta.lower().strip()
-    
-    # ===== JÁ TEMOS QUINTA? =====
-    if any(frase in p for frase in ['já temos', 'temos quinta', 'temos alguma quinta', 'há quinta', 'já temos sitio']):
-        quinta_pre = get_quinta_prereservada()
-        stats = get_stats_quintas()
-        
-        resposta = f"""✅ Sim! Temos o **{quinta_pre['nome']}** pré-reservado como plano B, mas estamos à procura de mais quintas.
 
-📊 Estado da procura:
-• {stats['total_contactadas']} quintas contactadas
-• {stats['responderam']} responderam"""
-        
-        if stats.get('outras_respostas', 0) > 0:
-            resposta += f"""
-• {stats['disponiveis']} disponíveis
-• {stats['indisponiveis']} indisponíveis  
-• {stats['outras_respostas']} a verificar
-• {stats['sem_resposta']} sem resposta ainda"""
-        else:
-            resposta += f"""
-• {stats['disponiveis']} disponíveis
-• {stats['indisponiveis']} indisponíveis
-• {stats['sem_resposta']} sem resposta ainda"""
-        
-        return resposta
-    
-    # ===== QUANTAS QUINTAS RESPONDERAM? =====
-    if 'quantas' in p and ('responderam' in p or 'resposta' in p):
-        stats = get_stats_quintas()
-        
-        resposta = f"""📊 **{stats['responderam']}** quintas responderam de {stats['total_contactadas']} contactadas:
+    # ===== NOVO: Pergunta sobre resposta de uma quinta =====
+    if any(k in p for k in ["resposta da", "respondeu", "email da", "email de", "o que disse", "qual foi a resposta"]):
+        nome_quinta = extrair_nome_quinta(pergunta)
+        if not nome_quinta:
+            return "🤔 Podes indicar o nome da quinta?"
 
-✅ {stats['disponiveis']} disponíveis
-❌ {stats['indisponiveis']} indisponíveis"""
+        try:
+            from modules.quintas_qdrant import procurar_quinta_por_nome
+            info = procurar_quinta_por_nome(nome_quinta)
+        except Exception as e:
+            print(f"❌ Erro ao aceder ao Qdrant: {e}")
+            info = None
 
-        if stats.get('outras_respostas', 0) > 0:
-            resposta += f"\n🔍 {stats['outras_respostas']} a verificar"
-        
-        resposta += f"\n⏳ {stats['sem_resposta']} sem resposta"
-        
-        return resposta
-    
-    # ===== QUANTOS CONFIRMARAM? =====
-    if 'quantos' in p and ('confirmaram' in p or 'confirmados' in p):
-        stats = get_stats_confirmacoes()
-        
-        resposta = f"""👥 **{stats['total_confirmados']}** pessoas confirmadas de {stats['total_convidados']} convidados
+        if not info:
+            return f"🤔 Não encontrei nenhuma quinta chamada **{nome_quinta}**."
 
-📊 Taxa de confirmação: {stats['taxa_confirmacao']}%
-⏳ Faltam confirmar: {stats['faltam_confirmar']} pessoas"""
-        
-        if stats['confirmados']:
-            resposta += f"\n\n✅ Confirmados:\n"
-            for nome in stats['confirmados'][:10]:  # Máximo 10
-                resposta += f"• {nome}\n"
-            
-            if len(stats['confirmados']) > 10:
-                resposta += f"• ... e mais {len(stats['confirmados']) - 10}"
-        
-        return resposta
-    
-    # ===== QUAIS SÃO OS DIAS? =====
-    if 'quais' in p and ('dias' in p or 'datas' in p) or 'quando' in p:
-        datas = get_datas_evento()
-        
-        resposta = f"""📅 **Passagem de Ano 2024/2025**
+        resposta_email = (
+            info.get("email_resposta")
+            or info.get("resposta_original")
+            or info.get("ultima_resposta")
+            or info.get("detalhes")
+            or info.get("resposta")
+        )
 
-📆 Datas: {datas['inicio']} a {datas['fim']}
-🏠 Check-in: {datas['check_in']}
-🚪 Check-out: {datas['check_out']}
-⏱️ Duração: {datas['duracao_dias']} dias
+        if not resposta_email:
+            return f"📭 Ainda não há resposta de email registada para **{info.get('nome', nome_quinta)}**."
 
-🎆 Passagem de Ano: 31/12/2024 à meia-noite!"""
-        
-        return resposta
-    
-    # ===== QUAL A COR? =====
-    if 'cor' in p or 'tema' in p:
-        tema = get_tema_cor()
-        
-        resposta = f"""🎨 **Cor/Tema deste ano: {tema['cor']}**
+        if len(resposta_email) > 600:
+            resposta_email = resposta_email[:600] + "..."
 
-{tema['tema']}"""
-        
-        return resposta
-    
-    # ===== INFORMAÇÕES DA QUINTA PRÉ-RESERVADA =====
-    if 'monte' in p and 'galega' in p:
-        # Pergunta específica sobre Monte da Galega
-        quinta_pre = get_quinta_prereservada()
-        
-        resposta = f"""🏡 **{quinta_pre['nome']}**
+        estado = info.get("estado", "—")
+        local = info.get("local", "")
+        nome = info.get("nome", nome_quinta)
 
-📍 Status: {quinta_pre['status']}"""
-        
-        if quinta_pre.get('zona'):
-            resposta += f"\n🗺️ Zona: {quinta_pre['zona']}"
-        if quinta_pre.get('telefone'):
-            resposta += f"\n📞 Telefone: {quinta_pre['telefone']}"
-        if quinta_pre.get('website'):
-            resposta += f"\n🌐 Website: {quinta_pre['website']}"
-        if quinta_pre.get('capacidade'):
-            resposta += f"\n👥 Capacidade: {quinta_pre['capacidade']} pessoas"
-        if quinta_pre.get('custo'):
-            resposta += f"\n💰 Custo: €{quinta_pre['custo']}"
-        
-        # Calcular distância se tiver zona
-        if quinta_pre.get('zona'):
-            distancia = calcular_distancia(quinta_pre['zona'])
-            if distancia.get('distancia_porto'):
-                resposta += f"\n\n📏 **Distâncias:**"
-                resposta += f"\n• Porto: {distancia['distancia_porto']} km"
-                resposta += f"\n• Lisboa: {distancia['distancia_lisboa']} km"
-        
-        return resposta
-    
-    # ===== DISTÂNCIA DE LISBOA =====
-    if any(palavra in p for palavra in ['distancia', 'distância', 'km', 'quilometros', 'quilómetros']) and 'lisboa' in p:
-        quinta_pre = get_quinta_prereservada()
-        if quinta_pre.get('zona'):
-            distancia = calcular_distancia(quinta_pre['zona'])
-            if distancia.get('distancia_lisboa'):
-                return f"📏 A {quinta_pre['nome']} fica a **{distancia['distancia_lisboa']} km de Lisboa** (cerca de {distancia.get('tempo_lisboa', 'N/A')})"
-        return "Ainda não tenho informação exata da distância 😅"
-    
-    # ===== QUANTO CUSTA? =====
-    if any(palavra in p for palavra in ['quanto', 'preço', 'preco', 'custo', 'valor']):
-        if 'pessoa' in p or 'por pessoa' in p:
-            orcamento = get_orcamento()
-            
-            resposta = f"""💰 **€{orcamento['por_pessoa']} por pessoa**
+        return (
+            f"📨 **{nome}** ({local}) respondeu por email:\n\n"
+            f"🗣️ _{resposta_email}_\n\n"
+            f"📊 Estado: **{estado}**"
+        )
 
-✅ Já inclui TUDO:
-"""
-            for item in orcamento['inclui']:
-                resposta += f"• {item}\n"
-            
-            resposta += f"\n📊 Total estimado ({get_evento()['total_convidados']} pessoas): €{orcamento['total_estimado']}"
-            
-            return resposta
+    # ===== Outras perguntas (já existentes) =====
+    if any(f in p for f in ["já temos", "temos quinta", "há quinta"]):
+        from modules.quintas_qdrant import listar_quintas
+        stats = {"total_contactadas": len(listar_quintas())}
+        return f"✅ Sim! Já temos quintas contactadas ({stats['total_contactadas']} no total)."
 
-
-        # ===== QUAIS AS QUINTAS CONTACTADAS? =====
-    if any(palavra in p for palavra in ['quais', 'lista', 'mostra', 'que']) and 'quinta' in p and ('contactad' in p or 'envia' in p or 'contactámos' in p):
+    if "quintas" in p and "contactadas" in p:
         try:
             from modules.quintas_qdrant import listar_quintas
             quintas = listar_quintas()
-
-            if not quintas:
-                return "😅 Ainda não tenho nenhuma quinta registada como contactada."
-
-            resposta = "📋 **Lista de quintas contactadas:**\n"
-            for q in quintas[:15]:
-                nome = q.get('nome', 'Sem nome')
-                zona = q.get('zona', '')
-                resposta_q = q.get('resposta', 'Sem resposta')
-                resposta += f"• {nome}"
-                if zona:
-                    resposta += f" ({zona})"
-                resposta += f" — {resposta_q}\n"
-
-            if len(quintas) > 15:
-                resposta += f"\n... e mais {len(quintas) - 15} quintas."
-
+            resposta = "📋 Quintas contactadas:\n"
+            for q in quintas[:10]:
+                resposta += f"• {q.get('nome')} — {q.get('resposta','Sem resposta')}\n"
             return resposta
         except Exception as e:
-            import traceback
-            print(f"❌ Erro ao listar quintas contactadas: {e}")
-            traceback.print_exc()
-            return "Desculpa, tive um problema ao aceder à lista de quintas."
+            return f"⚠️ Erro ao listar quintas: {e}"
 
-    
-    # Não sabe responder
+    if "quantos" in p and "confirmados" in p:
+        stats = get_stats_confirmacoes()
+        return (
+            f"👥 {stats['total_confirmados']} confirmados de {stats['total_convidados']} convidados.\n"
+            f"📊 Taxa de confirmação: {stats['taxa_confirmacao']}%"
+        )
+
+    # Fallback
     return None
 
 # =====================================================
-# 🧪 TESTE
+# 🧪 TESTE LOCAL
 # =====================================================
 
 if __name__ == "__main__":
-    print("🧪 TESTE DO MÓDULO ORGANIZAÇÃO\n")
-    
-    # Testa resumo
-    print("📊 RESUMO DA ORGANIZAÇÃO:")
-    print("=" * 60)
-    resumo = get_resumo_organizacao()
-    print(json.dumps(resumo, indent=2, ensure_ascii=False))
-    
-    print("\n" + "=" * 60)
-    
-    # Testa perguntas
-    perguntas_teste = [
-        "Já temos quinta?",
-        "Quantas quintas responderam?",
-        "Quantos já confirmaram?",
-        "Quais são os dias?",
-        "Qual a cor deste ano?",
-        "Quanto custa por pessoa?"
-    ]
-    
-    print("\n🧪 TESTE DE PERGUNTAS:")
-    print("=" * 60)
-    
-    for pergunta in perguntas_teste:
-        print(f"\n❓ {pergunta}")
-        print("-" * 60)
-        resposta = responder_pergunta_organizacao(pergunta)
-        if resposta:
-            print(resposta)
-        else:
-            print("⚠️ Não soube responder")
-        print()
+    print("🧪 Teste: resposta de quinta específica\n")
+    print(responder_pergunta_organizacao("Qual foi a resposta da Centro Escutista de Apúlia (Esposende)?"))
