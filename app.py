@@ -161,7 +161,9 @@ def gerar_resposta(pergunta: str):
                 + "\n⏳ Por confirmar: " + ", ".join(por_confirmar)
             )
         elif ja_vao:
-            return "🎉 Toda a tua família já está confirmada: " + ", ".join(ja_vao)
+            return 
+            ja_vao_unicos = list(dict.fromkeys(ja_vao))
+            return "🎉 Toda a tua família já está confirmada: " + ", ".join(ja_vao_unicos)
         else:
             return "🙃 Ainda ninguém da tua família confirmou."
 
