@@ -347,3 +347,42 @@ if __name__ == "__main__":
     print("\n👨‍👩‍👧‍👦 Testando listagem de família...")
     familia = listar_familia("familia_jorge")
     print(f"✅ Família Jorge: {[p['nome'] for p in familia]}")
+
+    # --- NOVAS FUNÇÕES PARA QDRANT CENTRAL ---
+
+from qdrant_client import QdrantClient
+
+client = QdrantClient(path="data/qdrant")  # ou url do teu Qdrant Cloud
+
+def get_confirmacoes_qdrant():
+    """Lê confirmações diretamente do Qdrant"""
+    res = client.scroll(
+        collection_name="perfis",
+        scroll_filter={"must": [{"key": "confirmado", "match": {"value": True}}]},
+        limit=200
+    )
+    return [hit.payload for hit in res[0]] if res and res[0] else []
+
+def atualizar_confirmacao_qdrant(nome, confirmado=True, acompanhantes=None):
+    """Atualiza campo 'confirmado' no Qdrant"""
+    if acompanhantes is None:
+        acompanhantes = []
+
+    pontos = client.scroll(
+        collection_name="perfis",
+        scroll_filter={"must": [{"key": "nome", "match": {"value": nome}}]},
+        limit=1
+    )
+
+    if pontos and pontos[0]:
+        point_id = pontos[0][0].id
+        client.set_payload(
+            collection_name="perfis",
+            payload={
+                "confirmado": confirmado,
+                "acompanhantes": acompanhantes,
+            },
+            points=[point_id],
+        )
+        return True
+    return False
