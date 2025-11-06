@@ -13,7 +13,7 @@ from llm_groq import gerar_resposta_llm
 from modules.organizacao import responder_pergunta_organizacao
 from modules.confirmacoes import (
     
-    confirmar_familia_completa,
+    
     get_confirmados,
     get_estatisticas,
 )
