@@ -12,10 +12,11 @@ from datetime import datetime
 from llm_groq import gerar_resposta_llm
 from modules.organizacao import responder_pergunta_organizacao
 from modules.confirmacoes import (
-    
-    
+    confirmar_pessoa,
+    confirmar_familia_completa,
     get_confirmados,
     get_estatisticas,
+    verificar_confirmacao_pessoa,
 )
 from modules.perfis_manager import (
     listar_todos_perfis,
@@ -70,12 +71,17 @@ botao = st.button("Enviar")
 # ======================================================
 
 PALAVRAS_IGNORADAS_NOME = {
-    "o", "a", "os", "as", "vai", "vem", "foi", "irá", "comparece", "confirmou",
-    "família", "familia", "nós", "nos", "todos", "toda", "eu", "vou", "vamos"
+    "o", "a", "os", "as", "de", "da", "do", "dos", "das",
+    "vai", "vem", "foi", "irá", "comparece", "confirmou",
+    "família", "familia", "nós", "nos", "todos", "toda",
+    "eu", "vou", "vamos", "levar", "trazer"
 }
 
+def _limpar_artigos(txt: str) -> str:
+    return re.sub(r"^(?:o|a|os|as|de|da|do|dos|das)\s+", "", txt.strip(), flags=re.I)
+
 def extrair_nome(pergunta: str) -> str | None:
-    """Extrai nome próprio, ignorando expressões como 'eu vou'."""
+    """Extrai nome próprio, ignorando palavras funcionais."""
     tokens = [
         w.capitalize()
         for w in re.findall(r"[A-Za-zÀ-ÿ]+", pergunta)
@@ -83,7 +89,8 @@ def extrair_nome(pergunta: str) -> str | None:
     ]
     if not tokens:
         return None
-    return " ".join(tokens[:2]) if len(tokens) >= 2 else tokens[0]
+    nome = " ".join(tokens[:2]) if len(tokens) >= 2 else tokens[0]
+    return _limpar_artigos(nome)
 
 def intencao_familia_confirmar(p: str) -> bool:
     p = p.lower()
@@ -103,6 +110,61 @@ def pergunta_sobre_familia_ir(p: str) -> bool:
 def intencao_posso_levar(p: str) -> bool:
     p = p.lower()
     return any(k in p for k in ["posso levar", "posso trazer", "levo", "trago"])
+
+# -----------------------------
+# Parser semântico de relações
+# -----------------------------
+
+_REL_FILHOS = r"(?:filh[oa]s?)"
+_REL_CONJ = r"(?:c[ôo]njuge|marido|esposa|namorad[oa])"
+
+def _normalizar_relacao(palavra: str) -> str:
+    palavra = palavra.lower()
+    if re.search(_REL_FILHOS, palavra, re.I):
+        return "filhos"
+    if re.search(_REL_CONJ, palavra, re.I):
+        return "conjuge"
+    return ""
+
+def interpretar_relacao(pergunta: str):
+    """
+    Tenta perceber perguntas como:
+    - 'A Isabel vai levar as filhas?'
+    - 'O Tiago leva o filho?'
+    - 'Quem são os acompanhantes da Isabel?'
+    Retorna dict {nome, tipo_relacao, modo} ou None.
+    """
+    p = pergunta.strip()
+
+    # 1) Acompanhantes de X (lista de conjuge + filhos)
+    m = re.search(r"(?i)quem\s+s[aã]o\s+os\s+acompanhantes\s+da?\s+([A-Za-zÀ-ÿ ]+)", p)
+    if m:
+        nome = _limpar_artigos(m.group(1))
+        return {"nome": nome, "tipo_relacao": "acompanhantes", "modo": "listar"}
+
+    # 2) [Nome] vai/leva/traz [o/os/a/as] (filho/filha/filhos/filhas|cônjuge...)
+    m = re.search(
+        rf"(?i)\b([A-Za-zÀ-ÿ ]+?)\s+(?:vai\s+levar|leva|traz|vai\s+trazer)\s+(?:o|os|a|as)?\s*({_REL_FILHOS}|{_REL_CONJ})\b",
+        p
+    )
+    if m:
+        nome = _limpar_artigos(m.group(1))
+        rel = _normalizar_relacao(m.group(2))
+        if rel:
+            return {"nome": nome, "tipo_relacao": rel, "modo": "confirmacao"}
+
+    # 3) 'Os/As filhos/filhas de [Nome] vão?' (variação)
+    m = re.search(
+        rf"(?i)\b(?:o|os|a|as)?\s*({_REL_FILHOS})\s+de\s+([A-Za-zÀ-ÿ ]+?)\s+(?:v[aã]o|v[ãa]o\s+ir|v[ãa]o\s+estar)\b",
+        p
+    )
+    if m:
+        rel = _normalizar_relacao(m.group(1))
+        nome = _limpar_artigos(m.group(2))
+        if rel:
+            return {"nome": nome, "tipo_relacao": rel, "modo": "confirmacao"}
+
+    return None
 
 
 # ======================================================
@@ -174,6 +236,57 @@ def gerar_resposta(pergunta: str):
         if possivel and (possivel in nomes_membros_familia):
             return f"Sim, **{possivel}** é da tua família e está incluíd{ 'o' if possivel not in ['Isabel','Sandra','Filipa','Inês'] else 'a' }."
         return f"Desculpa, {nome_sel}, não tenho essa pessoa como tua família direta. Queres que verifique na lista?"
+
+    # >>> NOVO BLOCO: PERGUNTAS DE RELAÇÃO (filhos/cônjuge/acompanhantes) <<<
+    rel_info = interpretar_relacao(pergunta)
+    if rel_info:
+        nome_querido = rel_info["nome"]
+        alvo = buscar_perfil(nome_querido)
+        if not alvo:
+            return f"🤔 Não encontrei ninguém chamado '{nome_querido}' na lista de convidados."
+
+        relacoes = alvo.get("relacoes", {}) or {}
+        confirmados = set(get_confirmados())
+
+        # Acompanhantes = cônjuge + filhos
+        if rel_info["tipo_relacao"] == "acompanhantes":
+            acompanhantes = []
+            if relacoes.get("conjuge"):
+                acompanhantes.append(relacoes["conjuge"])
+            if relacoes.get("filhos"):
+                acompanhantes.extend(relacoes["filhos"])
+            if not acompanhantes:
+                return f"👀 Não tenho acompanhantes registados para {alvo.get('nome')}."
+            conf = [n for n in acompanhantes if n in confirmados]
+            nconf = [n for n in acompanhantes if n not in confirmados]
+            msg = f"👥 Acompanhantes de {alvo.get('nome')}: " + ", ".join(acompanhantes)
+            if conf:
+                msg += "\n✅ Já confirmados: " + ", ".join(conf)
+            if nconf:
+                msg += "\n⏳ Por confirmar: " + ", ".join(nconf)
+            return msg
+
+        # Filhos ou Cônjuge
+        if rel_info["tipo_relacao"] in {"filhos", "conjuge"}:
+            pessoas = []
+            etiqueta = "Filhos" if rel_info["tipo_relacao"] == "filhos" else "Cônjuge"
+            if rel_info["tipo_relacao"] == "filhos":
+                pessoas = relacoes.get("filhos", []) or []
+            else:
+                c = relacoes.get("conjuge")
+                if c:
+                    pessoas = [c]
+            if not pessoas:
+                return f"👀 Não tenho {etiqueta.lower()} registad{ 'o' if etiqueta=='Cônjuge' else 'os' } para {alvo.get('nome')}."
+            conf = [n for n in pessoas if n in confirmados]
+            nconf = [n for n in pessoas if n not in confirmados]
+            base = f"👨‍👩‍👧 {etiqueta} de {alvo.get('nome')}: " + ", ".join(pessoas)
+            if conf or nconf:
+                if conf:
+                    base += "\n✅ Já confirmados: " + ", ".join(conf)
+                if nconf:
+                    base += "\n⏳ Por confirmar: " + ", ".join(nconf)
+            return base
 
     # PRIORIDADE 3: CONSULTAR CONFIRMAÇÕES (quem vai? / pessoa específica)
     tem_quinta = any(p in pergunta_l for p in ["quinta", "quintas", "reserva", "local", "evento", "sítio", "sitio"])

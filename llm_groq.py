@@ -8,13 +8,10 @@ import os
 import random
 from datetime import datetime
 from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    PointStruct,
-    Filter,
-    FieldCondition,
-    MatchValue,
-)
+from qdrant_client.models import PointStruct
 import streamlit as st
+from learning_qdrant import get_model  # ✅ import do modelo correto
+
 
 # ============================================================
 # 🔑 CONFIGURAÇÃO DE ACESSO AO QDRANT
@@ -138,7 +135,13 @@ def gerar_resposta_llm(
         client = get_qdrant_client()
         collection = "chatbot_festa"
 
-        # Buscar memória contextual se existir
+        # Gerar embedding real de 768 dimensões
+        model = get_model()
+        vector = model.encode(pergunta).tolist()
+        if len(vector) != 768:
+            print(f"⚠️ Corrigindo vetor incorreto (dim {len(vector)}) → 768")
+            vector = (vector + [0.0] * 768)[:768]
+
         resultados, _ = client.scroll(collection_name=collection, limit=1)
         memoria = resultados[0].payload.get("memoria", "") if resultados else ""
 
@@ -151,13 +154,13 @@ def gerar_resposta_llm(
         else:
             resposta += f"Ainda não sei a resposta exata, mas posso investigar!"
 
-        # Guarda feedback na coleção (aprendizagem leve)
+        # ✅ Upsert com vetor de 768 dimensões correto
         client.upsert(
             collection_name=collection,
             points=[
                 PointStruct(
                     id=random.randint(1000, 9999),
-                    vector=[0.1] * 10,
+                    vector=vector,
                     payload={
                         "pergunta": pergunta,
                         "resposta": resposta,

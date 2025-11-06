@@ -5,6 +5,7 @@ Autor: Miguel + GPT
 """
 
 import unicodedata
+import re
 from datetime import datetime
 from modules import perfis_manager as pm
 
@@ -19,6 +20,40 @@ def normalizar_nome(nome: str) -> str:
     nome = unicodedata.normalize('NFKD', nome)
     nome = ''.join(c for c in nome if not unicodedata.combining(c))
     return nome.lower().strip()
+
+# ======================================================
+# 🧠 Interpretação semântica simples
+# ======================================================
+
+def interpretar_relacao_frase(frase: str):
+    """
+    Identifica frases do tipo:
+    - 'A Isabel vai levar as filhas?'
+    - 'O Jorge vem com a mulher?'
+    - 'A Inês traz os irmãos?'
+    Retorna {'pessoa': 'Isabel', 'relacao': 'filhos'} ou None.
+    """
+    texto = frase.lower()
+
+    # Extrair possível nome próprio simples
+    match_nome = re.search(r"(?:a|o)\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõç]+)", frase)
+    nome = match_nome.group(1) if match_nome else None
+
+    if not nome:
+        return None
+
+    if "filh" in texto:
+        relacao = "filhos"
+    elif "mulher" in texto or "esposa" in texto or "marido" in texto or "cônjuge" in texto:
+        relacao = "conjuge"
+    elif "irma" in texto or "irmão" in texto or "irmã" in texto:
+        relacao = "irmaos"
+    else:
+        relacao = None
+
+    if relacao:
+        return {"pessoa": nome.capitalize(), "relacao": relacao}
+    return None
 
 # ======================================================
 # 🔍 Ler e guardar confirmações diretamente no Qdrant
@@ -148,21 +183,51 @@ def confirmar_familia_completa(nome_representante: str):
 # 🔍 Verificar confirmação individual
 # ======================================================
 
-def verificar_confirmacao_pessoa(nome: str):
-    """Verifica se uma pessoa específica está confirmada no Qdrant."""
+def verificar_confirmacao_pessoa(pergunta: str):
+    """
+    Verifica se uma pessoa específica está confirmada no Qdrant.
+    Agora também entende frases como:
+    - 'A Isabel vai levar as filhas?'
+    - 'O Jorge vem com a mulher?'
+    """
     try:
+        contexto = interpretar_relacao_frase(pergunta)
+
+        # Caso simples (sem intenção relacional)
+        if not contexto:
+            perfil = pm.buscar_perfil(pergunta)
+            if not perfil:
+                return f"❌ Não encontrei ninguém chamado '{pergunta}' na lista de convidados."
+            if perfil.get("confirmado"):
+                return f"✅ {perfil.get('nome')} já confirmou presença!"
+            else:
+                return f"🙃 {perfil.get('nome')} ainda não confirmou presença."
+
+        # Caso com relação (filhos, cônjuge, etc.)
+        nome = contexto["pessoa"]
+        relacao = contexto["relacao"]
+
         perfil = pm.buscar_perfil(nome)
         if not perfil:
             return f"❌ Não encontrei ninguém chamado '{nome}' na lista de convidados."
 
-        if perfil.get("confirmado"):
-            return f"✅ {perfil.get('nome')} já confirmou presença!"
+        relacoes = perfil.get("relacoes", {})
+        relacionados = relacoes.get(relacao, [])
+
+        if not relacionados:
+            return f"🙃 {nome} não indicou se vem acompanhado/a dos {relacao}."
+
+        confirmados = pm.get_confirmacoes_qdrant()
+        confirmados_relacionados = [r for r in relacionados if r in confirmados]
+
+        if confirmados_relacionados:
+            return f"👨‍👩‍👧 Sim, {nome} vem com {', '.join(confirmados_relacionados)}!"
         else:
-            return f"🙃 {perfil.get('nome')} ainda não confirmou presença."
+            return f"❌ {nome} ainda não confirmou se vem com os {relacao}."
 
     except Exception as e:
         print(f"❌ Erro ao verificar confirmação: {e}")
-        return f"⚠️ Erro ao verificar confirmação de {nome}."
+        return f"⚠️ Erro ao verificar confirmação ({pergunta})."
 
 # ======================================================
 # 🔎 Execução direta para teste
@@ -170,12 +235,5 @@ def verificar_confirmacao_pessoa(nome: str):
 
 if __name__ == "__main__":
     print("🔧 Teste rápido ao sistema de confirmações (Qdrant)...")
-    print("Confirmando Barbeitos...")
-    resultado = confirmar_pessoa("Barbeitos")
-    print(resultado)
-
-    print("\nConfirmados atuais:")
-    print(get_confirmados())
-
-    print("\nEstatísticas:")
-    print(get_estatisticas())
+    print(verificar_confirmacao_pessoa("A Isabel vai levar as filhas?"))
+    print(verificar_confirmacao_pessoa("O Jorge vem com a mulher?"))
